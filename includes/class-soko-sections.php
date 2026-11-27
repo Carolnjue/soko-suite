@@ -393,6 +393,9 @@ final class Soko_Sections {
 	}
 
 	public static function save( $data ) {
+		if ( isset( $data['site'] ) && is_array( $data['site'] ) && isset( $data['site']['pages'] ) ) {
+			$data = $data['site'];
+		}
 		$draft = ! empty( $data['_draft'] );
 		unset( $data['_draft'] );
 		$site = soko_rel( self::clean( $data ) );
@@ -403,9 +406,7 @@ final class Soko_Sections {
 		$old = self::site();
 		update_option( 'soko_site', $site, false );
 		delete_transient( 'soko_site_draft_' . get_current_user_id() );
-		if ( array_keys( (array) $old['pages'] ) !== array_keys( (array) $site['pages'] ) ) {
-			update_option( 'soko_flush', 1, false );
-		}
+		update_option( 'soko_flush', 1, false );
 		return $site;
 	}
 

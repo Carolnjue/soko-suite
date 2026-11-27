@@ -123,7 +123,7 @@ final class Soko_Store {
 				break;
 			case 'cart':
 				self::$title = 'Your cart | ' . soko_setting( 'business' );
-				echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><h1>Your cart</h1></div></div></section><section class="band"><div class="wrap cartpage" data-cart-page></div></section>'; // phpcs:ignore
+				echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Your order</span><h1>Your cart</h1><ol class="costeps"><li class="on"><i>1</i>Cart</li><li><i>2</i>Your details</li><li><i>3</i>Pay with M-Pesa</li><li><i>4</i>Receipt</li></ol></div></div></section><section class="band"><div class="wrap cartpage" data-cart-page></div></section>'; // phpcs:ignore
 				break;
 			case 'checkout':
 				self::$title = 'Checkout | ' . soko_setting( 'business' );
@@ -547,6 +547,7 @@ $chev = '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none
 				'whatsapp' => preg_replace( '/\D/', '', $s['whatsapp'] ),
 				'mpesa'    => Soko_Mpesa::ready(),
 				'pay'      => Soko_Mpesa::instructions( '' ),
+				'stk'      => Soko_Mpesa::ready(),
 				'phone'    => soko_phone( $s['phone'] ),
 				'route'    => self::$route,
 				'icons'    => array_combine( soko_icon_names(), array_map( function ( $k ) { return soko_icon( $k, 100 ); }, soko_icon_names() ) ),

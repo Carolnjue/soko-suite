@@ -799,3 +799,8 @@ html[data-theme=dark] .savings::before{display:none}html[data-theme=dark] .savin
 .faq details{transition:background .2s}.faq details[open]{background:var(--alt)}
 .faq summary::after{transition:transform .3s}.faq details[open] summary::after{transform:rotate(45deg)}
 @media(prefers-reduced-motion:reduce){.phero .pimg img,.phero .shimg img{animation:none}.ti .timg img{clip-path:none}}
+.pnote{display:block;font-size:13.5px;color:var(--soft);margin-top:2px;font-weight:500}
+.price b.tick{animation:tick .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes tick{40%{transform:translateY(-4px);color:var(--sun)}}
+.price.big b{display:inline-block}
+.cartpage .line img,.cartpage .thumb{width:84px;height:84px;border-radius:14px;object-fit:cover}

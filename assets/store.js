@@ -353,6 +353,10 @@
         var rc = $('[data-receipts]');
         if (rc && s.receipts.length) rc.innerHTML = '<h3 style="margin-top:20px">Receipts</h3>' + s.receipts.map(function (r) { return '<div class="line" style="grid-template-columns:minmax(0,1fr) auto auto"><span>' + esc(r.number) + ' · ' + esc(r.date) + '</span><b>' + money(r.total) + '</b><a class="btn b-line" style="min-height:38px" target="_blank" rel="noopener" href="' + esc(r.pdf) + '">PDF</a></div>'; }).join('');
         if (s.balance <= 0) { pp.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Fully paid</h3><p class="muted">Thank you. We will be in touch about delivery' + '.</p></div>'; return; }
+        if (!S.stk) {
+          pp.innerHTML = '<h3>Balance ' + money(s.balance) + '</h3>' + (S.pay && S.pay.number ? '<p class="muted">Pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div><p class="muted" style="margin-top:12px">Your receipt appears here once the payment is confirmed.</p>' : '<p class="muted">Our team will call you to confirm your order and how you would like to pay.</p>') + '<a class="btn b-sun wide" href="tel:' + esc(S.phone || '') + '">Call us</a>';
+          return;
+        }
         pp.innerHTML = '<h3>Pay ' + money(s.balance) + '</h3><form data-paybal novalidate><div class="f"><label for="pPhone">M-Pesa number</label><input id="pPhone" name="phone" inputmode="tel" value="' + esc(td.phone) + '" required></div><div class="f"><label for="pAmt">Amount</label><input id="pAmt" name="amount" type="number" min="1" max="' + s.balance + '" value="' + Math.ceil(s.balance) + '"></div><button class="btn b-sun wide">Send M-Pesa prompt</button><p class="formmsg"></p></form>' + (S.pay && S.pay.number ? '<p class="muted" style="margin-top:14px">Or pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div>' : '');
         var f = $('[data-paybal]', pp);
         f.onsubmit = function (e) {
@@ -379,7 +383,19 @@
   if (pdp) {
     var pd = JSON.parse(pdp.dataset.product), q = $('[data-qty] input', pdp);
     var inst = function () { var r = $('[name=inst]:checked', pdp); return r && r.value === '1'; };
-    $$('[data-qty] button', pdp).forEach(function (b) { b.onclick = function () { q.value = Math.max(1, (+q.value || 1) + +b.dataset.d); }; });
+    var pb = $('.price.big b', pdp) || $('.price.big b');
+    var syncPrice = function () {
+      if (!pb) return;
+      var qn = Math.max(1, +q.value || 1), total = (pd.price + (inst() ? (pd.install || 0) : 0)) * qn;
+      pb.textContent = money(total);
+      var note = $('.pnote', pdp) || $('.pnote');
+      if (!note) { note = document.createElement('small'); note.className = 'pnote'; pb.parentNode.appendChild(note); }
+      note.textContent = (inst() ? 'Includes installation' : 'Supply only') + (qn > 1 ? ' · ' + qn + ' units' : '');
+      pb.classList.remove('tick'); void pb.offsetWidth; pb.classList.add('tick');
+    };
+    $$('[name=inst]', pdp).forEach(function (r) { r.addEventListener('change', syncPrice); });
+    if (q) q.addEventListener('input', syncPrice);
+    $$('[data-qty] button', pdp).forEach(function (b) { b.onclick = function () { q.value = Math.max(1, (+q.value || 1) + +b.dataset.d); syncPrice(); }; });
     $('[data-add-pdp]', pdp).onclick = function () { add(pd.id, Math.max(1, +q.value || 1), inst()); };
     $('[data-buy-pdp]', pdp).onclick = function () { add(pd.id, Math.max(1, +q.value || 1), inst(), true); location.href = S.home + 'checkout/'; };
     $$('.thumbs button', pdp).forEach(function (b) { b.onclick = function () { $$('.thumbs button', pdp).forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on'); var im = $('.gmain img', pdp); if (im) im.src = b.dataset.img; }; });
@@ -557,7 +573,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
     requestAnimationFrame(step);
   }
   var cio = ('IntersectionObserver' in window) && !reduce ? new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { countUp(e.target); cio.unobserve(e.target); } }); }, { threshold: 0.6 }) : null;
-  if (cio) $$('.mzstats b, .stats b, .pj .size, .hfact b, .meter b, [data-count]').forEach(function (el) { cio.observe(el); });
+  if (cio) $$('.mzstats b, .stats b, .pj .size, .hfact b, .meter b').forEach(function (el) { cio.observe(el); });
 })();
 /* product page: sticky buy bar on phones once the main buttons scroll away */
 (function () {

@@ -676,3 +676,7 @@ html[data-theme=dark] .ptabs button.on{background:var(--sun);border-color:var(--
 @media(max-width:920px){.phero.mosaic .wrap,.phero.actions .wrap,.phero.shophero .wrap,.phero.plhero .wrap{grid-template-columns:minmax(0,1fr)}.mzgrid{height:300px}.shimg{justify-self:stretch}.shimg img{aspect-ratio:21/9}}
 @media(max-width:600px){.qa{grid-template-columns:minmax(0,1fr)}.flowv svg{width:48px;height:48px;padding:9px}.mzstats div{min-width:0;flex:1}}
 @media(prefers-reduced-motion:reduce){.flowv i{animation:none}}
+.phero.photo{background:linear-gradient(90deg,var(--card) 0,var(--card) 42%,color-mix(in srgb,var(--card) 80%,transparent) 55%,transparent 78%),var(--img) right center/cover}
+.phero.photo .pcopy{max-width:560px}
+@media(max-width:760px){.phero.photo{background:var(--card);display:block;min-height:0;padding-top:24px}.phero.photo::after{content:"";display:block;margin:20px max(16px,4vw) 0;aspect-ratio:16/10;border-radius:20px;background:var(--img) center/cover}.shimg{display:none}.mzstats{gap:8px}.mzstats div{padding:10px;min-width:0}.mzstats b{font-size:20px}.mzstats span{font-size:12px;line-height:1.3;display:block}}
+.phero.photo .wrap{width:100%}

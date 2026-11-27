@@ -166,6 +166,15 @@ final class Soko_Demo {
 
 	public static function remove() {
 		global $wpdb;
+		// Test orders placed while checking the shop go with the sample data.
+		$cust = $wpdb->get_col( 'SELECT id FROM ' . soko_t( 'customers' ) . " WHERE name LIKE 'Test %' OR email LIKE '%@example.com'" ); // phpcs:ignore
+		if ( $cust ) {
+			$cin = implode( ',', array_map( 'intval', $cust ) );
+			$wpdb->query( 'UPDATE ' . soko_t( 'customers' ) . " SET demo = 1 WHERE id IN ($cin)" ); // phpcs:ignore
+			$wpdb->query( 'UPDATE ' . soko_t( 'docs' ) . " SET demo = 1 WHERE customer_id IN ($cin)" ); // phpcs:ignore
+			$wpdb->query( 'UPDATE ' . soko_t( 'jobs' ) . " SET demo = 1 WHERE customer_id IN ($cin)" ); // phpcs:ignore
+		}
+		$wpdb->query( 'UPDATE ' . soko_t( 'payments' ) . " SET demo = 1 WHERE code LIKE 'TST%'" ); // phpcs:ignore
 		$ids = $wpdb->get_col( 'SELECT id FROM ' . soko_t( 'docs' ) . ' WHERE demo = 1' ); // phpcs:ignore
 		$nums = $wpdb->get_col( 'SELECT number FROM ' . soko_t( 'docs' ) . ' WHERE demo = 1' ); // phpcs:ignore
 		if ( $nums ) {

@@ -27,7 +27,7 @@
       if (d.etims && d.etims.pending) att.push(['var(--brand)', d.etims.pending + ' invoice' + (d.etims.pending > 1 ? 's' : '') + ' waiting for eTIMS', 'Sign', '#compliance']);
       if (d.leads_new) att.push(['var(--ok)', d.leads_new + ' new lead' + (d.leads_new > 1 ? 's' : '') + ' to call', 'Call', '#crm']);
       var finding = 'Sales for ' + esc(d.month) + ' are ' + money(d.sales) + (ch != null ? ', ' + Math.abs(ch) + '% ' + (ch >= 0 ? 'ahead of' : 'behind') + ' last month' : '') + '.' + ((d.overdue || []).length ? ' ' + d.overdue.length + ' invoice' + (d.overdue.length > 1 ? 's need' : ' needs') + ' chasing.' : ' Nothing is overdue.');
-      v.innerHTML = K.head(greet() + ', ' + esc(K.me.first), finding, (K.can('reports') ? '<a class="btn" href="#reports">Reports</a>' : '') + (K.can('sales') ? '<button class="btn" data-nq>New quotation</button><button class="btn sun" data-ni>New invoice</button>' : '')) +
+      v.innerHTML = K.head(greet() + (/admin|^[a-z0-9_.-]+$/i.test(K.me.first || '') && !/ /.test(K.me.first) && /admin/i.test(K.me.first) ? '' : ', ' + esc(K.me.first)), finding, (K.can('reports') ? '<a class="btn" href="#reports">Reports</a>' : '') + (K.can('sales') ? '<button class="btn" data-nq>New quotation</button><button class="btn sun" data-ni>New invoice</button>' : '')) +
         '<div class="kpis"><div class="kpi"><small>Sales this month</small><b>' + money(d.sales) + '</b>' + (ch != null ? '<i class="' + (ch >= 0 ? 'up' : 'down') + '">' + (ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch) + '% vs last month</i>' : '<i class="mut">First month on the Desk</i>') + '</div>' +
         '<div class="kpi"><small>Collected this month</small><b>' + money(d.collected) + '</b><i class="up">' + d.collected_n + ' payment' + (d.collected_n === 1 ? '' : 's') + ' matched</i></div>' +
         '<div class="kpi"><small>Owed by customers</small><b>' + money(d.owed) + '</b><i class="' + ((d.overdue || []).length ? 'down' : 'mut') + '">' + (d.overdue || []).length + ' overdue</i></div>' +
@@ -268,7 +268,7 @@
       var un = rows.filter(function (p) { return p.status !== 'matched'; });
       var mp = K.me.settings.mpesa || {};
       v.innerHTML = K.head('Payments', 'M-Pesa payments arrive here the moment Safaricom confirms them and match to the right invoice by account number. Bank and cash payments are recorded here too.', '<label class="btn" title="CSV from the M-Pesa business portal">' + ic(I.up || I.plus) + 'Import M-Pesa statement<input type="file" accept=".csv,text/csv" hidden data-stmt></label><button class="btn sun" data-rec>' + ic(I.plus) + 'Record a payment</button>') +
-        (K.me.mpesa_ready ? '' : '<div class="notice">Daraja is not connected yet. Payments still match automatically if you forward M-Pesa SMS or import the statement (see <a href="#settings/payments">Settings → Payments</a>). You can also record a payment here with its M-Pesa code.</div>') +
+        (K.me.mpesa_ready ? '' : '<div class="notice">M-Pesa prompts at checkout are not switched on yet. Payments still match to invoices on their own when you forward M-Pesa SMS or import your statement (<a href="#settings/payments">set up in Settings</a>). You can also record any payment here with its M-Pesa code.</div>') +
         '<div class="kpis"><div class="kpi"><small>Received this month</small><b>' + money(month.reduce(function (a, p) { return a + p.amount; }, 0)) + '</b><i class="mut">' + month.length + ' payments</i></div>' +
         '<div class="kpi"><small>Matched automatically</small><b>' + (rows.length ? Math.round(rows.filter(function (p) { return p.status === 'matched'; }).length / rows.length * 100) : 0) + '%</b><i class="mut">by invoice number</i></div>' +
         '<div class="kpi"><small>Waiting to match</small><b>' + un.length + '</b><i class="' + (un.length ? 'down' : 'up') + '">' + (un.length ? money(un.reduce(function (a, p) { return a + p.amount; }, 0)) : 'all matched') + '</i></div>' +
@@ -504,7 +504,7 @@
         $('[data-c]', b).onchange = function (e) { stockState.cat = e.target.value; draw(); };
         $('[data-l]', b).onchange = function (e) { stockState.low = e.target.checked ? 1 : 0; draw(); };
         $$('[data-vis]', b).forEach(function (s) { s.onclick = function (e) { e.stopPropagation(); }; s.onchange = function () { K.api('products/' + s.dataset.vis, { body: { visible: s.checked ? 1 : 0 } }).then(function () { K.toast(s.checked ? 'Shown on the website' : 'Hidden from the website'); }).catch(K.fail); }; });
-        $$('[data-row]', b).forEach(function (tr) { tr.onclick = function (e) { if (e.target.closest('[data-vis]')) return; K.editProduct(+tr.dataset.row); }; });
+        $$('[data-row]', b).forEach(function (tr) { tr.onclick = function (e) { if (e.target.closest('[data-vis]')) return; tr.classList.add('loading'); K.editProduct(+tr.dataset.row); setTimeout(function () { tr.classList.remove('loading'); }, 2500); }; });
         K.sortable(b, stockState, draw);
       };
       draw();
@@ -788,14 +788,14 @@
 (function () {
   var $ = K.$, esc = K.esc;
   K.V.blog = function (v) {
-    v.innerHTML = '<div class="ph"><div><h1>Blog</h1><p class="sub">Guides and news shown at /blog on the website. Write here, then publish.</p></div><div class="acts"><button class="btn pri" data-new>' + K.ic(K.ICONS.plus) + 'New article</button></div></div><div class="card" data-list><div class="empty">Loading…</div></div>';
+    v.innerHTML = K.head('Blog', 'Buying guides and news for your customers. Write an article here, add a cover photo and publish it to the website.', '<button class="btn sun" data-new>' + K.ic(K.ICONS.plus) + 'New article</button>') + '<div class="box" data-list><div class="empty">Loading…</div></div>';
     var load = function () {
       K.api('blog').then(function (rows) {
         var l = $('[data-list]', v);
         if (!rows.length) { l.innerHTML = '<div class="empty">No articles yet. Write your first one.</div>'; return; }
         l.innerHTML = K.table([
-          { label: 'Article', f: function (r) { return '<b>' + esc(r.title) + '</b><br><span class="tiny">' + esc(r.excerpt).slice(0, 90) + '</span>'; } },
-          { label: 'Topic', k: 'topic' }, { label: 'Date', k: 'date' },
+          { label: 'Article', f: function (r) { return '<div class="blrow">' + (r.image ? '<img src="' + esc(r.image) + '" alt="">' : '<span class="blph"></span>') + '<div><b>' + esc(r.title) + '</b><br><span class="tiny">' + esc(String(r.excerpt || '').slice(0, 90)) + '</span></div></div>'; } },
+          { label: 'Topic', k: 'topic' }, { label: 'Date', f: function (r) { return K.d(String(r.date).slice(0, 10)); } },
           { label: 'Status', f: function (r) { return r.status === 'publish' ? K.badge('paid', 'Published') : K.badge('draft', 'Draft'); } },
           { label: '', f: function (r) { return '<button class="btn sm" data-ed="' + r.id + '">Edit</button> ' + (r.status === 'publish' ? '<a class="btn sm ghost" target="_blank" href="' + esc(r.url) + '">View</a>' : ''); } }
         ], rows);

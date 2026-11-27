@@ -74,7 +74,7 @@
   function drawPanel() {
     var p = $('[data-panel]'); if (!p) return;
     var pg = S.site.pages[S.page];
-    var tabs = '<div class="sttabs">' + [['pages', 'Pages'], ['header', 'Header and menu'], ['brand', 'Brand'], ['projects', 'Projects'], ['footer', 'Footer']].map(function (t) { return '<button data-tab="' + t[0] + '" class="' + (S.tab === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
+    var tabs = '<div class="sttabs">' + [['pages', 'Pages'], ['header', 'Header'], ['brand', 'Brand'], ['projects', 'Projects'], ['footer', 'Footer']].map(function (t) { return '<button data-tab="' + t[0] + '" class="' + (S.tab === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
     var body = '';
     if (S.tab === 'pages' && S.sec) {
       var sc = schema(S.sec.type);

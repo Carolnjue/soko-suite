@@ -285,3 +285,9 @@ html[data-theme=dark] .side{background:#16191d}html[data-theme=dark] .side a.on{
 .cal-d:hover .cal-add{opacity:1}
 @media(max-width:760px){.cal{grid-template-columns:minmax(0,1fr)}.cal-h{display:none}.cal-d{min-height:0}.cal-d.past{display:none}.cal-add{opacity:1}.legend{display:none}}
 html[data-theme=dark] .k-ins{background:#33240f;color:#ffd29a}html[data-theme=dark] .k-sur{background:#1c2540;color:#b9c9ff}html[data-theme=dark] .k-mnt{background:#13301f;color:#a6e6c3}html[data-theme=dark] .k-call{background:#2a1d38;color:#dcc2f5}
+.stpanel .sttabs{display:grid;grid-template-columns:repeat(5,auto);justify-content:stretch;gap:4px;overflow:visible;background:var(--alt);border-radius:12px 12px 0 0}
+.stpanel .sttabs button{padding:8px 6px;font-size:13px;text-align:center;transition:background .2s,color .2s}
+.stpanel .sttabs button:hover{color:var(--ink)}
+.stpanel .sttabs button.on{background:var(--card);color:var(--brand);box-shadow:0 2px 8px -4px rgba(29,33,86,.35)}
+tr.loading{opacity:.6;cursor:progress;background:linear-gradient(90deg,transparent,var(--sky),transparent) 0 0/200% 100%;animation:rowload 1s linear infinite}@keyframes rowload{to{background-position:-200% 0}}
+.blrow{display:flex;gap:12px;align-items:center}.blrow img,.blph{width:72px;height:50px;border-radius:8px;object-fit:cover;flex:none;background:var(--alt)}

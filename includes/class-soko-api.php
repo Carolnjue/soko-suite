@@ -142,6 +142,8 @@ final class Soko_API {
 		$r( '/users', 'GET', array( __CLASS__, 'users' ), self::perm( 'soko_users' ) );
 		$r( '/users', 'POST', array( __CLASS__, 'save_user' ), self::perm( 'soko_users' ) );
 		$r( '/users/(?P<id>\d+)', 'POST', array( __CLASS__, 'save_user' ), self::perm( 'soko_users' ) );
+		$r( '/users/(?P<id>\d+)/link', 'POST', array( __CLASS__, 'signin_link' ), self::perm( 'soko_users' ) );
+		$r( '/me/password', 'POST', array( __CLASS__, 'my_password' ), $staff );
 		$r( '/team', 'GET', array( __CLASS__, 'team' ), $staff );
 	}
 
@@ -2137,11 +2139,15 @@ final class Soko_API {
 			soko_log( 'Updated team member ' . $b['name'], 'user', $id );
 			return array( 'message' => 'Saved.' );
 		}
-		$email = sanitize_email( $b['email'] );
-		if ( ! is_email( $email ) || email_exists( $email ) ) {
+		$email = sanitize_email( isset( $b['email'] ) ? $b['email'] : '' );
+		$uname = sanitize_user( strtolower( isset( $b['username'] ) ? $b['username'] : '' ), true );
+		if ( $email && ( ! is_email( $email ) || email_exists( $email ) ) ) {
 			return new WP_Error( 'soko', 'Use a valid email address that is not already in use.', array( 'status' => 400 ) );
 		}
-		$login = sanitize_user( strtolower( strtok( $email, '@' ) ), true );
+		if ( ! $email && ! $uname ) {
+			return new WP_Error( 'soko', 'Give an email address, or a username if they have no email yet.', array( 'status' => 400 ) );
+		}
+		$login = $uname ? $uname : sanitize_user( strtolower( strtok( $email, '@' ) ), true );
 		$base  = $login;
 		$i     = 2;
 		while ( username_exists( $login ) ) {
@@ -2163,13 +2169,44 @@ final class Soko_API {
 		}
 		update_user_meta( $uid, 'soko_phone', sanitize_text_field( isset( $b['phone'] ) ? $b['phone'] : '' ) );
 		update_user_meta( $uid, 'show_admin_bar_front', 'false' );
-		$sent = soko_mail(
+		$sent = ! $email ? false : soko_mail(
 			$email,
 			'Your Dynamic Desk account',
 			sprintf( "Hello %s,\n\nAn account has been created for you on Dynamic Desk.\n\nSign in: %s\nEmail: %s\nPassword: %s\n\nPlease change your password after signing in.\n\n%s", sanitize_text_field( $b['name'] ), home_url( '/desk/' ), $email, $pass, soko_setting( 'business' ) )
 		);
 		soko_log( 'Invited ' . $b['name'] . ' as ' . soko_roles()[ $role ][0], 'user', $uid );
+		if ( ! $email ) {
+			$lnk = self::signin_link( array( 'id' => $uid ) );
+			return array( 'id' => $uid, 'login' => $login, 'link' => $lnk['url'], 'expires' => $lnk['expires'], 'message' => 'Account created. Share the sign-in link with them.' );
+		}
 		return array( 'id' => $uid, 'login' => $login, 'password' => empty( $b['password'] ) ? $pass : '', 'sent' => $sent, 'message' => 'Account created.' );
+	}
+
+	/** A one-time sign-in link (valid 3 days) the owner shares on WhatsApp: no password needs to be sent. */
+	public static function signin_link( $req ) {
+		$u = get_userdata( (int) $req['id'] );
+		if ( ! $u || ( user_can( $u, 'manage_options' ) && (int) $u->ID !== get_current_user_id() ) ) {
+			return new WP_Error( 'soko', 'A sign-in link cannot be made for this account.', array( 'status' => 400 ) );
+		}
+		$tok = wp_generate_password( 32, false );
+		update_user_meta( $u->ID, 'soko_signin', array( 'h' => wp_hash( $tok ), 'x' => time() + 3 * DAY_IN_SECONDS ) );
+		soko_log( 'Made a sign-in link for ' . $u->display_name, 'user', $u->ID );
+		return array( 'url' => home_url( '/desk/?signin=' . $u->ID . '.' . $tok ), 'expires' => wp_date( 'j M Y, H:i', time() + 3 * DAY_IN_SECONDS ), 'login' => $u->user_login );
+	}
+
+	/** The signed-in person chooses their own password. */
+	public static function my_password( $req ) {
+		$b  = $req->get_json_params();
+		$pw = isset( $b['password'] ) ? (string) $b['password'] : '';
+		if ( strlen( $pw ) < 8 ) {
+			return new WP_Error( 'soko', 'Use at least 8 characters.', array( 'status' => 400 ) );
+		}
+		$uid = get_current_user_id();
+		wp_set_password( $pw, $uid );
+		wp_set_current_user( $uid );
+		wp_set_auth_cookie( $uid, true, is_ssl() );
+		soko_log( 'Changed own password', 'user', $uid );
+		return array( 'message' => 'Password saved. Next time, sign in with ' . wp_get_current_user()->user_login . ' and this password.' );
 	}
 
 	public static function test_email() {

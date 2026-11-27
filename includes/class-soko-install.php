@@ -50,6 +50,28 @@ final class Soko_Install {
 					update_option( 'soko_settings', $st, false );
 				}
 			}
+			if ( version_compare( (string) get_option( 'soko_db_version' ), '9', '<' ) ) {
+				// Payment wording no longer names a single method across the site.
+				$site = get_option( 'soko_site' );
+				if ( is_array( $site ) ) {
+					$map  = array(
+						'online and pay by M-Pesa. Installed'           => 'online with easy payment. Installed',
+						'priced with installation. Pay by M-Pesa.'      => 'priced with installation.',
+						'"title":"Pay by M-Pesa"'                       => '"title":"Easy payment"',
+						'By M-Pesa at checkout or against your invoice number.' => 'By mobile money, bank transfer, card or cash, at checkout or against your invoice number.',
+						' Pay by M-Pesa.'                               => '',
+						'Pay by M-Pesa'                                 => 'Easy payment',
+					);
+					$json = wp_json_encode( $site, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+					$new  = str_replace( array_keys( $map ), array_values( $map ), $json );
+					if ( $new !== $json ) {
+						$dec = json_decode( $new, true );
+						if ( is_array( $dec ) ) {
+							update_option( 'soko_site', $dec, false );
+						}
+					}
+				}
+			}
 			self::activate();
 		}
 		if ( get_option( 'soko_flush' ) ) {

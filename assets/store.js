@@ -89,7 +89,7 @@
     var el = $('[data-cart-page]');
     if (!el) return;
     if (!cart.length) { el.innerHTML = '<div class="panel">' + emptyCart() + '</div>'; return; }
-    el.innerHTML = '<div class="panel">' + linesHTML(true) + '</div><aside class="panel summary"><h3>Summary</h3><div class="sum">' + sumHTML(null) + '</div><a class="btn b-sun wide" style="margin-top:14px" href="' + S.home + 'checkout/">Checkout with M-Pesa</a><a class="btn b-line wide" style="margin-top:10px" href="' + S.home + 'shop/">Keep shopping</a></aside>';
+    el.innerHTML = '<div class="panel">' + linesHTML(true) + '</div><aside class="panel summary"><h3>Summary</h3><div class="sum">' + sumHTML(null) + '</div><a class="btn b-sun wide" style="margin-top:14px" href="' + S.home + 'checkout/">Checkout</a><a class="btn b-line wide" style="margin-top:10px" href="' + S.home + 'shop/">Keep shopping</a></aside>';
   }
 
   /* ---------------- drawer ---------------- */
@@ -302,7 +302,7 @@
     payBtn.disabled = false;
     lines.innerHTML = linesHTML(false);
     sum.innerHTML = sumHTML(deliveryFee());
-    payBtn.textContent = S.stk ? 'Pay ' + money(subtotal() + deliveryFee()) + ' with M-Pesa' : 'Place order · ' + money(subtotal() + deliveryFee());
+    payBtn.textContent = S.stk ? 'Pay ' + money(subtotal() + deliveryFee()) + '' : 'Place order · ' + money(subtotal() + deliveryFee());
     var inst = $('.inst-date', co); if (inst) inst.hidden = !cart.some(function (c) { return c.install; });
   }
   var coForm = $('[data-co-form]');
@@ -384,7 +384,7 @@
           pp.innerHTML = '<h3>Balance ' + money(s.balance) + '</h3>' + (S.pay && S.pay.number ? '<p class="muted">Pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div><p class="muted" style="margin-top:12px">Your receipt appears here once the payment is confirmed.</p>' : '<p class="muted">Our team will call you to confirm your order and how you would like to pay.</p>') + '<a class="btn b-sun wide" href="tel:+' + esc(String(S.phone || '').replace(/^\+/, '')) + '">Call us</a>';
           return;
         }
-        pp.innerHTML = '<h3>Pay ' + money(s.balance) + '</h3><form data-paybal novalidate><div class="f"><label for="pPhone">M-Pesa number</label><input id="pPhone" name="phone" inputmode="tel" value="' + esc(td.phone) + '" required></div><div class="f"><label for="pAmt">Amount</label><input id="pAmt" name="amount" type="number" min="1" max="' + s.balance + '" value="' + Math.ceil(s.balance) + '"></div><button class="btn b-sun wide">Send M-Pesa prompt</button><p class="formmsg"></p></form>' + (S.pay && S.pay.number ? '<p class="muted" style="margin-top:14px">Or pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div>' : '');
+        pp.innerHTML = '<h3>Pay ' + money(s.balance) + '</h3><form data-paybal novalidate><div class="f"><label for="pPhone">Phone number to pay from</label><input id="pPhone" name="phone" inputmode="tel" value="' + esc(td.phone) + '" required></div><div class="f"><label for="pAmt">Amount</label><input id="pAmt" name="amount" type="number" min="1" max="' + s.balance + '" value="' + Math.ceil(s.balance) + '"></div><button class="btn b-sun wide">Send payment request</button><p class="formmsg"></p></form>' + (S.pay && S.pay.number ? '<p class="muted" style="margin-top:14px">Or pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div>' : '');
         var f = $('[data-paybal]', pp);
         f.onsubmit = function (e) {
           e.preventDefault();

@@ -174,7 +174,7 @@ JS;
 		$b    = self::brand();
 		$s    = Soko_Settings::all();
 		$logo = $b['logo'] ? $b['logo'] : SOKO_URL . 'assets/img/dss-logo.png';
-		?><!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+		?><!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8">
 <script>try{if(localStorage.getItem('soko_desk_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sign in · Dynamic Desk</title><meta name="robots" content="noindex"><link rel="manifest" href="<?php echo esc_url( home_url( '/desk/manifest.webmanifest' ) ); ?>"><link rel="icon" type="image/png" href="<?php echo esc_url( SOKO_URL . 'assets/app/icon-192.png' ); ?>"><meta name="theme-color" content="#1d2156"><link rel="apple-touch-icon" href="<?php echo esc_url( SOKO_URL . 'assets/app/apple-touch.png' ); ?>"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dynamic Desk">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -193,7 +193,7 @@ button{width:100%;height:50px;border:0;border-radius:12px;background:<?php echo 
 @media(max-width:800px){body{grid-template-columns:1fr}.art{min-height:220px;padding:28px}.art svg{display:none}.art p{display:none}}
 </style></head><body>
 <div class="art"><div class="brand"><img src="<?php echo esc_url( $logo ); ?>" alt=""><span>Dynamic Desk</span></div>
-<div><h1>Your whole business, one desk.</h1><p>Sales, M-Pesa payments, invoices, stock, installations and reports for <?php echo esc_html( $s['business'] ); ?>.</p></div>
+<div><h1>Your whole business, one desk.</h1><p>Sales, payments, invoices, stock, installations and reports for <?php echo esc_html( $s['business'] ); ?>.</p></div>
 <svg viewBox="0 0 400 300" aria-hidden="true"><circle cx="300" cy="70" r="46" fill="<?php echo esc_attr( $b['accent'] ); ?>"/><circle cx="300" cy="70" r="70" fill="<?php echo esc_attr( $b['accent'] ); ?>" opacity=".18"/><g transform="translate(60 150) skewX(-24)"><?php for ( $r = 0; $r < 3; $r++ ) { for ( $c = 0; $c < 5; $c++ ) { echo '<rect x="' . ( $c * 52 ) . '" y="' . ( $r * 38 ) . '" width="48" height="34" fill="#2f6fd0" stroke="#9cc3ff" stroke-width="1.5"/>'; } } ?></g></svg>
 </div>
 <form method="post" action="<?php echo esc_url( home_url( '/desk/login/' ) ); ?>">
@@ -212,7 +212,7 @@ button{width:100%;height:50px;border:0;border-radius:12px;background:<?php echo 
 	private static function shell() {
 		$b = self::brand();
 		$css = SOKO_URL . 'assets/desk.css?v=' . SOKO_VERSION;
-		?><!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+		?><!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8">
 <script>try{if(localStorage.getItem('soko_desk_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dynamic Desk</title><meta name="robots" content="noindex"><link rel="manifest" href="<?php echo esc_url( home_url( '/desk/manifest.webmanifest' ) ); ?>"><link rel="icon" type="image/png" href="<?php echo esc_url( SOKO_URL . 'assets/app/icon-192.png' ); ?>"><meta name="theme-color" content="#1d2156"><link rel="apple-touch-icon" href="<?php echo esc_url( SOKO_URL . 'assets/app/apple-touch.png' ); ?>"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dynamic Desk"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?php echo esc_url( $css ); ?>">

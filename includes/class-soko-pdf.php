@@ -207,11 +207,11 @@ final class Soko_PDF {
 			$pdf->SetXY( 20, $y + 3 );
 			$pdf->SetFont( 'Helvetica', 'B', 10 );
 			self::color( $pdf, array( 10, 143, 60 ) );
-			$pdf->Cell( 80, 5, 'Pay with M-Pesa', 0, 2 );
+			$pdf->Cell( 80, 5, 'How to pay', 0, 2 );
 			self::color( $pdf, self::INK );
 			$pdf->SetFont( 'Helvetica', '', 9.5 );
 			if ( $ins['number'] ) {
-				$pdf->Cell( 80, 5, self::t( $ins['kind'] . ': ' . $ins['number'] ), 0, 2 );
+				$pdf->Cell( 80, 5, self::t( 'M-Pesa ' . $ins['kind'] . ': ' . $ins['number'] ), 0, 2 );
 				if ( $ins['account'] ) {
 					$pdf->Cell( 80, 5, self::t( 'Account number: ' . $ins['account'] ), 0, 2 );
 				}

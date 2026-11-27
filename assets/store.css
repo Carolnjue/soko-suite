@@ -887,3 +887,5 @@ html[data-theme=dark] .fband a i,html[data-theme=dark] .fband a i.g,html[data-th
 .cb .ferr{grid-column:1/-1}
 /* run 3: comfortable tap rows for checkboxes on touch screens */
 @media (hover:none){label:has(>input[type=checkbox]),label:has(>input[type=radio]){min-height:44px;display:flex;align-items:center;gap:10px}}
+@media(hover:none){.qty span,.qty button{flex:none;min-width:40px}.qty{flex-wrap:nowrap}}
+@media(hover:none){.foot a{padding:9px 0}.ann-l a,.ann-r a{min-height:36px}.rm{min-height:40px;padding:0 10px;margin-left:-10px}}

@@ -261,17 +261,17 @@ final class Soko_Sections {
 				'home'     => array(
 					'title'    => 'Home',
 					'seo'      => 'Solar systems, batteries, water heaters and pumps in Kenya | Dynamic Smart Systems',
-					'desc'     => 'Buy solar kits, panels, lithium batteries, inverters, water heaters and pumps online and pay by M-Pesa. Installed by EPRA-licensed engineers.',
+					'desc'     => 'Buy solar kits, panels, lithium batteries, inverters, water heaters and pumps online with easy payment. Installed by EPRA-licensed engineers.',
 					'sections' => array(
 						$sec( 'hero_carousel', array( 'autoplay' => 1, 'slides' => array(
-							array( 'tab' => 'Homes', 'kicker' => 'Home solar kits', 'title' => 'Stay powered through every blackout', 'text' => 'Panels, inverter and lithium battery in one kit, priced with installation. Pay by M-Pesa.', 'cta_label' => 'Shop home kits', 'cta_link' => '/shop/kits/', 'cta2_label' => 'Calculate my system', 'cta2_link' => '/planner/', 'image' => 'soko:stock/home-family.jpg', 'fact' => '3–10 kW', 'fact_text' => 'complete home kits' ),
+							array( 'tab' => 'Homes', 'kicker' => 'Home solar kits', 'title' => 'Stay powered through every blackout', 'text' => 'Panels, inverter and lithium battery in one kit, priced with installation.', 'cta_label' => 'Shop home kits', 'cta_link' => '/shop/kits/', 'cta2_label' => 'Calculate my system', 'cta2_link' => '/planner/', 'image' => 'soko:stock/home-family.jpg', 'fact' => '3–10 kW', 'fact_text' => 'complete home kits' ),
 							array( 'tab' => 'Businesses', 'kicker' => 'Commercial and institutional', 'title' => 'Cut your power bill, keep your business running', 'text' => 'Hybrid and grid-tied systems for hotels, schools, farms and offices, from a 10 kW bakery to a 70 kW hotel.', 'cta_label' => 'Request a quote', 'cta_link' => '/contact/', 'cta2_label' => 'See our projects', 'cta2_link' => '/projects/', 'image' => 'soko:stock/business-team.jpg', 'fact' => '70 kW', 'fact_text' => 'largest hotel install' ),
 							array( 'tab' => 'Installation', 'kicker' => 'Design, supply and install', 'title' => 'One team, from site survey to switch-on', 'text' => 'We design, supply, install and commission every system, then stay with you through warranty and aftercare.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Our services', 'cta2_link' => '/services/', 'image' => 'soko:stock/installer-roof.jpg', 'fact' => 'EPRA', 'fact_text' => 'licensed technicians' ),
 							array( 'tab' => 'Smart systems', 'kicker' => 'Power backup, CCTV and IT', 'title' => 'Backup power, security and IT support', 'text' => 'Solar CCTV, street and flood lighting, power backup and IT consultancy for homes, offices and institutions.', 'cta_label' => 'Shop CCTV and lighting', 'cta_link' => '/shop/cctv/', 'cta2_label' => 'Talk to an engineer', 'cta2_link' => '/contact/', 'image' => 'soko:stock/smart-panel.jpg' ),
 						) ) ),
 						$sec( 'trust_strip', array( 'items' => array(
 							array( 'icon' => 'shield', 'title' => 'EPRA-licensed', 'text' => 'technicians and engineers' ),
-							array( 'icon' => 'battery', 'title' => 'Pay by M-Pesa', 'text' => 'receipt sent instantly' ),
+							array( 'icon' => 'battery', 'title' => 'Easy payment', 'text' => 'receipt sent instantly' ),
 							array( 'icon' => 'kit', 'title' => 'Countrywide delivery', 'text' => 'and installation' ),
 							array( 'icon' => 'tools', 'title' => 'Aftercare', 'text' => 'maintenance visits' ),
 						) ) ),
@@ -338,7 +338,7 @@ final class Soko_Sections {
 						$sec( 'contact', array( 'title' => '', 'text' => '' ) ),
 						$sec( 'faq', array( 'title' => 'Common questions', 'text' => '', 'items' => array(
 							array( 'q' => 'Do you install outside Nairobi?', 'a' => 'Yes. We have installed in Kisumu, Vihiga, Voi, Machakos and beyond. Delivery and installation costs depend on distance.' ),
-							array( 'q' => 'How do I pay?', 'a' => 'By M-Pesa at checkout or against your invoice number. You get a receipt immediately. For larger projects we take a deposit to start and the balance on handover.' ),
+							array( 'q' => 'How do I pay?', 'a' => 'By mobile money, bank transfer, card or cash, at checkout or against your invoice number. You get a receipt immediately. For larger projects we take a deposit to start and the balance on handover.' ),
 							array( 'q' => 'Are your technicians licensed?', 'a' => 'Yes. Our technicians and engineers are licensed by EPRA.' ),
 						) ) ),
 					),

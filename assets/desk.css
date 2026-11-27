@@ -335,3 +335,6 @@ td.nw{white-space:nowrap}@media(max-width:640px){.stack td.nw{white-space:normal
 .pickrow{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
 .pickrow .btn{width:100%}
 }
+/* run 3: on phones keep toasts clear of form buttons */
+@media (max-width:760px){.toast{top:calc(10px + env(safe-area-inset-top));bottom:auto!important}.toast:not(.on){transform:translateX(-50%) translateY(-20px)!important}}
+.toast.err{color:#fff;border-color:transparent}

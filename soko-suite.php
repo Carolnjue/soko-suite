@@ -3,7 +3,7 @@
  * Plugin Name:       Soko Suite
  * Plugin URI:        https://github.com/Carolnjue/soko-suite
  * Description:       Storefront, M-Pesa checkout, invoicing, CRM, stock, installations, accounting reports and a front-end business desk in one plugin.
- * Version:           1.6.7
+ * Version:           1.6.8
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            Soko Suite
@@ -15,8 +15,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SOKO_VERSION', '1.6.7' );
-define( 'SOKO_DB_VERSION', '8' );
+define( 'SOKO_VERSION', '1.6.8' );
+define( 'SOKO_DB_VERSION', '9' );
 define( 'SOKO_FILE', __FILE__ );
 define( 'SOKO_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SOKO_URL', plugin_dir_url( __FILE__ ) );

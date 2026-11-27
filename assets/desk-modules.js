@@ -21,7 +21,7 @@
       var ch = d.sales_change, att = [];
       (d.neworders || []).forEach(function (o) { att.push(['var(--brand)', 'New website order ' + esc(o.number) + ' · ' + esc(o.name || '') + (+o.paid > 0 ? ' · part paid' : ' · call to confirm'), money(o.total), '#sales/' + o.id]); });
       (d.overdue || []).forEach(function (o) { att.push(['var(--bad)', esc(o.number) + ' overdue · ' + esc(o.name), money(o.bal), '#sales/' + o.id]); });
-      (d.unmatched || []).forEach(function (u) { att.push(['var(--warn)', 'Unmatched M-Pesa ' + esc(u.code) + ' from ' + esc(u.payer), money(u.amount), '#payments']); });
+      (d.unmatched || []).forEach(function (u) { att.push(['var(--warn)', 'Unmatched payment ' + esc(u.code) + ' from ' + esc(u.payer), money(u.amount), '#payments']); });
       if (d.to_pack) att.push(['var(--warn)', d.to_pack + ' paid website order' + (d.to_pack > 1 ? 's' : '') + ' to pack', 'Open', '#sales/web']);
       (d.low || []).forEach(function (p) { att.push(['var(--warn)', 'Low stock: ' + esc(p.name), (+p.stock) + ' left', '#stock/' + p.id]); });
       (d.licences || []).forEach(function (l) { att.push(['var(--brand)', esc(l.name) + ' renews ' + K.ds(l.expires), 'Renew', '#compliance']); });
@@ -37,7 +37,7 @@
         '<div class="box"><h3>Needs attention</h3><p class="sub">' + (att.length ? 'Open an item to deal with it' : 'All clear') + '</p><ul class="list">' + (att.length ? att.slice(0, 9).map(function (a) { return '<li class="click" data-go="' + a[3] + '"><span class="pip" style="background:' + a[0] + '"></span><span>' + a[1] + '</span><b class="mono">' + a[2] + '</b></li>'; }).join('') : '<li><span class="pip" style="background:var(--ok)"></span><span>Nothing overdue, unmatched or low.</span><span></span></li>') + '</ul></div></div>' +
         '<div class="cols three"><div class="box link" data-go="#reports" data-set=\'{"rep":{"type":"sales","p":"month"}}\'><h3>Sales by category</h3><p class="sub">This month</p>' + ((d.cats || []).length ? K.bars(d.cats.map(function (c) { return [c.label, c.value]; })) : '<div class="empty">No sales yet this month</div>') + '</div>' +
         '<div class="box link" data-go="#schedule"><h3>Today</h3><p class="sub">' + K.d(K.today()) + '</p><ul class="list">' + ((d.today || []).length ? d.today.map(function (e) { return '<li class="click" data-go="#schedule"><b class="mono">' + K.t(e.start) + '</b><span>' + esc(e.title) + '<small>' + esc([e.who, e.location].filter(Boolean).join(' · ')) + '</small></span><span class="st">' + esc(e.kind) + '</span></li>'; }).join('') : '<li><span></span><span class="mut">Nothing scheduled</span><span></span></li>') + '</ul></div>' +
-        '<div class="box link" data-go="#payments"><h3>Latest payments</h3><p class="sub">M-Pesa, bank and cash</p><ul class="list">' + ((d.recent || []).length ? d.recent.map(function (p) { return '<li class="click" data-go="#payments"><span class="pip" style="background:' + (p.status === 'matched' ? 'var(--ok)' : 'var(--warn)') + '"></span><span>' + esc(p.payer || p.code) + '<small>' + esc(p.code) + ' · ' + (p.number ? esc(p.number) : 'unmatched') + '</small></span><b class="mono">' + money(p.amount) + '</b></li>'; }).join('') : '<li><span></span><span class="mut">No payments yet</span><span></span></li>') + '</ul></div></div>';
+        '<div class="box link" data-go="#payments"><h3>Latest payments</h3><p class="sub">All payment methods</p><ul class="list">' + ((d.recent || []).length ? d.recent.map(function (p) { return '<li class="click" data-go="#payments"><span class="pip" style="background:' + (p.status === 'matched' ? 'var(--ok)' : 'var(--warn)') + '"></span><span>' + esc(p.payer || p.code) + '<small>' + esc(p.code) + ' · ' + (p.number ? esc(p.number) : 'unmatched') + '</small></span><b class="mono">' + money(p.amount) + '</b></li>'; }).join('') : '<li><span></span><span class="mut">No payments yet</span><span></span></li>') + '</ul></div></div>';
       if (!K.can('reports')) {
         $$('[data-go="#reports"]', v).forEach(function (el) {
           if (el.classList.contains('kpi') && /margin/i.test(el.textContent)) {
@@ -62,7 +62,7 @@
     else if (arg && /^\d+$/.test(arg)) setTimeout(function () { K.openDoc(+arg); }, 50);
     var t = salesState.tab;
     var q = t === 'web' ? 'docs?type=invoice&source=web' : 'docs?type=' + t;
-    v.innerHTML = K.head('Sales and invoices', 'Quotations become invoices in one click. Every invoice has its own M-Pesa account number, so payments match themselves.', '<button class="btn" data-nq>' + ic(I.plus) + 'New quotation</button><button class="btn sun" data-ni>' + ic(I.plus) + 'New invoice</button>') +
+    v.innerHTML = K.head('Sales and invoices', 'Quotations become invoices in one click. Every invoice number doubles as the payment reference, so payments match themselves.', '<button class="btn" data-nq>' + ic(I.plus) + 'New quotation</button><button class="btn sun" data-ni>' + ic(I.plus) + 'New invoice</button>') +
       K.tabs('sales', [['invoice', 'Invoices'], ['quote', 'Quotations'], ['receipt', 'Receipts'], ['web', 'Website orders']], t) + '<div data-list><div class="boot" style="height:30vh"><div class="spin"></div></div></div>';
     $('[data-nq]', v).onclick = function () { K.editDoc('quote'); };
     $('[data-ni]', v).onclick = function () { K.editDoc('invoice'); };
@@ -85,7 +85,7 @@
         else cols.push({ k: 'state', label: 'Status', f: function (r) { return t === 'web' ? K.badge(r.fulfil || 'awaiting_payment') + ' ' + K.badge(r.state) : K.badge(r.state); } });
         if (t === 'invoice') cols.push({ k: 'etims_status', label: 'eTIMS', f: function (r) { return r.etims_status ? K.badge(r.etims_status) : ''; } });
         host.innerHTML = '<div class="box"><div class="toolbar"><input type="search" placeholder="Search number, customer or phone" value="' + esc(salesState.q) + '" data-q><div class="chips">' + states.map(function (s) { return '<button class="chip' + (salesState.state === s[0] ? ' on' : '') + '" data-st="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '</div><span class="tiny" style="margin-left:auto">' + list.length + ' · ' + money(total) + (bal ? ' · ' + money(bal) + ' owed' : '') + '</span></div>' +
-          K.table(cols, list, { click: 1, sortKey: salesState.sortKey, sortDir: salesState.sortDir, empty: t === 'web' ? 'No website orders yet' : 'Nothing here yet', emptySub: t === 'web' ? 'Orders placed on the website appear here, already linked to their M-Pesa payment.' : '' }) + '</div>';
+          K.table(cols, list, { click: 1, sortKey: salesState.sortKey, sortDir: salesState.sortDir, empty: t === 'web' ? 'No website orders yet' : 'Nothing here yet', emptySub: t === 'web' ? 'Orders placed on the website appear here, already linked to their payment.' : '' }) + '</div>';
         $('[data-q]', host).oninput = function (e) { salesState.q = e.target.value; var p = e.target.selectionStart; draw(); var n = $('[data-q]', host); n.focus(); n.setSelectionRange(p, p); };
         $$('[data-st]', host).forEach(function (b) { b.onclick = function () { salesState.state = b.dataset.st; draw(); }; });
         $$('[data-row]', host).forEach(function (tr) { tr.onclick = function () { K.openDoc(+tr.dataset.row); }; });
@@ -103,7 +103,7 @@
     K.api('docs/' + id).then(function (d) {
       setTimeout(function () { var nb = document.querySelector('.drawer .db'); if (nb && keep) nb.scrollTop = keep; }, 0);
       var c = d.customer || {}, isInv = d.type === 'invoice', isQ = d.type === 'quote', isR = d.type === 'receipt';
-      var waText = encodeURIComponent('Hello ' + (c.name || '') + ', here is your ' + (isQ ? 'quotation' : isInv ? 'invoice' : 'receipt') + ' ' + d.number + ' from ' + K.me.settings.business + ' for ' + money(d.total) + '.' + (isInv && d.balance > 0 ? ' Balance ' + money(d.balance) + '. Pay by M-Pesa using account number ' + d.number + ' or here: ' + d.pay_url : ' View it here: ' + d.public_pdf));
+      var waText = encodeURIComponent('Hello ' + (c.name || '') + ', here is your ' + (isQ ? 'quotation' : isInv ? 'invoice' : 'receipt') + ' ' + d.number + ' from ' + K.me.settings.business + ' for ' + money(d.total) + '.' + (isInv && d.balance > 0 ? ' Balance ' + money(d.balance) + '. Pay using reference ' + d.number + ' or online here: ' + d.pay_url : ' View it here: ' + d.public_pdf));
       var wa = 'https://wa.me/' + K.waNum(c.phone) + '?text=' + waText;
       var acts = [];
       acts.push('<button class="btn" data-a="pdf">' + ic(I.eye) + 'View PDF</button>');
@@ -286,8 +286,8 @@
       var mon = K.today().slice(0, 7), month = rows.filter(function (p) { return String(p.received).slice(0, 7) === mon; });
       var un = rows.filter(function (p) { return p.status !== 'matched'; });
       var mp = K.me.settings.mpesa || {};
-      v.innerHTML = K.head('Payments', 'M-Pesa payments arrive here the moment Safaricom confirms them and match to the right invoice by account number. Bank and cash payments are recorded here too.', '<label class="btn" title="Statement downloaded from the M-Pesa business portal">' + ic(I.up || I.plus) + 'Import M-Pesa statement<input type="file" accept=".csv,text/csv" hidden data-stmt></label><button class="btn sun" data-rec>' + ic(I.plus) + 'Record a payment</button>') +
-        (K.me.mpesa_ready ? '' : '<div class="notice">M-Pesa prompts at checkout are not switched on yet. Payments still match to invoices on their own when you forward M-Pesa SMS or import your statement (<a href="#settings/payments">set up in Settings</a>). You can also record any payment here with its M-Pesa code.</div>') +
+      v.innerHTML = K.head('Payments', 'Every payment received, by any method, matched to the right invoice by its reference.', '<label class="btn" title="Statement downloaded from the M-Pesa business portal">' + ic(I.up || I.plus) + 'Import M-Pesa statement<input type="file" accept=".csv,text/csv" hidden data-stmt></label><button class="btn sun" data-rec>' + ic(I.plus) + 'Record a payment</button>') +
+        (K.me.mpesa_ready ? '' : '<div class="notice">M-Pesa prompts at checkout are not switched on yet. Payments still match to invoices on their own when you forward M-Pesa SMS or import your statement (<a href="#settings/payments">set up in Settings</a>). You can also record any payment here with its reference.</div>') +
         '<div class="kpis"><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "payments", "p": "month"}}\'><small>Received this month</small><b>' + money(month.reduce(function (a, p) { return a + p.amount; }, 0)) + '</b><i class="mut">' + month.length + ' payments</i></div>' +
         '<div class="kpi link" data-go="#payments" data-set=\'{"pay": {"f": "matched", "q": ""}}\'><small>Matched automatically</small><b>' + (rows.length ? Math.round(rows.filter(function (p) { return p.status === 'matched'; }).length / rows.length * 100) : 0) + '%</b><i class="mut">by invoice number</i></div>' +
         '<div class="kpi link" data-go="#payments" data-set=\'{"pay": {"f": "unmatched", "q": ""}}\'><small>Waiting to match</small><b>' + un.length + '</b><i class="' + (un.length ? 'down' : 'up') + '">' + (un.length ? money(un.reduce(function (a, p) { return a + p.amount; }, 0)) : 'all matched') + '</i></div>' +
@@ -303,7 +303,7 @@
           { k: 'account_ref', label: 'Reference given', f: function (p) { return '<span class="mono">' + esc(p.account_ref) + '</span>'; } },
           { k: 'amount', label: 'Amount', n: 1, f: function (p) { return money(p.amount); } },
           { k: 'status', label: 'Matched to', f: function (p) { return p.status === 'matched' ? K.badge('matched', esc(p.invoice)) + (p.receipt ? '<div class="tiny">' + esc(p.receipt) + '</div>' : '') : '<div style="display:flex;gap:6px;align-items:center">' + K.badge('unmatched') + '<select data-m="' + p.id + '" style="width:auto;min-height:32px;font-size:13px"><option value="">Match to…</option>' + open.map(function (o) { return '<option value="' + o.id + '">' + esc(o.number) + ' · ' + esc(o.customer_name) + ' · ' + money(o.balance) + '</option>'; }).join('') + '</select></div>'; } }
-        ], list, { empty: 'No payments yet', emptySub: 'M-Pesa confirmations, prompts and recorded payments appear here.' });
+        ], list, { empty: 'No payments yet', emptySub: 'Confirmed and recorded payments appear here.' });
         $$('[data-m]', v).forEach(function (s) { s.onchange = function () { if (!s.value) return; var lab = s.options[s.selectedIndex].text; K.confirm('Match this payment to <b>' + esc(lab) + '</b>? A receipt will be issued to the customer.', 'Match and issue receipt').then(function (y) { if (!y) { s.value = ''; return; } K.api('payments/' + s.dataset.m + '/match', { body: { doc_id: +s.value } }).then(function (r) { K.toast(r.message); K.refreshBadges(); K.route(); }).catch(K.fail); }); }; });
       };
       draw();
@@ -650,7 +650,7 @@
   K.editExpense = function (x) {
     x = x || { date: K.today(), method: 'M-Pesa', category: (K.me.settings.expense_cats || [])[0] };
     var receipt = x.receipt || '';
-    var m = K.modal(x.id ? 'Edit expense' : 'Add expense', '<div class="grid2">' + K.field('Amount', 'amount', x.amount || '', 'number') + K.field('Date', 'date', x.date, 'date') + '</div><div class="grid2">' + K.field('Category', 'category', x.category, 'select', { options: opts(K.me.settings.expense_cats || ['Other']) }) + K.field('Paid by', 'method', x.method, 'select', { options: opts(['M-Pesa', 'Bank', 'Cash', 'Card', 'Cheque']) }) + '</div>' + K.field('Description', 'description', x.description, 'text') + '<div class="grid2">' + K.field('Reference or M-Pesa code', 'reference', x.reference, 'text') + K.field('VAT included (for the VAT return)', 'vat', x.vat || '', 'number', { hint: 'Only when you have a VAT receipt' }) + '</div><div class="flabel">Receipt photo</div><div class="imgs" data-r></div>',
+    var m = K.modal(x.id ? 'Edit expense' : 'Add expense', '<div class="grid2">' + K.field('Amount', 'amount', x.amount || '', 'number') + K.field('Date', 'date', x.date, 'date') + '</div><div class="grid2">' + K.field('Category', 'category', x.category, 'select', { options: opts(K.me.settings.expense_cats || ['Other']) }) + K.field('Paid by', 'method', x.method, 'select', { options: opts(['M-Pesa', 'Bank', 'Cash', 'Card', 'Cheque']) }) + '</div>' + K.field('Description', 'description', x.description, 'text') + '<div class="grid2">' + K.field('Reference or transaction code', 'reference', x.reference, 'text') + K.field('VAT included (for the VAT return)', 'vat', x.vat || '', 'number', { hint: 'Only when you have a VAT receipt' }) + '</div><div class="flabel">Receipt photo</div><div class="imgs" data-r></div>',
       (x.id ? '<button class="btn danger" data-del>Delete</button>' : '') + '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-s>Save</button>');
     var dr = function () { $('[data-r]', m).innerHTML = receipt ? '<div class="im"><img src="' + esc(receipt) + '" alt=""><button type="button" data-rr>✕</button></div>' : '<button type="button" class="add" data-ar>+ Add photo</button>'; };
     dr();
@@ -675,7 +675,19 @@
     $$('[data-x]', v).forEach(function (b) { b.onclick = function () { location.href = K.url('reports/' + repState.type + '?from=' + pr[0] + '&to=' + pr[1] + '&format=' + b.dataset.x); }; });
     K.api('reports/' + repState.type + '?from=' + pr[0] + '&to=' + pr[1]).then(function (r) {
       var h = '<h2 style="font-size:24px;margin:6px 0 2px">' + esc(r.title) + '</h2><p class="tiny" style="margin-bottom:12px">' + esc(r.period) + '</p>';
-      if (r.kpis.length) h += '<div class="kpis">' + r.kpis.map(function (k) { return '<div class="kpi"><small>' + esc(k[0]) + '</small><b>' + esc(k[1]) + '</b></div>'; }).join('') + '</div>';
+      var kpiGo = function (label) {
+        var l = String(label).toLowerCase();
+        if (/owed|overdue|unpaid/.test(l)) return ['#sales', { sales: { tab: 'invoice', state: 'owed', q: '' } }];
+        if (/net profit|expense/.test(l)) return ['#reports', { rep: { type: 'expenses' } }];
+        if (/gross|margin|sales|revenue/.test(l)) return ['#reports', { rep: { type: 'sales' } }];
+        if (/vat|tax/.test(l)) return ['#reports', { rep: { type: 'vat' } }];
+        if (/stock|value/.test(l)) return ['#stock', { stock: { tab: 'items', low: 0, q: '', cat: '' } }];
+        if (/paid|payment|collected|money in/.test(l)) return ['#payments', null];
+        if (/job|install/.test(l)) return ['#jobs', null];
+        if (/customer/.test(l)) return ['#crm', null];
+        return null;
+      };
+      if (r.kpis.length) h += '<div class="kpis">' + r.kpis.map(function (k) { var g = kpiGo(k[0]); if (g && g[0] === '#reports' && g[1].rep.type === repState.type) g = null; return '<div class="kpi' + (g ? ' link' : '') + '"' + (g ? ' data-go="' + g[0] + '"' + (g[1] ? " data-set='" + JSON.stringify(g[1]).replace(/'/g, '&#39;') + "'" : '') + ' title="Open the detail"' : '') + '><small>' + esc(k[0]) + '</small><b>' + esc(k[1]) + '</b></div>'; }).join('') + '</div>';
       if (r.chart && r.chart.length && r.chart[0].in != null) h += '<div class="fig" data-ch></div><div class="legend"><span><i style="background:var(--brand)"></i>Money in</span><span><i style="background:var(--sun)"></i>Money out</span></div>';
       else if (r.chart && r.chart.length) h += '<div style="margin-bottom:14px">' + K.bars(r.chart.slice(0, 8).map(function (c) { return [c.label, c.value]; })) + '</div>';
       r.sections.forEach(function (s) {

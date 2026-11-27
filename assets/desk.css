@@ -308,3 +308,9 @@ tr.loading{opacity:.6;cursor:progress;background:linear-gradient(90deg,transpare
 details.tech{margin:14px 0 4px;border:1px dashed var(--line2);border-radius:12px;padding:10px 14px;background:var(--alt)}
 details.tech summary{cursor:pointer;font-weight:600;color:var(--soft);font-size:14px}
 details.tech[open] summary{margin-bottom:10px;color:var(--ink)}
+.appways{list-style:none;padding:0;margin:8px 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.appways li{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--alt);display:flex;flex-direction:column;gap:4px;font-size:14px}
+.appways span{color:var(--soft)}
+@media(max-width:760px){.appways{grid-template-columns:minmax(0,1fr)}}
+[data-install][hidden]{display:none!important}
+td.nw{white-space:nowrap}@media(max-width:640px){.stack td.nw{white-space:normal}}

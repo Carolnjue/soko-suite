@@ -57,6 +57,12 @@ final class Soko_Desk {
 	}
 
 	public static function render( $arg ) {
+		if ( 'manifest' === $arg ) {
+			self::manifest();
+		}
+		if ( 'sw' === $arg ) {
+			self::service_worker();
+		}
 		nocache_headers();
 		header( 'X-Robots-Tag: noindex, nofollow' );
 		if ( 'logout' === $arg ) {
@@ -70,6 +76,67 @@ final class Soko_Desk {
 		}
 		update_user_meta( get_current_user_id(), 'soko_last_seen', time() );
 		self::shell();
+	}
+
+	/** Installable app: the Desk can be added to a phone home screen or installed on a computer. */
+	private static function manifest() {
+		$biz = soko_setting( 'business' );
+		header( 'Content-Type: application/manifest+json; charset=utf-8' );
+		header( 'Cache-Control: no-cache' );
+		echo wp_json_encode(
+			array(
+				'name'             => 'Dynamic Desk · ' . $biz,
+				'short_name'       => 'Dynamic Desk',
+				'description'      => 'Sales, payments, installations and the website for ' . $biz . '.',
+				'start_url'        => home_url( '/desk/?app=1' ),
+				'scope'            => home_url( '/desk/' ),
+				'id'               => home_url( '/desk/' ),
+				'display'          => 'standalone',
+				'background_color' => '#f4f6fb',
+				'theme_color'      => '#1d2156',
+				'icons'            => array(
+					array( 'src' => SOKO_URL . 'assets/app/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png' ),
+					array( 'src' => SOKO_URL . 'assets/app/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png' ),
+					array( 'src' => SOKO_URL . 'assets/app/maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ),
+				),
+				'shortcuts'        => array(
+					array( 'name' => 'New invoice', 'url' => home_url( '/desk/#sales' ) ),
+					array( 'name' => 'Payments', 'url' => home_url( '/desk/#payments' ) ),
+					array( 'name' => 'Schedule', 'url' => home_url( '/desk/#schedule' ) ),
+				),
+			),
+			JSON_UNESCAPED_SLASHES
+		);
+		exit;
+	}
+
+	/**
+	 * Service worker. The Desk always loads fresh from the website, so the installed app
+	 * updates itself; files are kept only so it opens quickly and shows a notice when offline.
+	 */
+	private static function service_worker() {
+		header( 'Content-Type: application/javascript; charset=utf-8' );
+		header( 'Cache-Control: no-cache' );
+		header( 'Service-Worker-Allowed: ' . wp_parse_url( home_url( '/desk/' ), PHP_URL_PATH ) );
+		$v = SOKO_VERSION;
+		echo "const V='desk-" . esc_js( $v ) . "';\n";
+		echo <<<'JS'
+self.addEventListener('install',e=>{self.skipWaiting();});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',e=>{
+  const r=e.request; if(r.method!=='GET')return;
+  const u=new URL(r.url);
+  if(u.pathname.indexOf('/wp-json/')>-1)return;
+  if(r.mode==='navigate'){
+    e.respondWith(fetch(r).catch(()=>new Response('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font:16px system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#f4f6fb;color:#1d2156;text-align:center"><div><h2>You are offline</h2><p>Dynamic Desk needs the internet. It will reload when you are back online.</p></div><script>addEventListener("online",()=>location.reload())</script>',{headers:{'Content-Type':'text/html'}})));
+    return;
+  }
+  if(/\.(css|js|png|jpg|jpeg|svg|woff2?)(\?|$)/.test(u.pathname+u.search)&&u.search.indexOf('v=')>-1){
+    e.respondWith(caches.open(V).then(c=>c.match(r).then(hit=>hit||fetch(r).then(res=>{if(res.ok)c.put(r,res.clone());return res;}))));
+  }
+});
+JS;
+		exit;
 	}
 
 	private static function brand() {
@@ -108,7 +175,7 @@ final class Soko_Desk {
 		$s    = Soko_Settings::all();
 		$logo = $b['logo'] ? $b['logo'] : SOKO_URL . 'assets/img/dss-logo.png';
 		?><!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<script>try{if(localStorage.getItem('soko_desk_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sign in · Dynamic Desk</title><meta name="robots" content="noindex">
+<script>try{if(localStorage.getItem('soko_desk_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sign in · Dynamic Desk</title><meta name="robots" content="noindex"><link rel="manifest" href="<?php echo esc_url( home_url( '/desk/manifest.webmanifest' ) ); ?>"><meta name="theme-color" content="#1d2156"><link rel="apple-touch-icon" href="<?php echo esc_url( SOKO_URL . 'assets/app/apple-touch.png' ); ?>"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dynamic Desk">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);font:16px/1.5 Inter,system-ui,sans-serif;color:#0f1d36;background:#fff}
@@ -146,7 +213,7 @@ button{width:100%;height:50px;border:0;border-radius:12px;background:<?php echo 
 		$b = self::brand();
 		$css = SOKO_URL . 'assets/desk.css?v=' . SOKO_VERSION;
 		?><!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<script>try{if(localStorage.getItem('soko_desk_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dynamic Desk</title><meta name="robots" content="noindex">
+<script>try{if(localStorage.getItem('soko_desk_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dynamic Desk</title><meta name="robots" content="noindex"><link rel="manifest" href="<?php echo esc_url( home_url( '/desk/manifest.webmanifest' ) ); ?>"><meta name="theme-color" content="#1d2156"><link rel="apple-touch-icon" href="<?php echo esc_url( SOKO_URL . 'assets/app/apple-touch.png' ); ?>"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dynamic Desk"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?php echo esc_url( $css ); ?>">
 <style>:root{--brand:<?php echo esc_html( $b['primary'] ); ?>;--side:<?php echo esc_html( $b['deep'] ); ?>;--sun:<?php echo esc_html( $b['accent'] ); ?>}</style>

@@ -124,7 +124,7 @@
     var key = opt.sortKey, dir = opt.sortDir || 1;
     if (key) rows = rows.slice().sort(function (a, b) { var x = a[key], y = b[key]; if (!isNaN(+x) && !isNaN(+y) && x !== '' && y !== '') return (x - y) * dir; return String(x || '').localeCompare(String(y || '')) * dir; });
     return '<div class="scroll"><table class="' + (opt.stack === false ? '' : 'stack') + '"><thead><tr>' + cols.map(function (c) { return '<th' + (c.n ? ' class="n"' : '') + (c.k ? ' data-sort="' + c.k + '"' : '') + '>' + esc(c.label) + (key === c.k ? (dir > 0 ? ' ↑' : ' ↓') : '') + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      rows.map(function (r) { return '<tr' + (opt.click ? ' class="click" data-row="' + esc(r[opt.id || 'id']) + '"' : '') + '>' + cols.map(function (c) { var v = c.f ? c.f(r) : esc(r[c.k]); return '<td' + (c.n ? ' class="n"' : '') + ' data-l="' + esc(c.label) + '">' + (v == null ? '' : v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+      rows.map(function (r) { return '<tr' + (opt.click ? ' class="click" data-row="' + esc(r[opt.id || 'id']) + '"' : '') + '>' + cols.map(function (c) { var v = c.f ? c.f(r) : esc(r[c.k]); var plain = String(v == null ? '' : v).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); var cls = (c.n ? 'n' : '') + (plain.length && plain.length <= 18 && !/<br|<div|<ul/.test(String(v)) ? ' nw' : ''); return '<td' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + ' data-l="' + esc(c.label) + '">' + (v == null ? '' : v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
   };
   K.sortable = function (host, state, redraw) {
     $$('th[data-sort]', host).forEach(function (th) {
@@ -187,7 +187,7 @@
     app.innerHTML = '<aside class="side" data-side><a class="brand" href="#home"><img src="' + esc(D.logo) + '" alt=""><span><b>Dynamic Desk</b><small>' + esc(K.me.settings.business) + '</small></span></a>' +
       order.map(function (g) { return '<h4>' + esc(g) + '</h4>' + groups[g].map(function (m) { return '<a href="#' + m.id + '" data-nav="' + m.id + '">' + K.ic(K.ICONS[m.id] || K.ICONS.home) + esc(m.label) + '<em data-badge="' + m.id + '" hidden></em></a>'; }).join(''); }).join('') +
       '<div class="foot">Signed in as ' + esc(K.me.role) + '<br><a href="' + esc(D.site) + '" target="_blank" rel="noopener">View website</a> · <a href="' + esc(D.logout) + '">Sign out</a></div></aside>' +
-      '<main><div class="top"><button class="btn ghost mbtn" data-menu aria-label="Menu">' + K.ic(K.ICONS.menu) + '</button><a class="mbrand" href="#home"><img src="' + esc(D.logo) + '" alt="">Desk</a><div class="gsearch">' + K.ic(K.ICONS.search) + '<input type="search" placeholder="Search invoices, customers, M-Pesa codes, products" aria-label="Search" data-gs><div class="gres" hidden data-gr></div></div>' +
+      '<main><div class="top"><button class="btn ghost mbtn" data-menu aria-label="Menu">' + K.ic(K.ICONS.menu) + '</button><button class="btn sun sm" data-install hidden>' + K.ic(K.ICONS.dl || K.ICONS.plus) + 'Install app</button><a class="mbrand" href="#home"><img src="' + esc(D.logo) + '" alt="">Desk</a><div class="gsearch">' + K.ic(K.ICONS.search) + '<input type="search" placeholder="Search invoices, customers, M-Pesa codes, products" aria-label="Search" data-gs><div class="gres" hidden data-gr></div></div>' +
       '<div class="tright"><button class="btn ghost themebtn" data-themebtn aria-label="Light or dark mode" title="Light or dark mode"><svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></button><a class="btn" href="' + esc(D.site) + '" target="_blank" rel="noopener">' + K.ic(K.ICONS.ext) + '<span>Website</span></a><button class="me" data-me><span class="av">' + esc((K.me.name || '?').split(' ').map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase()) + '</span><span><b>' + esc(K.me.first) + '</b><small>' + esc(K.me.role) + '</small></span></button></div></div><div id="view"></div></main>' +
       '<div class="scrim"></div><aside class="drawer" role="dialog" aria-modal="true"></aside><div class="modal"></div><div class="toast" role="status"></div>';
     $('[data-menu]').onclick = function () { $('[data-side]').classList.toggle('on'); };
@@ -254,4 +254,19 @@
       app.innerHTML = '<div class="boot"><b>Dynamic Desk could not start</b><span>' + esc(e.message) + '</span><a class="btn" href="">Try again</a></div>';
     });
   };
+})();
+
+/* Installable app: register the service worker and offer "Install app" where the browser supports it */
+(function () {
+  if (!('serviceWorker' in navigator)) return;
+  var base = (window.DESK && DESK.site ? DESK.site : '/') + 'desk/';
+  window.addEventListener('load', function () { navigator.serviceWorker.register(base + 'sw.js', { scope: base }).catch(function () {}); });
+  var deferred = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault(); deferred = e;
+    var b = document.querySelector('[data-install]'); if (!b) return;
+    b.hidden = false;
+    b.onclick = function () { b.hidden = true; deferred.prompt(); deferred.userChoice.then(function () { deferred = null; }); };
+  });
+  window.addEventListener('appinstalled', function () { var b = document.querySelector('[data-install]'); if (b) b.hidden = true; if (window.K && K.toast) K.toast('Dynamic Desk is installed. Open it from your apps or home screen.'); });
 })();

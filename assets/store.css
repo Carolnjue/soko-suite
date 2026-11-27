@@ -674,7 +674,7 @@ html[data-theme=dark] .ptabs button.on{background:var(--sun);border-color:var(--
 .flowv i{flex:1;min-width:24px;height:4px;margin:0 6px;border-radius:4px;background:repeating-linear-gradient(90deg,var(--sun) 0 10px,transparent 10px 18px);background-size:36px 4px;animation:dash 1s linear infinite}
 @keyframes dash{to{background-position:36px 0}}
 @media(max-width:920px){.phero.mosaic .wrap,.phero.actions .wrap,.phero.shophero .wrap,.phero.plhero .wrap{grid-template-columns:minmax(0,1fr)}.mzgrid{height:300px}.shimg{justify-self:stretch}.shimg img{aspect-ratio:21/9}}
-@media(max-width:600px){.qa{grid-template-columns:minmax(0,1fr)}.flowv svg{width:48px;height:48px;padding:9px}.mzstats div{min-width:0;flex:1}}
+@media(max-width:600px){.flowv svg{width:48px;height:48px;padding:9px}.mzstats div{min-width:0;flex:1}}
 @media(prefers-reduced-motion:reduce){.flowv i{animation:none}}
 .phero.photo{background:linear-gradient(90deg,var(--card) 0,var(--card) 42%,color-mix(in srgb,var(--card) 80%,transparent) 55%,transparent 78%),var(--img) right center/cover}
 .phero.photo .pcopy{max-width:560px}
@@ -829,3 +829,6 @@ html[data-theme=dark] .savings::before{display:none}html[data-theme=dark] .savin
 .cinfo>.nexts{display:block!important;padding:20px 20px 8px!important;border-bottom:0!important}
 .mcats span{border:1px solid var(--line)}
 @media(max-width:600px){.htabs button{font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.htabs button b,.htabs button span{overflow:hidden;text-overflow:ellipsis;max-width:100%}.wa{bottom:84px}}
+@media(max-width:600px){.qa{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.qa a{padding:12px;border-radius:14px}.qa a small,.qa a span{font-size:12px;overflow-wrap:anywhere}}
+.phero.slim + .band{padding-top:clamp(24px,3vw,40px)}
+.bgrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}

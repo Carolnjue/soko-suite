@@ -49,6 +49,8 @@ final class Soko_Store {
 		add_rewrite_rule( '^desk/?$', $q . 'desk', 'top' );
 		add_rewrite_rule( '^desk/login/?$', $q . 'desk&soko_arg=login', 'top' );
 		add_rewrite_rule( '^desk/logout/?$', $q . 'desk&soko_arg=logout', 'top' );
+		add_rewrite_rule( '^desk/manifest\.webmanifest$', $q . 'desk&soko_arg=manifest', 'top' );
+		add_rewrite_rule( '^desk/sw\.js$', $q . 'desk&soko_arg=sw', 'top' );
 		$site = get_option( 'soko_site' );
 		if ( is_array( $site ) && ! empty( $site['pages'] ) ) {
 			foreach ( array_keys( $site['pages'] ) as $slug ) {
@@ -356,7 +358,7 @@ final class Soko_Store {
 		foreach ( (array) $s['delivery'] as $i => $d ) {
 			$del .= '<label><input type="radio" name="delivery" value="' . (int) $i . '" data-fee="' . esc_attr( $d['fee'] ) . '"' . ( 0 === $i ? ' checked' : '' ) . '><span><b>' . esc_html( $d['label'] ) . '</b><small>' . esc_html( $d['note'] ) . '</small></span><b>' . ( (float) $d['fee'] ? esc_html( soko_money( $d['fee'] ) ) : 'Free' ) . '</b></label>';
 		}
-		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><h1>Checkout</h1><p>' . ( Soko_Mpesa::ready() ? 'Pay securely with M-Pesa. You get a receipt straight away and can track your order online.' : 'Place your order in a minute. We confirm it with you, you pay by M-Pesa, and you can track it online.' ) . '</p><ol class="costeps"><li class="on"><i>1</i>Cart</li><li class="on"><i>2</i>Your details</li><li><i>3</i>Pay with M-Pesa</li><li><i>4</i>Receipt</li></ol></div></div></section>';
+		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Secure checkout</span><h1>Checkout</h1><p>' . ( Soko_Mpesa::ready() ? 'Pay securely with M-Pesa. You get a receipt straight away and can track your order online.' : 'Place your order in a minute. We confirm it with you, you pay by M-Pesa, and you can track it online.' ) . '</p><ol class="costeps"><li class="on"><i>1</i>Cart</li><li class="on"><i>2</i>Your details</li><li><i>3</i>Pay with M-Pesa</li><li><i>4</i>Receipt</li></ol></div></div></section>';
 		echo '<section class="band"><div class="wrap co" data-checkout><form class="panel" data-co-form novalidate><h3>Your details</h3>
 			<div class="f2"><div class="f"><label for="cName">Full name</label><input id="cName" name="name" autocomplete="name" required></div><div class="f"><label for="cPhone">Phone (M-Pesa)</label><input id="cPhone" name="phone" inputmode="tel" autocomplete="tel" placeholder="07XX XXX XXX" required></div></div>
 			<div class="f2"><div class="f"><label for="cEmail">Email for your receipt</label><input id="cEmail" name="email" type="email" autocomplete="email"></div><div class="f"><label for="cCounty">County or town</label><input id="cCounty" name="county" autocomplete="address-level2"></div></div>
@@ -376,14 +378,14 @@ final class Soko_Store {
 		$tok = isset( $_GET['t'] ) ? sanitize_text_field( wp_unslash( $_GET['t'] ) ) : ''; // phpcs:ignore
 		$d   = $num ? Soko_Ledger::doc( $num ) : null;
 		if ( ! $d || ! $tok || ! hash_equals( (string) $d['token'], $tok ) || 'invoice' !== $d['type'] ) {
-			echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><h1>Track your order</h1><p>Use the link in your email or SMS, or enter your order number and phone.</p></div></div></section><section class="band"><div class="wrap co trackf"><form class="panel" data-find-form><div class="f2"><div class="f"><label for="tNum">Order or invoice number</label><input id="tNum" name="number" placeholder="INV-1001" required></div><div class="f"><label for="tPhone">Phone used</label><input id="tPhone" name="phone" inputmode="tel" required></div></div><button class="btn b-sun">Find my order</button><p class="formmsg" role="status"></p></form><aside class="tsteps"><h3>What happens after you order</h3><ol><li><b>Placed</b><span>We confirm your order and payment.</span></li><li><b>Paid</b><span>Your receipt is issued straight away.</span></li><li><b>Packed</b><span>Items are checked and packed at our store.</span></li><li><b>On the way</b><span>Delivery or our installation team is on its way.</span></li><li><b>Delivered</b><span>Installed, tested and handed over.</span></li></ol></aside></div></section>';
+			echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Order tracking</span><h1>Track your order</h1><p>Use the link in your email or SMS, or enter your order number and phone.</p></div></div></section><section class="band"><div class="wrap co trackf"><form class="panel" data-find-form><div class="f2"><div class="f"><label for="tNum">Order or invoice number</label><input id="tNum" name="number" placeholder="INV-1001" required></div><div class="f"><label for="tPhone">Phone used</label><input id="tPhone" name="phone" inputmode="tel" required></div></div><button class="btn b-sun">Find my order</button><p class="formmsg" role="status"></p></form><aside class="tsteps"><h3>What happens after you order</h3><ol><li><b>Placed</b><span>We confirm your order and payment.</span></li><li><b>Paid</b><span>Your receipt is issued straight away.</span></li><li><b>Packed</b><span>Items are checked and packed at our store.</span></li><li><b>On the way</b><span>Delivery or our installation team is on its way.</span></li><li><b>Delivered</b><span>Installed, tested and handed over.</span></li></ol></aside></div></section>';
 			return;
 		}
 		$steps = array( 'awaiting_payment' => 'Placed', 'to_pack' => 'Paid', 'packed' => 'Packed', 'dispatched' => 'On the way', 'delivered' => 'Delivered' );
 		$cur   = $d['fulfil'] ? $d['fulfil'] : ( 'paid' === $d['state'] ? 'to_pack' : 'awaiting_payment' );
 		$keys  = array_keys( $steps );
 		$idx   = array_search( $cur, $keys, true );
-		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><h1>Order ' . esc_html( $d['number'] ) . '</h1><p>' . esc_html( $d['customer'] ? 'For ' . $d['customer']['name'] : '' ) . ' · ' . esc_html( date_i18n( 'j M Y', strtotime( $d['date'] ) ) ) . '</p></div></div></section>';
+		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Order tracking</span><h1>Order ' . esc_html( $d['number'] ) . '</h1><p>' . esc_html( $d['customer'] ? 'For ' . $d['customer']['name'] : '' ) . ' · ' . esc_html( date_i18n( 'j M Y', strtotime( $d['date'] ) ) ) . '</p></div></div></section>';
 		echo '<section class="band"><div class="wrap co" data-track="' . esc_attr( wp_json_encode( array( 'doc' => $d['number'], 't' => $d['token'], 'balance' => $d['balance'], 'phone' => $d['customer'] ? soko_phone_display( $d['customer']['phone'] ) : '' ) ) ) . '"><div class="panel">';
 		if ( 'web' === $d['source'] ) {
 			echo '<ol class="track">';

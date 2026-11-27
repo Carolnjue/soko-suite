@@ -1062,3 +1062,4 @@ html[data-theme=dark] .card,html[data-theme=dark] .panel{box-shadow:0 8px 20px -
 .line{border-bottom-color:var(--line)}
 input,select,textarea{border-color:var(--line2)}
 html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#14171b;border-color:var(--line2)}
+@media(max-width:400px){.btn{white-space:normal;text-align:center;line-height:1.25;height:auto;min-height:48px;padding-top:10px;padding-bottom:10px}}

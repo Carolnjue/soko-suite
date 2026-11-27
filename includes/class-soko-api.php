@@ -2128,7 +2128,18 @@ final class Soko_API {
 			if ( ! $u || user_can( $u, 'manage_options' ) ) {
 				return new WP_Error( 'soko', 'This is the web team support account and cannot be changed here.', array( 'status' => 400 ) );
 			}
-			wp_update_user( array( 'ID' => $id, 'display_name' => sanitize_text_field( $b['name'] ), 'user_email' => sanitize_email( $b['email'] ) ) );
+			wp_update_user( array( 'ID' => $id, 'display_name' => sanitize_text_field( $b['name'] ), 'first_name' => sanitize_text_field( $b['name'] ), 'user_email' => sanitize_email( $b['email'] ) ) );
+			// Change the sign-in username (WordPress has no built-in way to rename one).
+			$nu = isset( $b['username'] ) ? sanitize_user( strtolower( trim( (string) $b['username'] ) ), true ) : '';
+			if ( $nu && $nu !== $u->user_login ) {
+				if ( username_exists( $nu ) ) {
+					return new WP_Error( 'soko', 'That username is already taken.', array( 'status' => 400 ) );
+				}
+				global $wpdb;
+				$wpdb->update( $wpdb->users, array( 'user_login' => $nu, 'user_nicename' => sanitize_title( $nu ) ), array( 'ID' => $id ) );
+				clean_user_cache( $id );
+				soko_log( 'Changed username to ' . $nu, 'user', $id );
+			}
 			$u = new WP_User( $id );
 			$u->set_role( $role );
 			update_user_meta( $id, 'soko_phone', sanitize_text_field( isset( $b['phone'] ) ? $b['phone'] : '' ) );

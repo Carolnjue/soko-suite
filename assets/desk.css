@@ -376,3 +376,14 @@ html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] t
 @media(max-width:640px){.stack tr{border-bottom:1px solid var(--line2);padding:10px 0}.stack tbody tr:hover td{background:none}}
 [data-pcd][hidden]{display:none!important}
 @media(max-width:640px){th{white-space:normal}}
+/* phone header: logo at its natural shape, icons only, nothing spills */
+.top .mbrand img{height:32px;width:auto;max-width:130px;flex:none;object-fit:contain}
+@media(max-width:640px){
+.top{gap:6px;padding:10px 0}
+.top .mbrand{margin-right:auto;min-width:0}
+.top .tright{gap:6px;flex:none;margin-left:0}
+.top .sitebtn span,.top .me>span:not(.av){display:none}
+.top .sitebtn,.top .themebtn,.top .msearch,.top .mbtn{width:40px;height:40px;min-width:40px;padding:0;display:grid;place-items:center;flex:none}
+.top .msearch{margin-left:0}
+.top .me{padding:0;border:0;background:none}
+}

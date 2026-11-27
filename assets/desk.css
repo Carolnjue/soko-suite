@@ -353,3 +353,7 @@ html[data-theme=dark] .k-del{background:#0f2d33;color:#a7e6ef}html[data-theme=da
 /* run 4: phone fit */
 @media(max-width:640px){.kpi b{font-size:clamp(16px,5vw,22px);overflow-wrap:anywhere}.drawer table,.docv table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}.drawer td.n,.drawer th.n{white-space:nowrap}}
 .unsaved{position:sticky;bottom:12px;z-index:20;display:flex;gap:10px;align-items:center;justify-content:flex-end;background:var(--card);border:1px solid var(--sun);border-radius:12px;padding:10px 14px;margin-top:12px;box-shadow:0 18px 40px -20px rgba(0,0,0,.4)}.unsaved span{margin-right:auto;font-weight:600}
+
+/* run 6: journal and purchase lines on phones */
+@media(max-width:640px){.lines.jl tr{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px}.lines.jl td:first-child{grid-column:1/-1}.lines.jl td:first-child select{width:100%}.lines.jl td.jdr::before,.lines.jl td.jcr::before{display:block;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:3px}.lines.jl td.jdr::before{content:"Debit"}.lines.jl td.jcr::before{content:"Credit"}.lines.jl input{width:100%}
+.poline{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px!important}.poline>:first-child{grid-column:1/-1}.poline select,.poline input{width:100%}}

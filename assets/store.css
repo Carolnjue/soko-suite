@@ -976,3 +976,13 @@ html[data-theme=dark] .bo-note,html[data-theme=dark] .inst-note{background:#2a21
 .crumbs{align-items:center}.crumbs a{min-width:0;justify-content:flex-start}
 .pickup svg{flex:none;width:18px;height:18px;margin-top:2px}
 @media (pointer:coarse){.card h3 a{display:flex;align-items:center;min-height:44px}}
+.msearch{position:relative}.msearch .sugg{position:static;width:auto;margin:0 0 8px;box-shadow:none}
+/* run 6 */
+.apps{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+@media(max-width:560px){.apps{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.cb .f{flex:none}}
+.rt-out b{white-space:nowrap;font-size:clamp(22px,7vw,32px)}
+@media(hover:none){.rm{margin-left:0;padding:0}}
+.line .ltot{grid-column:2/-1;justify-self:end;font-size:14px}
+@media(min-width:601px) and (max-width:1024px){.phero.photo{background:linear-gradient(90deg,var(--card) 0,var(--card) 55%,color-mix(in srgb,var(--card) 85%,transparent) 72%,color-mix(in srgb,var(--card) 25%,transparent) 100%),var(--img) right center/cover}.phero.photo .pcopy{max-width:62%}}
+@media(min-width:1181px){.msrch{display:none!important}}

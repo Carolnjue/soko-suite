@@ -66,12 +66,12 @@
     return cart.map(function (c, i) {
       var p = byId[c.id];
       return '<div class="line">' + thumb(p) + '<div><h4>' + esc(p.name) + '</h4><small>' + money(p.price) + (c.install ? ' + installation ' + money(p.install) : '') + '</small>' + (backorder(c.id) ? '<small class="bo">Ordered in for you: about a week</small>' : '') + (edit ? '<button class="rm" data-rm="' + i + '">Remove</button>' : '') + '</div>' +
-        (edit ? '<span class="qty"><button data-cq="' + i + '" data-d="-1" aria-label="One less">−</button><b>' + c.qty + '</b><button data-cq="' + i + '" data-d="1" aria-label="One more">+</button></span>' : '<b>× ' + c.qty + '</b>') + '</div>';
+        (edit ? '<span class="qty"><button data-cq="' + i + '" data-d="-1" aria-label="One less">−</button><b>' + c.qty + '</b><button data-cq="' + i + '" data-d="1" aria-label="One more">+</button></span>' : '<b>× ' + c.qty + '</b>') + (c.qty > 1 ? '<b class="ltot">' + money(lineTotal(c)) + '</b>' : '') + '</div>';
     }).join('');
   }
   function sumHTML(fee) {
     var s = subtotal(), vat = S.vat ? Math.round((s + (fee || 0)) * S.vat / (100 + S.vat)) : 0;
-    return '<div><span>Items</span><span>' + money(s) + '</span></div>' + (hasGoods() ? '<div><span>Delivery</span><span>' + (fee === null ? 'Chosen at checkout' : fee ? money(fee) : 'Free') + '</span></div>' : '') + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + (fee || 0)) + '</span></div>';
+    return '<div><span>Items</span><span>' + money(s) + '</span></div>' + (!hasGoods() ? '' : installing() ? '<div><span>Delivery and installation</span><span>Included</span></div>' : fee === null ? '<div><span>Delivery</span><span>Chosen at checkout</span></div>' : '<div><span>' + (pickupChosen() ? 'Pick up' : 'Delivery') + '</span><span>' + (fee ? money(fee) : 'Free') + '</span></div>') + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + (fee || 0)) + '</span></div>';
   }
   function emptyCart() { return '<h3>Your cart is empty</h3><p class="muted" style="margin:8px 0 18px">Start with the solar calculator or browse the shop.</p><div class="row"><a class="btn b-sun" href="' + S.home + 'planner/">Calculate my system</a><a class="btn b-line" href="' + S.home + 'shop/">Go to the shop</a></div>'; }
   function upsell() {
@@ -85,7 +85,7 @@
   function cartDrawer() {
     var x = '<div class="dhead"><b>Your cart</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
     if (!cart.length) return openDrawer(x + '<div class="dbody">' + emptyCart() + '</div>');
-    openDrawer(x + '<div class="dbody">' + linesHTML(true) + '<div class="sum" style="margin-top:12px">' + sumHTML(null) + '</div><p class="muted" style="font-size:14px;margin-top:8px">Delivery is chosen at checkout.</p>' + upsell() + '</div><div class="buybar"><a class="btn b-line" href="' + S.home + 'cart/">View cart</a><a class="btn b-sun" href="' + S.home + 'checkout/">Checkout</a></div>');
+    openDrawer(x + '<div class="dbody">' + linesHTML(true) + '<div class="sum" style="margin-top:12px">' + sumHTML(null) + '</div>' + (hasGoods() && !installing() ? '<p class="muted" style="font-size:14px;margin-top:8px">Delivery is chosen at checkout.</p>' : '') + upsell() + '</div><div class="buybar"><a class="btn b-line" href="' + S.home + 'cart/">View cart</a><a class="btn b-sun" href="' + S.home + 'checkout/">Checkout</a></div>');
   }
   function renderCartPage() {
     var el = $('[data-cart-page]');
@@ -305,6 +305,7 @@
   /* ---------------- checkout ---------------- */
   function hasGoods() { return cart.some(function (c) { var p = byId[c.id]; return !p || p.kind === 'product'; }); }
   function installing() { return cart.some(function (c) { return c.install; }); }
+  function pickupChosen() { var r = document.querySelector('[name=delivery]:checked'), l = r && r.closest('label'); return !!(l && /pick|collect/i.test(l.textContent)); }
   function deliveryFee() { if (!hasGoods() || installing()) return 0; var r = $('[name=delivery]:checked'); return r ? +r.dataset.fee : 0; }
   function renderCheckout() {
     var co = $('[data-checkout]');
@@ -322,7 +323,14 @@
       var bo = $('.bo-note', db), any = cart.some(function (c) { return backorder(c.id); });
       if (any && !bo) { db.insertAdjacentHTML('beforeend', '<p class="bo-note">Some items are ordered in for you and arrive in about a week. We deliver them, or have them ready to collect, once they arrive.</p>'); }
       if (!any && bo) bo.remove();
+      $$('.opts label', db).forEach(function (l) {
+        if (!/pick|collect/i.test(l.textContent)) return;
+        var sm = l.querySelector('small'); if (!sm) return;
+        if (!sm.dataset.orig) sm.dataset.orig = sm.textContent;
+        sm.textContent = any ? sm.dataset.orig.replace(/Ready in [^·]*/i, 'Ready when your order arrives (about a week) ') : sm.dataset.orig;
+      });
     }
+    var eo = $('.inst-only', co); if (eo) eo.hidden = !installing();
     var ins = $('.inst-note', co); if (installing() && !ins) { var anchor = $('.inst-date', co); if (anchor) anchor.insertAdjacentHTML('beforebegin', '<p class="inst-note">Our team delivers and installs everything on this order, so there is no separate delivery choice.</p>'); } else if (!installing() && ins) ins.remove();
   }
   var coForm = $('[data-co-form]');
@@ -351,7 +359,8 @@
   function payFlow(host, d, stk, pay) {
     setTimeout(function () { try { host.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} var st = document.querySelectorAll('.costeps li'); if (st[2]) st[2].classList.add('on'); }, 30);
     var instr = pay && pay.number ? '<div class="paybill"><div><span>M-Pesa ' + esc(pay.kind) + '</span><b>' + esc(pay.number) + '</b></div>' + (pay.kind === 'Paybill' ? '<div><span>Account number</span><b>' + esc(d.doc) + '</b></div>' : '') + '<div><span>Amount</span><b>' + money(d.balance != null ? d.balance : d.total) + '</b></div></div>' : '';
-    var trackLink = d.url ? '<a class="btn b-line wide" href="' + esc(d.url) + '">View and track this order</a>' : '';
+    var pk = pickupChosen() ? document.querySelector('[name=delivery]:checked').closest('label').querySelector('small') : null;
+    var trackLink = (pk ? '<p class="pickup"><span><b>Pick up</b> ' + esc((pk.dataset.orig || pk.textContent).replace(/^.*?·\s*/, '')) + '. We call you when it is ready.</span></p>' : '') + (d.url ? '<a class="btn b-line wide" href="' + esc(d.url) + '">View and track this order</a>' : '');
     if (stk && stk.ok) {
       host.innerHTML = '<div class="payflow"><div class="phone"><span class="mpesa" style="font-size:16px">M-Pesa</span></div><h3>Check your phone</h3><p class="muted">Enter your M-Pesa PIN to pay <b>' + money(d.balance != null ? d.balance : d.total) + '</b> for order <b>' + esc(d.doc) + '</b>.</p><div class="prog"><b data-pg></b></div><p class="muted" data-pmsg style="font-size:14px">Waiting for Safaricom to confirm…</p></div>';
       var t0 = Date.now(), pg = $('[data-pg]', host);
@@ -422,7 +431,7 @@
   if (findF) findF.addEventListener('submit', function (e) {
     e.preventDefault();
     if (!check(findF)) return;
-    api('store/find', { method: 'POST', body: formData(findF) }).then(function (r) { location.href = r.url; }).catch(function (err) { msg(findF, err.message); });
+    api('store/find', { method: 'POST', body: formData(findF) }).then(function (r) { if (r.found === false) { msg(findF, r.message); return; } location.href = r.url; }).catch(function (err) { msg(findF, err.message); });
   });
 
   /* ---------------- product page ---------------- */
@@ -482,6 +491,7 @@
     if (t.closest('[data-open-cart]')) { cartDrawer(); return; }
     var cq = t.closest('[data-cq]'); if (cq) { var c = cart[+cq.dataset.cq]; if (+cq.dataset.d > 0 && cart.filter(function (x) { return x.id === c.id; }).reduce(function (a, x) { return a + x.qty; }, 0) >= maxQty(c.id)) { toast('Only ' + maxQty(c.id) + ' available.'); return; } if (+cq.dataset.d < 0 && c.qty <= 1) { return; } c.qty += +cq.dataset.d; saveCart(); if ($('[data-drawer]').classList.contains('on')) cartDrawer(); return; }
     var rm = t.closest('[data-rm]'); if (rm) { cart.splice(+rm.dataset.rm, 1); saveCart(); if ($('[data-drawer]').classList.contains('on')) cartDrawer(); return; }
+    if (t.closest('[data-msrch]')) { $('[data-mnav]').classList.add('on'); var mi = $('.msearch input'); if (mi) setTimeout(function () { mi.focus(); }, 60); return; }
     if (t.closest('[data-burger]')) { $('[data-mnav]').classList.add('on'); return; }
     if (t.closest('[data-close-mnav]')) { $('[data-mnav]').classList.remove('on'); return; }
     if (t.closest('[data-stop]') && !t.closest('button')) return;
@@ -624,7 +634,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
     var m = el.textContent.match(/^([^0-9]*)([0-9][0-9,]*\.?[0-9]*)(.*)$/); if (!m) return;
     var end = parseFloat(m[2].replace(/,/g, '')), dec = (m[2].split('.')[1] || '').length, t0 = null, comma = m[2].indexOf(',') > -1;
     function f(n) { var s = n.toFixed(dec); return comma ? Number(s).toLocaleString('en-GB', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : s; }
-    function step(t) { t0 = t0 || t; var k = Math.min(1, (t - t0) / 1100), e = 1 - Math.pow(1 - k, 3); el.textContent = m[1] + f(end * e) + m[3]; if (k < 1) requestAnimationFrame(step); }
+    function step(t) { t0 = t0 || t; var k = Math.min(1, (t - t0) / 450), e = 1 - Math.pow(1 - k, 3); el.textContent = m[1] + f(end * e) + m[3]; if (k < 1) requestAnimationFrame(step); }
     requestAnimationFrame(step);
   }
   var cio = ('IntersectionObserver' in window) && !reduce ? new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { countUp(e.target); cio.unobserve(e.target); } }); }, { threshold: 0.6 }) : null;
@@ -646,7 +656,19 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
 (function () {
   var wa = document.querySelector('.wa'); if (!wa) return;
   var hero = document.querySelector('.hero'), inHero = false;
-  function upd() { var ph = innerWidth < 1100; wa.classList.toggle('wa-hide', ph && (inHero || scrollY < 300)); }
+  var busy = new Set();
+  function upd() { var ph = innerWidth < 1100; wa.classList.toggle('wa-hide', ph && (inHero || scrollY < 300 || busy.size > 0)); }
+  /* also keep it off buttons and sliders it would cover */
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) busy.add(e.target); else busy.delete(e.target); }); upd(); }, { rootMargin: '0px 0px -0px 0px' });
+    document.querySelectorAll('.buyrow, .wa-ask, .sv-grid, .co form button[type=submit], .sticky-buy').forEach(function (el) { io.observe(el); });
+  }
   if (hero && 'IntersectionObserver' in window) new IntersectionObserver(function (es) { inHero = es[0].intersectionRatio >= 0.35; upd(); }, { threshold: [0, 0.35] }).observe(hero);
   addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd); upd();
+})();
+/* category chips on phones and tablets: bring the active one into view */
+(function () {
+  var side = document.querySelector('.side'), on = side && side.querySelector('a.on');
+  if (!on || side.scrollWidth <= side.clientWidth + 4) return;
+  side.scrollLeft = Math.max(0, on.offsetLeft - (side.clientWidth - on.offsetWidth) / 2);
 })();

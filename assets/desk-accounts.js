@@ -103,7 +103,7 @@
       '<div data-jl></div><button class="btn sm" data-ja>' + ic(I.plus) + 'Add line</button><div class="tot" data-jt></div>',
       '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-js>Save entry</button>', true);
     var draw = function () {
-      $('[data-jl]', m).innerHTML = '<table class="lines"><thead><tr><th>Account</th><th class="n">Debit</th><th class="n">Credit</th><th></th></tr></thead><tbody>' + lines.map(function (l, i) { return '<tr><td><select data-jc="' + i + '">' + opts(acc, l.code) + '</select></td><td class="q"><input type="number" min="0" step="any" value="' + l.debit + '" data-jdr="' + i + '" aria-label="Debit"></td><td class="p"><input type="number" min="0" step="any" value="' + l.credit + '" data-jcr="' + i + '" aria-label="Credit"></td><td>' + (lines.length > 2 ? '<button class="btn ghost sm" data-jx="' + i + '" aria-label="Remove line">' + ic(I.x) + '</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>';
+      $('[data-jl]', m).innerHTML = '<table class="lines jl"><thead><tr><th>Account</th><th class="n">Debit</th><th class="n">Credit</th><th></th></tr></thead><tbody>' + lines.map(function (l, i) { return '<tr><td><select data-jc="' + i + '">' + opts(acc, l.code) + '</select></td><td class="jdr"><input type="number" min="0" step="any" value="' + l.debit + '" data-jdr="' + i + '" aria-label="Debit"></td><td class="jcr"><input type="number" min="0" step="any" value="' + l.credit + '" data-jcr="' + i + '" aria-label="Credit"></td><td>' + (lines.length > 2 ? '<button class="btn ghost sm" data-jx="' + i + '" aria-label="Remove line">' + ic(I.x) + '</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>';
       tot();
     };
     var tot = function () { var d = lines.reduce(function (s, l) { return s + (+l.debit || 0); }, 0), c = lines.reduce(function (s, l) { return s + (+l.credit || 0); }, 0); $('[data-jt]', m).innerHTML = '<div><span>Debits</span><span>' + K.moneyx(d) + '</span></div><div><span>Credits</span><span>' + K.moneyx(c) + '</span></div><div class="g"><span>' + (Math.abs(d - c) < 0.01 ? 'Balanced' : 'Difference') + '</span><span class="' + (Math.abs(d - c) < 0.01 ? 'up' : 'down') + '">' + K.moneyx(Math.abs(d - c)) + '</span></div>'; };
@@ -129,24 +129,45 @@
     };
   }
 
-  function recon(host, acc) {
+  function recon(host, acc, r0) {
     var money_acc = acc.filter(function (a) { return a.money; });
-    K.api('accounts/' + st.rc + '/recon').then(function (r) {
-      var stmt = st.stmt === '' ? '' : +st.stmt;
+    var load = r0 ? Promise.resolve(r0) : K.api('accounts/' + st.rc + '/recon' + (st.rto ? '?to=' + st.rto : ''));
+    load.then(function (r) {
+      st.rto = r.to;
+      var stmt = r.stmt === null ? '' : r.stmt;
       var diff = stmt === '' ? null : Math.round((stmt - r.cleared) * 100) / 100;
-      host.innerHTML = '<div class="box"><div class="toolbar"><select data-ra style="width:auto">' + money_acc.map(function (a) { return '<option value="' + a.code + '"' + (a.code === st.rc ? ' selected' : '') + '>' + esc(a.name) + '</option>'; }).join('') + '</select>' +
-        '<label class="tiny" style="display:flex;gap:8px;align-items:center">Balance on your ' + (st.rc === '1010' ? 'M-Pesa' : st.rc === '1000' ? 'cash count' : 'bank') + ' statement <input type="number" step="any" data-rs value="' + esc(st.stmt) + '" style="width:160px"></label></div>' +
-        '<div class="kpis"><div class="kpi"><small>Balance in the books</small><b>' + K.moneyx(r.book) + '</b></div><div class="kpi"><small>Ticked as on the statement</small><b>' + K.moneyx(r.cleared) + '</b></div><div class="kpi"><small>Difference</small><b class="' + (diff === null ? '' : Math.abs(diff) < 0.01 ? 'up' : 'down') + '">' + (diff === null ? '—' : K.moneyx(diff)) + '</b><i class="mut">' + (diff === null ? 'Enter the statement balance' : Math.abs(diff) < 0.01 ? 'Reconciled' : 'Tick entries that appear on the statement') + '</i></div></div>' +
+      var ok = diff !== null && Math.abs(diff) < 0.01;
+      var rows = st.rall ? r.rows : r.rows.filter(function (x) { return !x.done; });
+      var last = r.history && r.history[0];
+      var where = st.rc === '1010' ? 'M-Pesa' : st.rc === '1000' ? 'cash count' : 'bank';
+      host.innerHTML = '<div class="box"><div class="toolbar" style="flex-wrap:wrap;gap:10px"><select data-ra style="width:auto" aria-label="Account">' + money_acc.map(function (a) { return '<option value="' + a.code + '"' + (a.code === st.rc ? ' selected' : '') + '>' + esc(a.name) + '</option>'; }).join('') + '</select>' +
+        '<label class="tiny" style="display:flex;gap:8px;align-items:center">Statement date <input type="date" data-rd value="' + esc(r.to) + '" max="' + K.today() + '"></label>' +
+        '<label class="tiny" style="display:flex;gap:8px;align-items:center">Closing balance on the ' + where + ' statement <input type="number" step="any" data-rs value="' + esc(stmt) + '" style="width:160px"></label>' +
+        '<button class="btn sm" data-rch>' + ic(I.plus) + 'Charges or interest</button></div>' +
+        (last ? '<p class="tiny">Last reconciled to ' + K.d(last.date) + ' at ' + K.moneyx(last.balance) + ' by ' + esc(last.by) + '.</p>' : '') +
+        '<div class="kpis"><div class="kpi"><small>Balance in the books at ' + K.d(r.to) + '</small><b>' + K.moneyx(r.book) + '</b></div><div class="kpi"><small>Ticked as on the statement</small><b>' + K.moneyx(r.cleared) + '</b></div><div class="kpi"><small>Difference</small><b class="' + (diff === null ? '' : ok ? 'up' : 'down') + '">' + (diff === null ? '—' : K.moneyx(diff)) + '</b><i class="mut">' + (diff === null ? 'Enter the statement balance' : ok ? 'Matches the statement' : 'Tick entries that appear on the statement') + '</i></div></div>' +
+        '<div class="toolbar"><label class="tiny" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-rall' + (st.rall ? ' checked' : '') + '> Show items already ticked</label>' + (ok ? '<button class="btn pri sm" data-rfin style="margin-left:auto">' + ic(I.check) + 'Finish reconciliation</button>' : '') + '</div>' +
         K.table([
           { k: 'done', label: 'On statement', f: function (x) { return '<input type="checkbox" data-rk="' + esc(x.key) + '"' + (x.done ? ' checked' : '') + ' aria-label="On statement">'; } },
           { k: 'date', label: 'Date', f: function (x) { return K.ds(x.date); } },
           { k: 'memo', label: 'Details', f: function (x) { return esc(x.memo) + (x.ref ? ' <span class="mono tiny">' + esc(x.ref) + '</span>' : ''); } },
           { k: 'amount', label: 'In', n: 1, f: function (x) { return x.amount > 0 ? K.moneyx(x.amount, 1) : ''; } },
           { k: 'out', label: 'Out', n: 1, f: function (x) { return x.amount < 0 ? K.moneyx(-x.amount, 1) : ''; } }
-        ], r.rows, { empty: 'Nothing in this account yet' }) + '</div>';
-      $('[data-ra]', host).onchange = function (e) { st.rc = e.target.value; st.stmt = ''; recon(host, acc); };
-      $('[data-rs]', host).onchange = function (e) { st.stmt = e.target.value; recon(host, acc); };
-      $$('[data-rk]', host).forEach(function (c) { c.onchange = function () { K.api('accounts/' + st.rc + '/recon', { body: { keys: [c.dataset.rk], on: c.checked ? 1 : 0 } }).then(function () { recon(host, acc); }).catch(K.fail); }; });
+        ], rows, { empty: st.rall ? 'Nothing in this account up to this date' : 'Everything up to this date is ticked' }) +
+        (r.history && r.history.length ? '<h3 style="margin-top:16px">Past reconciliations</h3>' + K.table([{ k: 'date', label: 'Statement date', f: function (x) { return K.d(x.date); } }, { k: 'balance', label: 'Balance', n: 1, f: function (x) { return K.moneyx(x.balance); } }, { k: 'by', label: 'Done by', f: function (x) { return esc(x.by); } }], r.history, {}) : '') + '</div>';
+      var post = function (body) { return K.api('accounts/' + st.rc + '/recon', { body: body }).then(function (x) { recon(host, acc, x); }); };
+      var saveStmt = function () { post({ do: 'statement', date: $('[data-rd]', host).value, balance: $('[data-rs]', host).value }).catch(K.fail); };
+      $('[data-ra]', host).onchange = function (e) { st.rc = e.target.value; st.rto = ''; recon(host, acc); };
+      $('[data-rs]', host).onchange = saveStmt;
+      $('[data-rd]', host).onchange = saveStmt;
+      $('[data-rall]', host).onchange = function (e) { st.rall = e.target.checked; recon(host, acc, r); };
+      var fin = $('[data-rfin]', host);
+      if (fin) fin.onclick = function () { post({ do: 'finish' }).then(function () { K.toast('Reconciliation saved.'); }).catch(K.fail); };
+      $('[data-rch]', host).onclick = function () {
+        var m = K.modal('Charges or interest on the statement', '<div class="grid2">' + K.field('What is it?', 'kind', 'charge', 'select', { options: [['charge', 'Charges or fees'], ['interest', 'Interest earned']] }) + K.field('Amount', 'amount', '', 'number') + '</div>' + K.field('Date', 'date', r.to, 'date'), '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-go>Add</button>');
+        $('[data-go]', m).onclick = function () { var f = K.read(m); f.do = 'charge'; post(f).then(function () { K.closeModal(); K.toast('Added and ticked.'); }).catch(K.fail); };
+      };
+      $$('[data-rk]', host).forEach(function (c) { c.onchange = function () { post({ keys: [c.dataset.rk], on: c.checked ? 1 : 0 }).catch(K.fail); }; });
     }).catch(K.fail);
   }
 })();

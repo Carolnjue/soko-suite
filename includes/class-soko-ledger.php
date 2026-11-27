@@ -95,8 +95,12 @@ final class Soko_Ledger {
 		}
 		if ( ! empty( $args['q'] ) ) {
 			$like    = '%' . $wpdb->esc_like( $args['q'] ) . '%';
-			$where[] = '(name LIKE %s OR sku LIKE %s OR brand LIKE %s OR runs LIKE %s)';
-			array_push( $vals, $like, $like, $like, $like );
+			$syn     = preg_match( '/repair|fault|fix|broken|service|not working/i', $args['q'] );
+			$where[] = '(name LIKE %s OR sku LIKE %s OR brand LIKE %s OR runs LIKE %s OR description LIKE %s' . ( $syn ? ' OR name LIKE %s OR name LIKE %s' : '' ) . ')';
+			array_push( $vals, $like, $like, $like, $like, $like );
+			if ( $syn ) {
+				array_push( $vals, '%maintenance%', '%survey%' );
+			}
 		}
 		$order = 'sort ASC, id ASC';
 		if ( ! empty( $args['sort'] ) ) {
@@ -186,7 +190,7 @@ final class Soko_Ledger {
 	}
 
 	/** Record a stock movement and update the product. */
-	public static function move( $product_id, $qty, $reason, $ref = '', $apply = true ) {
+	public static function move( $product_id, $qty, $reason, $ref = '', $apply = true, $cost = null ) {
 		global $wpdb;
 		$wpdb->insert(
 			soko_t( 'moves' ),
@@ -195,7 +199,7 @@ final class Soko_Ledger {
 				'qty'        => $qty,
 				'reason'     => $reason,
 				'ref'        => $ref,
-				'cost'       => (float) $wpdb->get_var( $wpdb->prepare( 'SELECT cost FROM ' . soko_t( 'products' ) . ' WHERE id = %d', $product_id ) ), // phpcs:ignore
+				'cost'       => null !== $cost ? (float) $cost : (float) $wpdb->get_var( $wpdb->prepare( 'SELECT cost FROM ' . soko_t( 'products' ) . ' WHERE id = %d', $product_id ) ), // phpcs:ignore
 				'user_id'    => get_current_user_id(),
 				'created'    => soko_now(),
 			)
@@ -291,7 +295,7 @@ final class Soko_Ledger {
 			$d['customer_credit'] = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(paid - total) FROM ' . soko_t( 'docs' ) . " WHERE type = 'invoice' AND status <> 'void' AND customer_id = %d AND paid > total", $d['customer_id'] ) ); // phpcs:ignore
 		}
 		if ( $with_lines ) {
-			$d['lines'] = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'lines' ) . ' WHERE doc_id = %d ORDER BY sort, id', $d['id'] ), ARRAY_A ); // phpcs:ignore
+			$d['lines'] = $wpdb->get_results( $wpdb->prepare( 'SELECT l.*, p.kind FROM ' . soko_t( 'lines' ) . ' l LEFT JOIN ' . soko_t( 'products' ) . ' p ON p.id = l.product_id WHERE l.doc_id = %d ORDER BY l.sort, l.id', $d['id'] ), ARRAY_A ); // phpcs:ignore
 			foreach ( $d['lines'] as &$l ) {
 				foreach ( array( 'qty', 'price', 'cost' ) as $k ) {
 					$l[ $k ] = (float) $l[ $k ];
@@ -300,6 +304,10 @@ final class Soko_Ledger {
 				$l['vatable']    = (int) $l['vatable'];
 			}
 			$d['customer'] = $d['customer_id'] ? self::customer( $d['customer_id'] ) : null;
+			if ( ! empty( $d['meta']['contact'] ) && ! empty( $d['customer'] ) ) {
+				$d['customer']['account_name'] = $d['customer']['name'];
+				$d['customer']['name']         = $d['meta']['contact'];
+			}
 		}
 		$d['pay_url'] = home_url( '/track/?doc=' . rawurlencode( $d['number'] ) . '&t=' . $d['token'] );
 		return $d;
@@ -354,6 +362,12 @@ final class Soko_Ledger {
 		$type = isset( $d['type'] ) ? $d['type'] : 'invoice';
 		if ( empty( $d['customer_id'] ) && ! empty( $d['customer'] ) ) {
 			$d['customer_id'] = self::customer_for( $d['customer'] );
+			// A shared or family phone: keep the name this order was placed under.
+			$typed = trim( sanitize_text_field( isset( $d['customer']['name'] ) ? $d['customer']['name'] : '' ) );
+			$known = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT name FROM ' . soko_t( 'customers' ) . ' WHERE id = %d', $d['customer_id'] ) ); // phpcs:ignore
+			if ( $typed && strcasecmp( $typed, $known ) ) {
+				$d['meta'] = array_merge( isset( $d['meta'] ) ? (array) $d['meta'] : array(), array( 'contact' => $typed ) );
+			}
 		}
 		$lines = array();
 		$i     = 0;
@@ -630,7 +644,7 @@ final class Soko_Ledger {
 	public static function email_doc( $doc, $to, $message = '' ) {
 		$file = Soko_PDF::doc_file( $doc );
 		$name = soko_setting( 'business' );
-		$kind = array( 'quote' => 'Quotation', 'invoice' => 'Invoice', 'receipt' => 'Receipt' );
+		$kind = array( 'quote' => 'Quotation', 'invoice' => 'Invoice', 'receipt' => 'Receipt', 'credit' => 'Credit note' );
 		$subj = $kind[ $doc['type'] ] . ' ' . $doc['number'] . ' from ' . $name;
 		$body = $message ? $message : sprintf(
 			"Hello %s,\n\nPlease find your %s %s attached.\n\n%s\n\nView or pay online: %s\n\n%s\n%s",

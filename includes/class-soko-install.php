@@ -42,6 +42,15 @@ final class Soko_Install {
 				update_option( 'soko_site', Soko_Sections::default_site(), false );
 				delete_option( 'soko_categories' );
 			}
+			if ( version_compare( (string) get_option( 'soko_db_version' ), '16', '<' ) ) {
+				// "Book a site survey" goes straight to the bookable survey, not the contact page.
+				$site = get_option( 'soko_site' );
+				if ( is_array( $site ) ) {
+					$json = wp_json_encode( $site );
+					$json = str_replace( '"cta_label":"Book a site survey","cta_link":"\/contact\/"', '"cta_label":"Book a site survey","cta_link":"\/product\/site-survey-and-system-design\/"', $json );
+					update_option( 'soko_site', json_decode( $json, true ), false );
+				}
+			}
 			if ( version_compare( (string) get_option( 'soko_db_version' ), '8', '<' ) ) {
 				// New private callback address: earlier builds could show it to staff.
 				$st = get_option( 'soko_settings' );
@@ -314,6 +323,7 @@ final class Soko_Install {
 			received datetime NULL,
 			demo tinyint(1) NOT NULL DEFAULT 0,
 			created datetime NULL,
+			supplier_inv varchar(60) NOT NULL DEFAULT '',
 			PRIMARY KEY  (id)
 		) $c;";
 		$sql[] = 'CREATE TABLE ' . $t( 'expenses' ) . " (
@@ -325,6 +335,8 @@ final class Soko_Install {
 			vat decimal(14,2) NOT NULL DEFAULT 0,
 			method varchar(20) NOT NULL DEFAULT 'M-Pesa',
 			reference varchar(60) NOT NULL DEFAULT '',
+			supplier varchar(120) NOT NULL DEFAULT '',
+			supplier_pin varchar(20) NOT NULL DEFAULT '',
 			receipt varchar(255) NOT NULL DEFAULT '',
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			demo tinyint(1) NOT NULL DEFAULT 0,

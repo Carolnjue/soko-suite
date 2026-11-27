@@ -944,7 +944,7 @@ final class Soko_API {
 				'email'    => $u->user_email,
 				'login'    => $u->user_login,
 				'role'     => $role,
-				'label'    => 'administrator' === $role ? 'Site administrator' : soko_roles()[ $role ][0],
+				'label'    => 'administrator' === $role ? 'Web team (support)' : soko_roles()[ $role ][0],
 				'last'     => $last ? date_i18n( 'j M, H:i', $last ) : 'Never',
 				'phone'    => get_user_meta( $u->ID, 'soko_phone', true ),
 				'disabled' => (bool) get_user_meta( $u->ID, 'soko_disabled', true ),
@@ -975,7 +975,7 @@ final class Soko_API {
 		if ( $id ) {
 			$u = get_userdata( $id );
 			if ( ! $u || user_can( $u, 'manage_options' ) ) {
-				return new WP_Error( 'soko', 'Site administrators are managed in WordPress.', array( 'status' => 400 ) );
+				return new WP_Error( 'soko', 'This is the web team support account and cannot be changed here.', array( 'status' => 400 ) );
 			}
 			wp_update_user( array( 'ID' => $id, 'display_name' => sanitize_text_field( $b['name'] ), 'user_email' => sanitize_email( $b['email'] ) ) );
 			$u = new WP_User( $id );

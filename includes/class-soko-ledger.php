@@ -382,7 +382,7 @@ final class Soko_Ledger {
 		if ( 'invoice' === $type && 'issued' === $doc['status'] ) {
 			Soko_Etims::queue( $doc );
 		}
-		soko_log( ( $id ? 'Saved ' : 'Created ' ) . $type . ' ' . $doc['number'], $type, $doc['number'] );
+		soko_log( ( $id ? 'Saved ' : 'Created ' ) . ( 'quote' === $type ? 'quotation' : $type ) . ' ' . $doc['number'], $type, $doc['number'] );
 		return $doc;
 	}
 

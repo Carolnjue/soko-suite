@@ -46,7 +46,7 @@
 
   /* ---------------- field renderers ---------------- */
   function linkList() {
-    return '<datalist id="sklinks">' + Object.keys(S.site.pages).map(function (p) { return '<option value="' + (p === 'home' ? '/' : '/' + p + '/') + '">' + esc(S.site.pages[p].title) + '</option>'; }).join('') + '<option value="/shop/">Shop</option><option value="/planner/">Power Planner</option><option value="/track/">Track an order</option>' + K.cats.map(function (c) { return '<option value="/shop/' + esc(c.id) + '/">' + esc(c.name) + '</option>'; }).join('') + '</datalist>';
+    return '<datalist id="sklinks">' + Object.keys(S.site.pages).map(function (p) { return '<option value="' + (p === 'home' ? '/' : '/' + p + '/') + '">' + esc(S.site.pages[p].title) + '</option>'; }).join('') + '<option value="/shop/">Shop</option><option value="/planner/">Solar calculator</option><option value="/track/">Track an order</option>' + K.cats.map(function (c) { return '<option value="/shop/' + esc(c.id) + '/">' + esc(c.name) + '</option>'; }).join('') + '</datalist>';
   }
   function field(f, obj, path) {
     var v = get(obj, path), p = ' data-p="' + esc(path) + '"', id = 'sf_' + path.replace(/\W/g, '_');

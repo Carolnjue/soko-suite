@@ -67,7 +67,7 @@ final class Soko_Blog {
 			return $h . '<div class="panel empty"><h3>Articles are on the way</h3><p>In the meantime, our engineers will answer any question on WhatsApp.</p><a class="btn b-sun" href="' . esc_url( home_url( '/contact/' ) ) . '">Talk to us</a></div></div></section>';
 		}
 		$first = array_shift( $posts );
-		$h    .= '<a class="bfeat" href="' . esc_url( $first['url'] ) . '"><span class="bimg">' . ( $first['image'] ? '<img src="' . esc_url( $first['image'] ) . '" alt="">' : '' ) . '</span><span class="bcopy">' . ( $first['topic'] ? '<em>' . esc_html( $first['topic'] ) . '</em>' : '' ) . '<h2>' . esc_html( $first['title'] ) . '</h2><p>' . esc_html( $first['excerpt'] ) . '</p><small>' . esc_html( date_i18n( 'j F Y', strtotime( $first['date'] ) ) ) . ' · ' . (int) $first['mins'] . ' min read</small><b>Read article →</b></span></a>';
+		$h    .= '<a class="bfeat" href="' . esc_url( $first['url'] ) . '"><span class="bimg">' . ( $first['image'] ? '<img src="' . esc_url( $first['image'] ) . '" alt="">' : '' ) . '</span><span class="bcopy">' . ( $first['topic'] ? '<em>' . esc_html( $first['topic'] ) . '</em>' : '' ) . '<h2>' . esc_html( $first['title'] ) . '</h2><p>' . esc_html( $first['excerpt'] ) . '</p><small>' . esc_html( date_i18n( 'j M Y', strtotime( $first['date'] ) ) ) . ' · ' . (int) $first['mins'] . ' min read</small><b>Read article →</b></span></a>';
 		if ( $posts ) {
 			$h .= '<div class="bgrid">';
 			foreach ( $posts as $p ) {
@@ -85,7 +85,7 @@ final class Soko_Blog {
 		}
 		$p    = self::row( $q[0], true );
 		$more = array_slice( array_values( array_filter( self::posts(), function ( $x ) use ( $p ) { return $x['id'] !== $p['id']; } ) ), 0, 3 );
-		$h    = '<article class="post"><header class="phead"><div class="wrap narrow"><nav class="crumbs"><a href="' . esc_url( home_url( '/blog/' ) ) . '">Blog</a><span>›</span><span>' . esc_html( $p['topic'] ? $p['topic'] : 'Article' ) . '</span></nav><h1>' . esc_html( $p['title'] ) . '</h1><p class="pmeta">' . esc_html( date_i18n( 'j F Y', strtotime( $p['date'] ) ) ) . ' · ' . (int) $p['mins'] . ' min read</p></div></header>';
+		$h    = '<article class="post"><header class="phead"><div class="wrap narrow"><nav class="crumbs"><a href="' . esc_url( home_url( '/blog/' ) ) . '">Blog</a><span>›</span><span>' . esc_html( $p['topic'] ? $p['topic'] : 'Article' ) . '</span></nav><h1>' . esc_html( $p['title'] ) . '</h1><p class="pmeta">' . esc_html( date_i18n( 'j M Y', strtotime( $p['date'] ) ) ) . ' · ' . (int) $p['mins'] . ' min read</p></div></header>';
 		if ( $p['image'] ) {
 			$h .= '<div class="wrap pimgw"><img class="pimg" src="' . esc_url( $p['image'] ) . '" alt=""></div>';
 		}

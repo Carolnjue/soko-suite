@@ -40,7 +40,7 @@ final class Soko_Mpesa {
 	public static function test() {
 		$c = self::cfg();
 		if ( empty( $c['key'] ) || empty( $c['secret'] ) ) {
-			return array( 'ok' => false, 'message' => 'Paste the Consumer Key and Consumer Secret first, then save.' );
+			return array( 'ok' => false, 'message' => 'Paste the Safaricom keys first, then save.' );
 		}
 		delete_transient( 'soko_mpesa_token' );
 		$t = self::token();
@@ -75,7 +75,7 @@ final class Soko_Mpesa {
 		}
 		$b = json_decode( wp_remote_retrieve_body( $r ), true );
 		if ( empty( $b['access_token'] ) ) {
-			return new WP_Error( 'soko_mpesa', 'M-Pesa sign-in failed. Check the consumer key and secret.' );
+			return new WP_Error( 'soko_mpesa', 'Safaricom did not accept the keys. Check them and try again.' );
 		}
 		set_transient( 'soko_mpesa_token', $b['access_token'], 50 * MINUTE_IN_SECONDS );
 		return $b['access_token'];
@@ -225,7 +225,7 @@ final class Soko_Mpesa {
 	public static function register_c2b() {
 		$c = self::cfg();
 		if ( empty( $c['key'] ) || empty( $c['secret'] ) || empty( $c['shortcode'] ) ) {
-			return array( 'ok' => false, 'message' => 'Add the shortcode, consumer key and secret first.' );
+			return array( 'ok' => false, 'message' => 'Add the Paybill number and the Safaricom keys first.' );
 		}
 		$res = self::post(
 			'/mpesa/c2b/v2/registerurl',

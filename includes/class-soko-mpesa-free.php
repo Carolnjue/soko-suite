@@ -20,7 +20,37 @@ final class Soko_Mpesa_Free {
 	}
 
 	public static function sms_url() {
-		return rest_url( 'soko/v1/sms/' . self::token() );
+		return home_url( '/mpesa-sms/' . self::token() . '/' );
+	}
+
+	/** Short, readable address for SMS forwarding apps: /mpesa-sms/{token}/ */
+	public static function pretty_route() {
+		$path = (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ); // phpcs:ignore
+		$base = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		if ( ! preg_match( '#^' . preg_quote( rtrim( $base, '/' ), '#' ) . '/mpesa-sms/([A-Za-z0-9]+)/?$#', $path, $m ) ) {
+			return;
+		}
+		$req = new WP_REST_Request( 'POST', '/soko/v1/sms/' . $m[1] );
+		$req->set_url_params( array( 'token' => $m[1] ) );
+		$raw  = file_get_contents( 'php://input' ); // phpcs:ignore
+		$json = json_decode( (string) $raw, true );
+		if ( is_array( $json ) ) {
+			$req->set_header( 'content-type', 'application/json' );
+			$req->set_body( $raw );
+		} else {
+			$req->set_body_params( wp_unslash( $_POST ) ); // phpcs:ignore
+			foreach ( wp_unslash( $_GET ) as $k => $v ) { // phpcs:ignore
+				$req->set_param( $k, $v );
+			}
+			if ( ! $_POST && $raw ) { // phpcs:ignore
+				$req->set_param( 'message', $raw );
+			}
+		}
+		$out = self::on_sms( $req );
+		if ( is_wp_error( $out ) ) {
+			wp_send_json( array( 'ok' => false, 'message' => $out->get_error_message() ), 403 );
+		}
+		wp_send_json( $out );
 	}
 
 	/**
@@ -153,3 +183,4 @@ final class Soko_Mpesa_Free {
 		return null;
 	}
 }
+add_action( 'init', array( 'Soko_Mpesa_Free', 'pretty_route' ), 1 );

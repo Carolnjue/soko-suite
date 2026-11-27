@@ -42,7 +42,7 @@
     }).then(function (r) {
       if (r.status === 401 || r.status === 403 && /nonce|sign in/i.test(r.statusText)) { }
       return r.text().then(function (t) {
-        var j; try { j = JSON.parse(t); } catch (e) { j = { message: 'The server sent an unexpected reply.' }; }
+        var j; try { j = JSON.parse(t); } catch (e) { j = { message: 'Something went wrong. Please try again.' }; }
         if (!r.ok) { var err = new Error(j && j.message ? j.message : 'Something went wrong.'); err.status = r.status; throw err; }
         return j;
       });

@@ -122,7 +122,7 @@ final class Soko_Sections {
 				'label'  => 'Text and photo',
 				'desc'   => 'A story block beside a picture.',
 				'fields' => array_merge(
-					array( array( 'k' => 'title', 'label' => 'Heading', 'type' => 'text' ), array( 'k' => 'text', 'label' => 'Text', 'type' => 'richtext' ) ),
+					array( array( 'k' => 'kicker', 'label' => 'Small line above heading', 'type' => 'text' ), array( 'k' => 'title', 'label' => 'Heading', 'type' => 'text' ), array( 'k' => 'text', 'label' => 'Text', 'type' => 'richtext' ) ),
 					$cta,
 					array(
 						array( 'k' => 'image', 'label' => 'Photo', 'type' => 'image' ),
@@ -292,8 +292,8 @@ final class Soko_Sections {
 					'sections' => array(
 						$sec( 'page_hero', array( 'title' => 'Everything solar, from one team', 'text' => 'We design, supply, install and maintain. One point of contact from the first survey to the final switch-on.', 'style' => 'photo', 'image' => $img . 'team-roof.jpg', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/' ) ),
 						$sec( 'services', array( 'title' => 'Our services', 'text' => '', 'items' => $services ) ),
-						$sec( 'text_image', array( 'title' => 'Borehole and farm solarisation', 'text' => '<p>Diesel pumps are expensive to run and break down when you need water most. We size a solar pump or a pumping inverter for your borehole depth and daily water need, so your tank fills every sunny day.</p><p>We also solarise farm machinery and cold rooms.</p>', 'image' => $img . 'proj-baraka.jpg', 'side' => 'right', 'cta_label' => 'See pumps', 'cta_link' => '/shop/pumps/' ) ),
-						$sec( 'text_image', array( 'title' => 'Solar water heating', 'text' => '<p>Pressurised flat-plate heaters with stainless steel tanks, from 150 to 350 litres. We install, pressure-test and hand over, with an electric backup for cloudy days.</p>', 'image' => $img . 'team-heater.jpg', 'side' => 'left', 'cta_label' => 'See water heaters', 'cta_link' => '/shop/heaters/' ) ),
+						$sec( 'text_image', array( 'kicker' => 'Water for farms and homes', 'title' => 'Borehole and farm solarisation', 'text' => '<p>Diesel pumps are expensive to run and break down when you need water most. We size a solar pump or a pumping inverter for your borehole depth and daily water need, so your tank fills every sunny day.</p><p>We also solarise farm machinery and cold rooms.</p>', 'image' => $img . 'proj-baraka.jpg', 'side' => 'right', 'cta_label' => 'See pumps', 'cta_link' => '/shop/pumps/' ) ),
+						$sec( 'text_image', array( 'kicker' => 'Hot water', 'title' => 'Solar water heating', 'text' => '<p>Pressurised flat-plate heaters with stainless steel tanks, from 150 to 350 litres. We install, pressure-test and hand over, with an electric backup for cloudy days.</p>', 'image' => $img . 'team-heater.jpg', 'side' => 'left', 'cta_label' => 'See water heaters', 'cta_link' => '/shop/heaters/' ) ),
 						$sec( 'steps', array( 'title' => 'How we work', 'text' => '', 'items' => $steps ) ),
 						$sec( 'cta_band', $cta ),
 					),
@@ -314,7 +314,7 @@ final class Soko_Sections {
 					'desc'     => 'Dynamic Smart Systems designs, supplies, installs and maintains solar systems across East Africa.',
 					'sections' => array(
 						$sec( 'page_hero', array( 'title' => 'Think solar, think Dynamic', 'text' => 'Solar solutions and IT consultancy from Nairobi, for homes, businesses, farms and institutions across East Africa.', 'style' => 'split', 'image' => $img . 'team-crew.jpg' ) ),
-						$sec( 'text_image', array( 'title' => 'One team from first survey to final switch-on', 'text' => '<p>We design, install and maintain solar and IT systems for homes, businesses, farms and institutions, sized to how each client actually uses power.</p><p>Our technicians and engineers are licensed by EPRA. We install proven brands such as Victron, JA Solar and Lithium Valley, and quote a fixed price before any work starts.</p>', 'image' => $img . 'team-roof.jpg', 'image2' => $img . 'team-street.jpg', 'side' => 'right', 'cta_label' => 'See our projects', 'cta_link' => '/projects/' ) ),
+						$sec( 'text_image', array( 'kicker' => 'Our story', 'title' => 'One team from first survey to final switch-on', 'text' => '<p>We design, install and maintain solar and IT systems for homes, businesses, farms and institutions, sized to how each client actually uses power.</p><p>Our technicians and engineers are licensed by EPRA. We install proven brands such as Victron, JA Solar and Lithium Valley, and quote a fixed price before any work starts.</p>', 'image' => $img . 'team-roof.jpg', 'image2' => $img . 'team-street.jpg', 'side' => 'right', 'cta_label' => 'See our projects', 'cta_link' => '/projects/' ) ),
 						$sec( 'columns', array( 'title' => 'What drives us', 'text' => '', 'items' => array(
 							array( 'title' => 'Our mission', 'text' => 'To offer an all-in-one, customised solution: solar PV on and off grid, solar water heating, solar lighting, borehole solarisation and power backup.' ),
 							array( 'title' => 'Our vision', 'text' => 'To provide solar for productive use and become East Africa\'s favourite solar solution provider, customer-centred and cost-effective.' ),

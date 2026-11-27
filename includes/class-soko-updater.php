@@ -104,7 +104,7 @@ final class Soko_Updater {
 		$target = trailingslashit( $remote_source ) . self::SLUG . '/';
 		if ( untrailingslashit( $source ) !== untrailingslashit( $target ) ) {
 			if ( ! $wp_filesystem->move( $source, $target, true ) ) {
-				return new WP_Error( 'soko_rename', 'Could not prepare the Soko Suite update.' );
+				return new WP_Error( 'soko_rename', 'Could not prepare the update.' );
 			}
 			$source = $target;
 		}

@@ -161,7 +161,7 @@
   }
   function appBtn(a, i) {
     var n = picks[i] || 0, h = hours[i] != null ? hours[i] : a[2];
-    return '<div class="app' + (n ? ' on' : '') + '" role="button" tabindex="0" data-app="' + i + '"><i class="aico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + (AICO[i] || '') + '"/></svg></i><span>' + esc(a[0]) + '<small>' + a[1] + ' W' + (n ? '' : ' · tap to add') + '</small>' + (n ? '<label class="hrs" data-stop>Hours a day <input type="number" min="0.1" max="24" step="0.5" value="' + h + '" data-hrs="' + i + '" aria-label="Hours a day for ' + esc(a[0]) + '"></label>' : '') + '</span>' +
+    return '<div class="app' + (n ? ' on' : '') + '" role="button" tabindex="0" data-app="' + i + '"><i class="aico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + (AICO[i] || '') + '"/></svg></i><span>' + esc(a[0]) + '<small>' + a[1] + ' W' + (n ? '' : ' · add') + '</small>' + (n ? '<label class="hrs" data-stop>Hours a day <input type="number" min="0.1" max="24" step="0.5" value="' + h + '" data-hrs="' + i + '" aria-label="Hours a day for ' + esc(a[0]) + '"></label>' : '') + '</span>' +
       (n ? '<span class="qty" data-stop><button type="button" data-dec="' + i + '" aria-label="One less">−</button><b>' + n + '</b><button type="button" data-inc="' + i + '" aria-label="One more">+</button></span>' : '<span class="qty"><span>+</span></span>') + '</div>';
   }
   function renderPlanner(keepFocus) {

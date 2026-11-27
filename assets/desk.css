@@ -305,3 +305,6 @@ tr.loading{opacity:.6;cursor:progress;background:linear-gradient(90deg,transpare
 .top .mbrand{align-items:center;gap:8px;font:700 15px Poppins;color:var(--ink);text-decoration:none}.top .mbrand img{height:28px}
 .tabs,.subtabs,[data-tabs]{scrollbar-width:none}.tabs::-webkit-scrollbar,.subtabs::-webkit-scrollbar,[data-tabs]::-webkit-scrollbar{display:none}
 @media(min-width:641px){.top .mbrand{display:none}}
+details.tech{margin:14px 0 4px;border:1px dashed var(--line2);border-radius:12px;padding:10px 14px;background:var(--alt)}
+details.tech summary{cursor:pointer;font-weight:600;color:var(--soft);font-size:14px}
+details.tech[open] summary{margin-bottom:10px;color:var(--ink)}

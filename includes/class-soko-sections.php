@@ -314,7 +314,7 @@ final class Soko_Sections {
 					'desc'     => 'Dynamic Smart Systems designs, supplies, installs and maintains solar systems across East Africa.',
 					'sections' => array(
 						$sec( 'page_hero', array( 'title' => 'Think solar, think Dynamic', 'text' => 'Solar solutions and IT consultancy from Nairobi, for homes, businesses, farms and institutions across East Africa.', 'style' => 'split', 'image' => $img . 'team-crew.jpg' ) ),
-						$sec( 'text_image', array( 'title' => 'One team from first survey to final switch-on', 'text' => '<p>We deliver state-of-the-art solar and IT solutions, built for reliability and efficiency. We design, implement and maintain systems that keep homes and businesses running.</p><p>Our technicians and engineers are licensed by EPRA, and we partner with global brands to deliver world-class systems at a fair cost.</p>', 'image' => $img . 'team-roof.jpg', 'image2' => $img . 'team-street.jpg', 'side' => 'right', 'cta_label' => 'See our projects', 'cta_link' => '/projects/' ) ),
+						$sec( 'text_image', array( 'title' => 'One team from first survey to final switch-on', 'text' => '<p>We design, install and maintain solar and IT systems for homes, businesses, farms and institutions, sized to how each client actually uses power.</p><p>Our technicians and engineers are licensed by EPRA. We install proven brands such as Victron, JA Solar and Lithium Valley, and quote a fixed price before any work starts.</p>', 'image' => $img . 'team-roof.jpg', 'image2' => $img . 'team-street.jpg', 'side' => 'right', 'cta_label' => 'See our projects', 'cta_link' => '/projects/' ) ),
 						$sec( 'columns', array( 'title' => 'What drives us', 'text' => '', 'items' => array(
 							array( 'title' => 'Our mission', 'text' => 'To offer an all-in-one, customised solution: solar PV on and off grid, solar water heating, solar lighting, borehole solarisation and power backup.' ),
 							array( 'title' => 'Our vision', 'text' => 'To provide solar for productive use and become East Africa\'s favourite solar solution provider, customer-centred and cost-effective.' ),
@@ -434,7 +434,7 @@ final class Soko_Sections {
 		if ( empty( $p['title'] ) && empty( $p['text'] ) ) {
 			return '';
 		}
-		$kicks = array( 'categories' => 'Shop by need', 'products' => 'Best sellers', 'savings' => 'Savings calculator', 'services' => 'What we do', 'projects' => 'Our work', 'steps' => 'How it works', 'contact' => 'Talk to us', 'faq' => 'Good to know', 'testimonials' => 'Client stories', 'stats' => 'In numbers', 'features' => 'Why choose us', 'team' => 'Our people' );
+		$kicks = array( 'categories' => 'Shop by need', 'products' => 'Best sellers', 'savings' => 'Savings calculator', 'services' => 'What we do', 'projects' => 'Our work', 'steps' => 'How it works', 'contact' => 'Talk to us', 'faq' => 'Good to know', 'testimonials' => 'Client stories', 'stats' => 'In numbers', 'features' => 'Why choose us', 'team' => 'Our people', 'gallery' => 'On site', 'columns' => 'Who we are', 'video' => 'Watch' );
 		$type  = isset( $p['_type'] ) ? $p['_type'] : '';
 		$kick  = isset( $p['kicker'] ) ? $p['kicker'] : ( isset( $kicks[ $type ] ) ? $kicks[ $type ] : '' );
 		return '<div class="sec-head"><div>' . ( $kick ? '<span class="kick">' . self::e( $kick ) . '</span>' : '' ) . ( ! empty( $p['title'] ) ? '<h2>' . self::e( $p['title'] ) . '</h2>' : '' ) . ( ! empty( $p['text'] ) ? '<p>' . self::e( $p['text'] ) . '</p>' : '' ) . '</div>' . $right . '</div>';
@@ -554,7 +554,10 @@ final class Soko_Sections {
 		$style = isset( $p['style'] ) ? $p['style'] : 'sky';
 		$img   = ! empty( $p['image'] ) ? esc_url( $p['image'] ) : '';
 		$btn   = self::btn( isset( $p['cta_label'] ) ? $p['cta_label'] : '', isset( $p['cta_link'] ) ? $p['cta_link'] : '' );
-		$copy  = '<h1>' . self::e( $p['title'] ) . '</h1>' . ( ! empty( $p['text'] ) ? '<p>' . self::e( $p['text'] ) . '</p>' : '' ) . ( $btn ? '<div class="row">' . $btn . '</div>' : '' );
+		$path  = trim( (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ), '/' ); // phpcs:ignore
+		$pk    = array( 'services' => 'Our services', 'projects' => 'Our work', 'about' => 'About us', 'contact' => 'Contact us' );
+		$kick  = ! empty( $p['kicker'] ) ? $p['kicker'] : ( isset( $pk[ $path ] ) ? $pk[ $path ] : '' );
+		$copy  = ( $kick ? '<span class="kick">' . self::e( $kick ) . '</span>' : '' ) . '<h1>' . self::e( $p['title'] ) . '</h1>' . ( ! empty( $p['text'] ) ? '<p>' . self::e( $p['text'] ) . '</p>' : '' ) . ( $btn ? '<div class="row">' . $btn . '</div>' : '' );
 		if ( 'split' === $style && $img ) {
 			return '<section class="phero split"><div class="wrap"><div class="pcopy">' . $copy . '</div><div class="pimg"><img src="' . $img . '" alt=""></div></div></section>';
 		}
@@ -746,7 +749,12 @@ final class Soko_Sections {
 		if ( ! empty( $p['image2'] ) ) {
 			$imgs .= '<img src="' . esc_url( $p['image2'] ) . '" alt="" loading="lazy">';
 		}
-		return '<section class="band"><div class="wrap ti' . $side . '"><div class="ttext"><h2>' . self::e( $p['title'] ) . '</h2><div class="rich">' . wp_kses_post( wpautop( isset( $p['text'] ) ? $p['text'] : '' ) ) . '</div>' . ( ! empty( $p['cta_label'] ) ? '<div class="row">' . self::btn( $p['cta_label'], $p['cta_link'], 'b-blue' ) . '</div>' : '' ) . '</div><div class="timg' . ( ! empty( $p['image2'] ) ? ' two' : '' ) . '">' . $imgs . '</div></div></section>';
+		static $ti_n = 0;
+		$ti_n++;
+		$path = trim( (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ), '/' ); // phpcs:ignore
+		$svc  = 'services' === $path;
+		$kick = ! empty( $p['kicker'] ) ? $p['kicker'] : ( $svc ? 'Service focus' : 'Our story' );
+		return '<section class="band"><div class="wrap ti' . $side . '"><div class="ttext sec-head"><div><span class="kick' . ( $svc ? ' numbered' : '' ) . '">' . ( $svc ? '<em class="tnum">' . sprintf( '%02d', $ti_n ) . '</em>' : '' ) . self::e( $kick ) . '</span><h2>' . self::e( $p['title'] ) . '</h2><div class="rich">' . wp_kses_post( wpautop( isset( $p['text'] ) ? $p['text'] : '' ) ) . '</div>' . ( ! empty( $p['cta_label'] ) ? '<div class="row">' . self::btn( $p['cta_label'], $p['cta_link'], 'b-blue' ) . '</div>' : '' ) . '</div></div><div class="timg' . ( ! empty( $p['image2'] ) ? ' two' : '' ) . '">' . $imgs . '</div></div></section>';
 	}
 
 	private static function r_columns( $p ) {
@@ -794,6 +802,9 @@ final class Soko_Sections {
 	}
 
 	private static function r_faq( $p ) {
+		if ( empty( $p['title'] ) ) {
+			$p['title'] = 'Common questions';
+		}
 		$h = '<section class="band"><div class="wrap narrow">' . self::head( $p ) . '<div class="faq">';
 		foreach ( (array) ( isset( $p['items'] ) ? $p['items'] : array() ) as $i ) {
 			$h .= '<details><summary>' . self::e( $i['q'] ) . '</summary><p>' . self::e( $i['a'] ) . '</p></details>';
@@ -804,7 +815,7 @@ final class Soko_Sections {
 	private static function r_cta_band( $p ) {
 		$img  = ! empty( $p['image'] ) ? $p['image'] : '';
 		$form = ! empty( $p['callback'] ) ? '<form class="cb" data-lead-form data-source="Call-me-back request" novalidate><input class="hp" name="website" tabindex="-1" autocomplete="off"><input name="name" placeholder="Your name" autocomplete="name" required aria-label="Your name"><input name="phone" placeholder="Phone, e.g. 0712 345 678" inputmode="tel" autocomplete="tel" required aria-label="Phone"><input type="hidden" name="interest" value="Call me back"><button class="btn b-sun" type="submit">Call me back</button></form>' : '';
-		return '<section class="cta band' . ( $img ? ' has-img' : '' ) . '"><div class="wrap"><div class="cta-copy"><h2>' . self::e( $p['title'] ) . '</h2><p>' . self::e( $p['text'] ) . '</p>' . $form . '<div class="row">' . self::btn( $p['cta_label'], $p['cta_link'], $form ? 'b-line' : 'b-sun' ) . self::btn( isset( $p['cta2_label'] ) ? $p['cta2_label'] : '', isset( $p['cta2_link'] ) ? $p['cta2_link'] : '', 'b-line' ) . '</div></div>' . ( $img ? '<div class="cta-pic"><img src="' . esc_url( $img ) . '" alt="" loading="lazy"><span class="cta-badge"><b>EPRA</b>licensed engineers</span></div>' : '' ) . '</div></section>';
+		return '<section class="cta band' . ( $img ? ' has-img' : '' ) . '"><div class="wrap"><div class="cta-copy hd"><span class="kick">' . self::e( ! empty( $p['kicker'] ) ? $p['kicker'] : 'Free consultation' ) . '</span><h2>' . self::e( $p['title'] ) . '</h2><p>' . self::e( $p['text'] ) . '</p>' . $form . '<div class="row">' . self::btn( $p['cta_label'], $p['cta_link'], $form ? 'b-line' : 'b-sun' ) . self::btn( isset( $p['cta2_label'] ) ? $p['cta2_label'] : '', isset( $p['cta2_link'] ) ? $p['cta2_link'] : '', 'b-line' ) . '</div></div>' . ( $img ? '<div class="cta-pic"><img src="' . esc_url( $img ) . '" alt="" loading="lazy"><span class="cta-badge"><b>EPRA</b>licensed engineers</span></div>' : '' ) . '</div></section>';
 	}
 
 	private static function r_contact( $p ) {

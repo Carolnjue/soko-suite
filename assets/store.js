@@ -528,7 +528,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   var io = ('IntersectionObserver' in window) && !reduce ? new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -6% 0px', threshold: 0.12 }) : null;
   function watch(el) { if (io) io.observe(el); else el.classList.add('in'); }
   /* section headings: kicker line draws, title rises word by word, intro follows */
-  $$('main .sec-head, main .pcopy, main .phero h1').forEach(function (h) {
+  $$('main .sec-head, main .pcopy, main .phero h1, main .cta-copy').forEach(function (h) {
     var t = h.matches('h1') ? h : h.querySelector('h2, h1');
     if (t && !t.dataset.split) {
       t.dataset.split = 1;

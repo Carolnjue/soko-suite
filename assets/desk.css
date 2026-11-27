@@ -302,5 +302,6 @@ tr.loading{opacity:.6;cursor:progress;background:linear-gradient(90deg,transpare
 .stack td:empty{display:none}
 .top .mbrand{display:flex}
 }
-.top .mbrand{display:none;align-items:center;gap:8px;font:700 15px Poppins;color:var(--ink);text-decoration:none}.top .mbrand img{height:28px}
+.top .mbrand{align-items:center;gap:8px;font:700 15px Poppins;color:var(--ink);text-decoration:none}.top .mbrand img{height:28px}
 .tabs,.subtabs,[data-tabs]{scrollbar-width:none}.tabs::-webkit-scrollbar,.subtabs::-webkit-scrollbar,[data-tabs]::-webkit-scrollbar{display:none}
+@media(min-width:641px){.top .mbrand{display:none}}

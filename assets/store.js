@@ -622,7 +622,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   bar.innerHTML = '<div><small>' + (d.name || '') + '</small><b>' + (priceEl ? priceEl.textContent : '') + '</b></div><button class="btn b-sun" type="button">Add to cart</button>';
   document.body.appendChild(bar);
   bar.querySelector('button').addEventListener('click', function () { var b = document.querySelector('[data-add-pdp]'); if (b) b.click(); });
-  new IntersectionObserver(function (es) { var on = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; bar.classList.toggle('on', on); var t = $('.toast'); if (t) t.classList.toggle('up', on); }).observe(row);
+  new IntersectionObserver(function (es) { var on = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; bar.classList.toggle('on', on); var t = document.querySelector('.toast'); if (t) t.classList.toggle('up', on); }).observe(row);
 })();
 /* phones: keep the WhatsApp button off the home banner buttons while the banner is on screen */
 (function () {

@@ -625,3 +625,14 @@ html[data-theme=dark] .ptabs button.on{background:var(--sun);border-color:var(--
 .cotrust{list-style:none;padding:14px 0 0;margin:14px 0 0;border-top:1px solid var(--line);display:grid;gap:10px}
 .cotrust li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--soft)}
 .cotrust svg{flex:none;color:var(--ok);margin-top:2px}
+.trackf{align-items:start}
+.tsteps{background:var(--alt);border:1px solid var(--line);border-radius:var(--r);padding:24px}
+.tsteps h3{font-size:19px;color:var(--head);margin-bottom:14px}
+.tsteps ol{list-style:none;margin:0;padding:0;counter-reset:t;display:grid;gap:4px}
+.tsteps li{counter-increment:t;display:grid;grid-template-columns:36px minmax(0,1fr);column-gap:12px;position:relative;padding-bottom:14px}
+.tsteps li::before{content:counter(t);grid-row:span 2;width:32px;height:32px;border-radius:50%;background:var(--card);border:2px solid var(--blue);color:var(--blue);display:grid;place-items:center;font:700 14px var(--hf),Poppins}
+.tsteps li:not(:last-child)::after{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line2)}
+.tsteps b{color:var(--head)}.tsteps span{color:var(--soft);font-size:14.5px}
+.cols>div{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--sun);box-shadow:0 18px 40px -32px rgba(29,33,86,.5);transition:transform .25s}
+.cols>div:hover{transform:translateY(-4px)}
+.cols>div:nth-child(2){border-top-color:var(--blue)}.cols>div:nth-child(3){border-top-color:#14955a}

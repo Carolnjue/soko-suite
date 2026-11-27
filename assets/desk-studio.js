@@ -197,10 +197,8 @@
       S.site = s; S.dirty = false; S.sec = null;
       if (!S.site.pages[S.page]) S.page = 'home';
       drawPanel();
-      var f = $('[data-pf]', v);
-      f.onload = function () { try { f.contentDocument.body.addEventListener('click', clickToEdit, true); } catch (e) {} };
-      f.src = pageUrl(S.page) + '?soko_preview=1';
       $('[data-url]', v).textContent = pageUrl(S.page);
+      preview();
     }).catch(K.fail);
     window.onbeforeunload = function () { return S.dirty && K.mod === 'studio' ? 'You have unpublished changes.' : undefined; };
   };

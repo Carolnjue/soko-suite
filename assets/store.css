@@ -507,9 +507,9 @@ header.main{border-bottom:0;box-shadow:0 1px 0 var(--line)}
 @media(max-width:920px){.hslide{grid-template-rows:auto}}
 
 /* dark mode */
-html[data-theme=dark]{color-scheme:dark;--bg:#0d1324;--card:#141b30;--muted:#1b2340;--alt:#10172b;--sky:#18224a;--warm:#2a2116;--line:#252f4d;--line2:#33406a;--ink:#e6eaf5;--ink2:#c3cbe0;--soft:#9aa6c4;--head:#f2f5fc;--glass:rgba(20,27,48,.92)}
+html[data-theme=dark]{color-scheme:dark;--bg:#111316;--card:#1a1d22;--muted:#23272d;--alt:#16191d;--sky:#1d2127;--warm:#221d17;--line:#2a2f36;--line2:#383e47;--ink:#e8eaed;--ink2:#c4c8ce;--soft:#9ba1a9;--head:#ffffff;--glass:rgba(26,29,34,.94)}
 html[data-theme=dark] body.soko{background:var(--bg)}
-html[data-theme=dark] header.main{background:rgba(13,19,36,.92)}
+html[data-theme=dark] header.main{background:#16191d;border-bottom:1px solid #2a2f36}
 html[data-theme=dark] .logo img,html[data-theme=dark] .logo-w img,html[data-theme=dark] .mtop img{background:#fff;border-radius:10px;padding:4px 8px}
 html[data-theme=dark] .soko select,html[data-theme=dark] .soko input,html[data-theme=dark] .soko textarea{background:var(--muted);color:var(--ink);border-color:var(--line2)}
 html[data-theme=dark] .b-line{color:var(--ink)}
@@ -603,8 +603,8 @@ html[data-theme=dark] .chips li{color:var(--ink2)}
 @media(max-width:600px){.sv-kpis{grid-template-columns:minmax(0,1fr)}.sv-kpis div{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}.sv-mode button{padding:0 10px;font-size:14px}}
 .card[hidden]{display:none!important}
 html[data-theme=dark] .soko .search input{background:transparent}
-html[data-theme=dark] .kick,html[data-theme=dark] .catbar .menu>li:last-child>a,html[data-theme=dark] .dd-cats .dd-all,html[data-theme=dark] .sbody em,html[data-theme=dark] .bfeat em,html[data-theme=dark] .bcard em,html[data-theme=dark] .tiles small,html[data-theme=dark] .bfeat b,html[data-theme=dark] .catbar .menu>li:hover>a,html[data-theme=dark] .rich a,html[data-theme=dark] .crumbs a:hover{color:#8ab8ff}
-html[data-theme=dark] .sbody>svg,html[data-theme=dark] .strip svg,html[data-theme=dark] .cat .cimg svg{color:#8ab8ff}
+html[data-theme=dark] .kick,html[data-theme=dark] .catbar .menu>li:last-child>a,html[data-theme=dark] .dd-cats .dd-all,html[data-theme=dark] .sbody em,html[data-theme=dark] .bfeat em,html[data-theme=dark] .bcard em,html[data-theme=dark] .tiles small,html[data-theme=dark] .bfeat b,html[data-theme=dark] .catbar .menu>li:hover>a,html[data-theme=dark] .rich a,html[data-theme=dark] .crumbs a:hover{color:#f7a440}
+html[data-theme=dark] .sbody>svg,html[data-theme=dark] .strip svg,html[data-theme=dark] .cat .cimg svg{color:#f7a440}
 html[data-theme=dark] .ptabs button.on{background:var(--sun);border-color:var(--sun);color:#1b1100}
 @media(max-width:700px){.ptabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:calc(-1 * max(16px,4vw));padding-inline:max(16px,4vw)}.ptabs::-webkit-scrollbar{display:none}.ptabs button{flex:none}.cb{flex-direction:column}.cb input:not(.hp){flex:none;width:100%;border-bottom:1px solid var(--line)!important;border-radius:0}.cb .btn{width:100%}}
 .apps{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
@@ -706,73 +706,27 @@ html[data-theme=dark] .ptabs button.on{background:var(--sun);border-color:var(--
 .sbuy.on{transform:none}
 .sbuy small{display:block;font-size:12px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}.sbuy b{font:700 18px var(--hf),Poppins;color:var(--head)}
 @media(max-width:760px){.sbuy{display:flex}.sbuy.on~.wa,body:has(.sbuy.on) .wa{bottom:84px}}
-/* ===== dark mode, "solar night": deep indigo sky, warm sun glow, bright product frames ===== */
-html[data-theme=dark]{--bg:#0e1433;--card:#172052;--muted:#1f2a63;--alt:#121a42;--sky:#223074;--warm:#3a2a2e;--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.16);--ink:#eef1fb;--ink2:#cdd5ef;--soft:#a6b0d4;--head:#ffffff;--glass:rgba(23,32,82,.86)}
-html[data-theme=dark] body.soko{background:radial-gradient(900px 600px at 90% -10%,rgba(247,148,29,.18),transparent 60%),radial-gradient(800px 700px at -10% 30%,rgba(77,122,255,.16),transparent 60%),linear-gradient(180deg,#0e1433,#111a45 40%,#0e1433);background-attachment:fixed}
-html[data-theme=dark] .announce{background:linear-gradient(90deg,#0b1030,#1b1747 60%,#3b2235);border-bottom-color:rgba(255,255,255,.08)}
-html[data-theme=dark] header.main{background:rgba(14,20,51,.78);backdrop-filter:blur(14px)}
-html[data-theme=dark] .catbar{background:rgba(23,32,82,.55)}
-html[data-theme=dark] .catbar .menu>li>a::after{background:linear-gradient(90deg,var(--sun),#ffd27a)}
-html[data-theme=dark] .hero{background:radial-gradient(600px 420px at 78% 40%,rgba(247,148,29,.32),transparent 65%),radial-gradient(2px 2px at 12% 18%,rgba(255,255,255,.7),transparent 60%),radial-gradient(1.5px 1.5px at 32% 62%,rgba(255,255,255,.5),transparent 60%),radial-gradient(1.5px 1.5px at 48% 12%,rgba(255,255,255,.6),transparent 60%),radial-gradient(2px 2px at 64% 82%,rgba(255,255,255,.4),transparent 60%),linear-gradient(160deg,#101741,#1d1f57 55%,#34204a);border-bottom-color:rgba(255,255,255,.06)}
-html[data-theme=dark] .kick{color:#ffc46b}
-html[data-theme=dark] .kick::before{background:#ffc46b}
-html[data-theme=dark] .hpic img{box-shadow:0 0 0 1px rgba(255,255,255,.08),0 40px 80px -30px rgba(247,148,29,.45)}
-html[data-theme=dark] .hfact,html[data-theme=dark] .cta-badge{background:#fff;color:#1d2156}
-html[data-theme=dark] .hfact b,html[data-theme=dark] .cta-badge b{color:#1d2156}html[data-theme=dark] .hfact span,html[data-theme=dark] .cta-badge{color:#55627a}
-html[data-theme=dark] .htabs button i{background:rgba(255,255,255,.14)}
-html[data-theme=dark] .strip{background:rgba(23,32,82,.6)}
-html[data-theme=dark] .strip svg{background:rgba(255,196,107,.12);color:#ffc46b}
-html[data-theme=dark] .card,html[data-theme=dark] .svc a,html[data-theme=dark] .qa a,html[data-theme=dark] .fband a,html[data-theme=dark] .mzstats div,html[data-theme=dark] .panel,html[data-theme=dark] .result,html[data-theme=dark] .sv-card,html[data-theme=dark] .tsteps,html[data-theme=dark] .cols>div{background:linear-gradient(180deg,rgba(35,47,112,.85),rgba(23,32,82,.9));border-color:rgba(255,255,255,.09)}
-html[data-theme=dark] .card:hover,html[data-theme=dark] .svc a:hover,html[data-theme=dark] .qa a:hover,html[data-theme=dark] .fband a:hover{border-color:rgba(255,196,107,.55);box-shadow:0 24px 50px -28px rgba(247,148,29,.55)}
-html[data-theme=dark] .media,html[data-theme=dark] .art,html[data-theme=dark] .cat .cimg,html[data-theme=dark] .ti-img,html[data-theme=dark] .pi,html[data-theme=dark] .ci{background:#eef2fb}
-html[data-theme=dark] .chips li{background:rgba(255,255,255,.08);color:#dbe2f7}
-html[data-theme=dark] .addbtn{background:linear-gradient(135deg,var(--sun),#ffb347);color:#1b1100}
-html[data-theme=dark] .ptabs button{background:rgba(255,255,255,.05)}
-html[data-theme=dark] .band.tint,html[data-theme=dark] .savings,html[data-theme=dark] .steps-band{background:linear-gradient(160deg,rgba(29,31,87,.65),rgba(52,32,74,.45))}
-html[data-theme=dark] .savings::before{background:radial-gradient(circle,rgba(247,148,29,.35),transparent 65%)}
-html[data-theme=dark] .sv-kpis div{background:rgba(255,255,255,.06)}
-html[data-theme=dark] .sv-mode{background:rgba(255,255,255,.07)}html[data-theme=dark] .sv-mode button.on{background:var(--sun);color:#1b1100}
-html[data-theme=dark] .steps.tl .dot{background:#1f2a63;border-color:rgba(255,196,107,.5);color:#ffc46b}
-html[data-theme=dark] .lg{background:rgba(255,255,255,.05);color:#e8ecfa}
-html[data-theme=dark] .cta{background:radial-gradient(500px 300px at 80% 50%,rgba(247,148,29,.25),transparent 70%),linear-gradient(110deg,#1a1d52,#2b1f47)}
-html[data-theme=dark] .cb{background:rgba(255,255,255,.06)}
-html[data-theme=dark] .foot{background:linear-gradient(180deg,#0b1030,#130f2e);border-top:2px solid transparent;border-image:linear-gradient(90deg,var(--sun),#4d7aff) 1}
-html[data-theme=dark] .phero.mosaic,html[data-theme=dark] .phero.actions,html[data-theme=dark] .phero.shophero,html[data-theme=dark] .phero.plhero,html[data-theme=dark] .bloghero,html[data-theme=dark] .phero.blue,html[data-theme=dark] .phero.sky{background:radial-gradient(500px 320px at 85% 30%,rgba(247,148,29,.22),transparent 70%),linear-gradient(160deg,#101741,#1d1f57 60%,#2e2048)}
-html[data-theme=dark] .phero.photo{background:linear-gradient(90deg,#121a48 0,#121a48 42%,rgba(18,26,72,.75) 55%,transparent 78%),var(--img) right center/cover}
-html[data-theme=dark] .flowv{background:rgba(255,255,255,.05)}
-html[data-theme=dark] .mega{background:#141c4a;border-top-color:rgba(255,255,255,.08)}
-html[data-theme=dark] .mega-promo{background:linear-gradient(160deg,#3a2a2e,#1f2a63);border-color:rgba(255,196,107,.3)}
-html[data-theme=dark] .drawer,html[data-theme=dark] .dhead,html[data-theme=dark] .buybar{background:#141c4a}
-html[data-theme=dark] .theme{background:rgba(255,196,107,.12);border-color:rgba(255,196,107,.35);color:#ffc46b}
-html[data-theme=dark] body.soko{background-attachment:scroll;background:radial-gradient(900px 600px at 90% 0,rgba(247,148,29,.16),transparent 60%),linear-gradient(180deg,#0f1538 0,#141b4a 25%,#1a1848 50%,#141b4a 75%,#0f1538 100%)}
-html[data-theme=dark] .side a.on,html[data-theme=dark] .side a:hover{background:rgba(255,196,107,.12);color:#ffc46b}
-html[data-theme=dark] .side a svg,html[data-theme=dark] .perks svg,html[data-theme=dark] .cinfo svg{color:#8ab8ff}
-html[data-theme=dark] .qty span,html[data-theme=dark] .qty button{background:rgba(255,255,255,.08);color:#fff}
-html[data-theme=dark] .opts label:has(input:checked){background:rgba(255,196,107,.1);border-color:#ffc46b}
-html[data-theme=dark] .runsbox{background:rgba(255,255,255,.06)}html[data-theme=dark] .runsbox p{color:var(--ink2)}
-html[data-theme=dark] .wa-ask{color:#4fd17f}
-html[data-theme=dark] .app.on{background:rgba(255,196,107,.1);border-color:#ffc46b;box-shadow:none;color:#fff}html[data-theme=dark] .app.on .aico{background:var(--sun);color:#1b1100}
-html[data-theme=dark] .meter div{background:rgba(255,255,255,.06)}html[data-theme=dark] .meter b{color:#ffc46b}
-/* Dusk: night header, hero and footer; moonlit bands in between so dark mode is never one flat colour */
-html[data-theme=dark] .band:has(.ptabs),html[data-theme=dark] .band:has(.cats),html[data-theme=dark] .logos-band,html[data-theme=dark] .band:has(.bgrid),html[data-theme=dark] .shopband,html[data-theme=dark] .band:has(.rel-h){--card:#fff;--muted:#eef0fb;--alt:#f4f5fd;--line:#dfe3f4;--line2:#cfd5ee;--ink:#1a2240;--ink2:#3b4763;--soft:#5a6482;--head:#1d2156;color:var(--ink);background:radial-gradient(700px 260px at 85% 0,rgba(247,148,29,.16),transparent 70%),radial-gradient(600px 300px at 0 100%,rgba(120,140,255,.22),transparent 70%),linear-gradient(180deg,#e4e7fb,#eef0fc 40%,#e7e3f7);position:relative}
-html[data-theme=dark] .band:has(.ptabs) .card,html[data-theme=dark] .shopband .card,html[data-theme=dark] .band:has(.rel-h) .card,html[data-theme=dark] .band:has(.bgrid) article,html[data-theme=dark] .logos-band .mq-track>*{background:#fff;border-color:#dfe3f4;box-shadow:0 18px 40px -30px rgba(29,33,86,.45)}
-html[data-theme=dark] .band:has(.ptabs) .card:hover{border-color:#f7941d;box-shadow:0 26px 50px -28px rgba(247,148,29,.6)}
-html[data-theme=dark] .band:has(.ptabs) .ptabs button{background:#fff;color:#1d2156;border-color:#dfe3f4}html[data-theme=dark] .band:has(.ptabs) .ptabs button.on{background:var(--sun);color:#1b1100;border-color:transparent}
-html[data-theme=dark] .band:has(.ptabs) .b-line,html[data-theme=dark] .band:has(.cats) .b-line,html[data-theme=dark] .band:has(.bgrid) .b-line{color:#1d2156;border-color:#1d2156;background:transparent}
-html[data-theme=dark] .band:has(.ptabs) .chips li,html[data-theme=dark] .shopband .chips li,html[data-theme=dark] .band:has(.rel-h) .chips li,html[data-theme=dark] .band:has(.bgrid) .chips li{background:#eef0fb;color:#3b4763}
-html[data-theme=dark] .band:has(.cats) .cat span{color:#1d2156}html[data-theme=dark] .band:has(.cats) .cat small{color:#5a6482}
-html[data-theme=dark] .band.tint{background:radial-gradient(800px 400px at 100% 100%,rgba(247,148,29,.28),transparent 65%),linear-gradient(160deg,#1c1f5c,#3a2a6b 55%,#5a2f5e)}
-html[data-theme=dark] .logos-band .mq-track>*,html[data-theme=dark] .logos-band h3{color:#1d2156}
-html[data-theme=dark] .band:has(.svc){background:radial-gradient(900px 420px at 0 0,rgba(77,122,255,.28),transparent 60%),radial-gradient(700px 380px at 100% 100%,rgba(247,148,29,.2),transparent 65%),linear-gradient(180deg,#141b4a,#1a2160)}
-html[data-theme=dark] .band:has(.ptabs) .addbtn{box-shadow:0 10px 22px -10px rgba(247,148,29,.8)}
-html[data-theme=dark] .shopband .side a{color:#1d2156}html[data-theme=dark] .shopband .side a.on,html[data-theme=dark] .shopband .side a:hover{background:#fff3e2;color:#b35d00}html[data-theme=dark] .shopband .side a svg{color:#4d63c9}
-html[data-theme=dark] .shopband select,html[data-theme=dark] .shopband input{background:#fff;color:#1a2240;border-color:#dfe3f4}
 @media(max-width:600px){.media .off{top:auto;bottom:10px;right:10px}.media .tag{font-size:11.5px;padding:3px 9px;max-width:calc(100% - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
-html[data-theme=dark] .shopband,html[data-theme=dark] .band:has(.ptabs){color-scheme:light}
 @media(max-width:920px){.hero-in{height:calc(100svh - var(--hdr,66px));min-height:480px;max-height:820px}.hstage{flex:1;min-height:0;grid-template-rows:minmax(0,1fr)}.hslide{grid-template-rows:minmax(0,1fr) auto;height:100%}.hpic{height:auto;min-height:0}.hpic img{height:100%;width:100%;object-fit:cover}.hcopy p{-webkit-line-clamp:3;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;margin:8px 0 14px}.hcopy .kick{margin-bottom:4px}}
 @media(max-width:600px){.hcopy h1,.hcopy .h1{font-size:clamp(24px,7.2vw,30px)}.hcopy .btn{min-height:44px;padding-inline:16px;font-size:14.5px}.htabs{padding-block:8px 10px}}
 @media(max-width:920px){.hpic{overflow:hidden;border-radius:22px 22px 22px 70px}.hcopy .row{flex-wrap:nowrap;gap:8px}.hcopy .row .btn{flex:1 1 0;white-space:nowrap;padding-inline:12px;font-size:14px}}
 @media(max-width:600px){.costeps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;position:relative}.costeps li{flex-direction:column;gap:5px;text-align:center;font-size:12px;line-height:1.25;position:relative;z-index:1}.costeps li+li::before{position:absolute;top:13px;right:50%;width:100%;margin:0;z-index:-1}.costeps li.on+li.on::before{background:var(--sun)}}
-html[data-theme=dark] .band:has(.bgrid),html[data-theme=dark] .band:has(.ptabs),html[data-theme=dark] .shopband,html[data-theme=dark] .band:has(.cats),html[data-theme=dark] .logos-band,html[data-theme=dark] .band:has(.rel-h){--blue:#2b47c2}
-html[data-theme=dark] .band:has(.bgrid) a:not(.btn){color:#2b47c2}html[data-theme=dark] .band:has(.bgrid) h2 a,html[data-theme=dark] .band:has(.bgrid) h3 a{color:#1d2156}
-html[data-theme=dark] .band:has(.bgrid) .bfeat em,html[data-theme=dark] .band:has(.bgrid) .bfeat b,html[data-theme=dark] .band:has(.bgrid) .bcard em,html[data-theme=dark] .band:has(.bgrid) .bcard b{color:#2b47c2}
+/* Dark mode: neutral charcoal surfaces in three tones; photos carry the colour, orange is for actions only */
+html[data-theme=dark] .announce{background:#0c0e10;border-bottom:1px solid #22262c}
+html[data-theme=dark] .catbar{background:#1a1d22;border-color:#2a2f36}
+html[data-theme=dark] .hero,html[data-theme=dark] .phero{background:#16191d;border-bottom-color:#2a2f36}
+html[data-theme=dark] .phero.photo{background:linear-gradient(90deg,#16191d 0,rgba(22,25,29,.94) 38%,rgba(22,25,29,.35) 70%,rgba(22,25,29,0)),var(--img) right center/cover}
+html[data-theme=dark] main>section:nth-of-type(even):not(.hero):not(.phero):not(.cta){background:#16191d}
+html[data-theme=dark] .band.tint,html[data-theme=dark] .strip{background:#1a1d22}
+html[data-theme=dark] .cta,html[data-theme=dark] .foot{background:#0c0e10}
+html[data-theme=dark] .card,html[data-theme=dark] .svc a,html[data-theme=dark] .panel,html[data-theme=dark] .result,html[data-theme=dark] .fband a{background:#1a1d22;border-color:#2a2f36;box-shadow:none}
+html[data-theme=dark] .card:hover,html[data-theme=dark] .svc a:hover,html[data-theme=dark] .fband a:hover{border-color:#454c56;box-shadow:0 18px 36px -28px rgba(0,0,0,.9)}
+html[data-theme=dark] .card .media,html[data-theme=dark] .cat .cimg{background:#23272d}
+html[data-theme=dark] .chips li{background:#23272d;color:#c4c8ce}
+html[data-theme=dark] .ptabs button{background:#1a1d22;border-color:#2a2f36;color:#c4c8ce}
+html[data-theme=dark] .side a.on{background:#23272d;color:#fff}
+html[data-theme=dark] .qty button,html[data-theme=dark] .qty span{background:#23272d;color:#fff}
+html[data-theme=dark] .opts label:has(input:checked),html[data-theme=dark] .app.on{border-color:#f7941d;background:#221d17}
+html[data-theme=dark] a{--blue:#8fb0ff}
+html[data-theme=dark] .savings::before{display:none}html[data-theme=dark] .savings{background:#16191d}
+@media(max-width:920px){.hpic{position:relative;padding:0!important;align-self:stretch;height:auto!important}.hpic>img{position:absolute;inset:0;height:100%!important;width:100%;object-fit:cover}}

@@ -128,7 +128,7 @@ function soko_roles() {
 /** Can the current user open the Desk at all? */
 function soko_is_staff( $user = null ) {
 	$user = $user ? $user : wp_get_current_user();
-	if ( ! $user || ! $user->exists() ) {
+	if ( ! $user || ! $user->exists() || get_user_meta( $user->ID, 'soko_disabled', true ) ) {
 		return false;
 	}
 	if ( user_can( $user, 'manage_options' ) ) {
@@ -231,6 +231,33 @@ function soko_mail( $to, $subject, $body, $headers = array(), $files = array() )
 		return false;
 	}
 }
+
+/** Emails come from the business, not "WordPress". */
+add_filter(
+	'wp_mail_from_name',
+	function ( $n ) {
+		$b = soko_setting( 'business' );
+		return ( $b && 'WordPress' === $n ) ? $b : $n;
+	}
+);
+add_filter(
+	'wp_mail_from',
+	function ( $e ) {
+		$c = soko_setting( 'smtp' );
+		if ( ! empty( $c['user'] ) && is_email( $c['user'] ) ) {
+			return $c['user'];
+		}
+		$b = soko_setting( 'email' );
+		if ( $b && is_email( $b ) && 0 === strpos( $e, 'wordpress@' ) ) {
+			$host = wp_parse_url( home_url(), PHP_URL_HOST );
+			// Only use the business address directly when it is on this site's domain, so mail is not rejected as spoofed.
+			if ( $host && false !== stripos( $b, '@' . preg_replace( '/^www\./', '', $host ) ) ) {
+				return $b;
+			}
+		}
+		return $e;
+	}
+);
 
 /** Use the SMTP account from Settings, when one is filled in. */
 add_action(

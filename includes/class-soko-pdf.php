@@ -85,7 +85,7 @@ final class Soko_PDF {
 		$pdf->SetAutoPageBreak( true, 20 );
 		$pdf->AddPage();
 		$pending = 'invoice' === $d['type'] && 'web' === $d['source'] && (float) $d['paid'] <= 0 && ! in_array( $d['fulfil'], array( 'to_pack', 'packed', 'dispatched', 'delivered' ), true );
-		$titles  = array( 'quote' => 'Quotation', 'invoice' => $pending ? 'Order confirmation' : ( $s['vat_registered'] ? 'Tax invoice' : 'Invoice' ), 'receipt' => 'Receipt', 'credit' => 'Credit note' );
+		$titles  = array( 'quote' => 'Quotation', 'invoice' => $pending ? 'Order confirmation' : ( $s['vat_registered'] && ! empty( $s['kra_pin'] ) ? 'Tax invoice' : 'Invoice' ), 'receipt' => 'Receipt', 'credit' => 'Credit note' );
 		$right  = array( $d['number'], 'Date: ' . date_i18n( 'j M Y', strtotime( $d['date'] ) ) );
 		if ( 'quote' === $d['type'] && $d['due'] ) {
 			$right[] = 'Valid until: ' . date_i18n( 'j M Y', strtotime( $d['due'] ) );
@@ -100,7 +100,7 @@ final class Soko_PDF {
 		if ( 'void' === ( isset( $d['state'] ) ? $d['state'] : '' ) ) {
 			$pdf->SetFont( 'Helvetica', 'B', 11 );
 			$pdf->SetTextColor( 194, 54, 43 );
-			$pdf->Cell( 0, 8, 'This invoice has been cancelled. No payment is due.', 0, 1 );
+			$pdf->Cell( 0, 8, self::t( ( $pending ? 'This order' : ( 'credit' === $d['type'] ? 'This credit note' : ( 'receipt' === $d['type'] ? 'This payment' : 'This invoice' ) ) ) . ' has been cancelled.' . ( in_array( $d['type'], array( 'invoice' ), true ) ? ' No payment is due.' : '' ) ), 0, 1 );
 			$pdf->SetTextColor( 0, 0, 0 );
 		}
 
@@ -136,7 +136,7 @@ final class Soko_PDF {
 			$pdf->SetFont( 'Helvetica', '', 10 );
 			$rows = array(
 				array( 'Amount received', soko_money( $d['total'] ) ),
-				array( 'Paid by', ( 'mpesa' === ( isset( $meta['method'] ) ? $meta['method'] : '' ) ? 'M-Pesa' : ucfirst( isset( $meta['method'] ) ? $meta['method'] : '' ) ) . ( ! empty( $meta['code'] ) ? '  ·  ' . $meta['code'] : '' ) ),
+				array( 'Paid by', self::method_name( isset( $meta['method'] ) ? $meta['method'] : '' ) . ( ! empty( $meta['code'] ) ? '  ·  ' . $meta['code'] : '' ) ),
 				array( 'Against invoice', isset( $meta['invoice'] ) ? $meta['invoice'] : '' ),
 				array( 'Balance remaining', soko_money( isset( $meta['balance'] ) ? $meta['balance'] : 0 ) ),
 			);
@@ -149,11 +149,12 @@ final class Soko_PDF {
 				$pdf->Cell( 110, 10, self::t( $r[1] ), 'B', 1, 'R', 0 === $i );
 			}
 			$pdf->Ln( 8 );
-			$pdf->SetFont( 'Helvetica', 'B', 22 );
-			self::color( $pdf, array( 17, 128, 79 ) );
-			self::color( $pdf, array( 17, 128, 79 ), 'draw' );
+			$part = isset( $meta['balance'] ) && (float) $meta['balance'] > 0.005;
+			$pdf->SetFont( 'Helvetica', 'B', $part ? 14 : 22 );
+			self::color( $pdf, $part ? self::BLUE : array( 17, 128, 79 ) );
+			self::color( $pdf, $part ? self::BLUE : array( 17, 128, 79 ), 'draw' );
 			$pdf->SetLineWidth( 0.9 );
-			$pdf->Cell( 40, 14, 'PAID', 1, 1, 'C' );
+			$pdf->Cell( $part ? 70 : 40, 14, $part ? 'PART PAYMENT' : 'PAID', 1, 1, 'C' );
 			$pdf->SetLineWidth( 0.2 );
 			self::color( $pdf, self::INK );
 		} else {
@@ -191,8 +192,30 @@ final class Soko_PDF {
 				if ( $cn > 0 ) {
 					$tot[] = array( 'Less credit notes', '(' . soko_money( $cn ) . ')' );
 				}
-				if ( $d['paid'] - $cn > 0.005 ) {
-					$tot[] = array( 'Paid', '(' . soko_money( $d['paid'] - $cn ) . ')' );
+				$rf  = 0;
+				foreach ( (array) ( isset( $d['meta']['refunds'] ) ? $d['meta']['refunds'] : array() ) as $r ) {
+					$rf += (float) ( isset( $r['amount'] ) ? $r['amount'] : 0 );
+				}
+				$mv  = 0;
+				foreach ( (array) ( isset( $d['meta']['credit_moved'] ) ? $d['meta']['credit_moved'] : array() ) as $r ) {
+					$mv += (float) ( isset( $r['amount'] ) ? $r['amount'] : 0 );
+				}
+				$cin = 0;
+				foreach ( (array) ( isset( $d['meta']['credits_applied'] ) ? $d['meta']['credits_applied'] : array() ) as $r ) {
+					$cin += (float) ( isset( $r['amount'] ) ? $r['amount'] : 0 );
+				}
+				$cash = round( $d['paid'] - $cn - $cin + $rf + $mv, 2 );
+				if ( $cash > 0.005 ) {
+					$tot[] = array( 'Paid', '(' . soko_money( $cash ) . ')' );
+				}
+				if ( $cin > 0.005 ) {
+					$tot[] = array( 'Credit used from earlier invoices', '(' . soko_money( $cin ) . ')' );
+				}
+				if ( $rf > 0.005 ) {
+					$tot[] = array( 'Refunded to you', soko_money( $rf ) );
+				}
+				if ( $mv > 0.005 ) {
+					$tot[] = array( 'Credit moved to other invoices', soko_money( $mv ) );
 				}
 				$tot[] = array( 'Balance due', soko_money( $d['balance'] ) );
 			}
@@ -209,39 +232,60 @@ final class Soko_PDF {
 		}
 
 		$pdf->Ln( 6 );
-		if ( 'invoice' === $d['type'] && $d['balance'] > 0 || 'quote' === $d['type'] ) {
+		if ( 'invoice' === $d['type'] && $d['balance'] > 0 && 'void' !== ( isset( $d['state'] ) ? $d['state'] : '' ) ) {
 			$ins = Soko_Mpesa::instructions( $d['number'] );
-			self::color( $pdf, array( 238, 245, 255 ), 'fill' );
+			$bk  = array_filter( (array) ( isset( $s['bank'] ) ? $s['bank'] : array() ) );
+			$pay = array();
+			if ( $ins['number'] ) {
+				$pay[] = 'M-Pesa ' . $ins['kind'] . ': ' . $ins['number'];
+				if ( $ins['account'] ) {
+					$pay[] = 'Account number: ' . $ins['account'];
+				}
+			}
+			if ( ! empty( $bk['account'] ) ) {
+				$pay[] = 'Bank: ' . ( isset( $bk['name'] ) ? $bk['name'] : '' ) . ( ! empty( $bk['branch'] ) ? ', ' . $bk['branch'] : '' );
+				$pay[] = 'Account: ' . $bk['account'];
+				if ( ! empty( $bk['account_name'] ) ) {
+					$pay[] = 'Account name: ' . $bk['account_name'];
+				}
+			}
+			if ( $pay ) {
+				$pay[] = 'Reference: ' . $d['number'];
+			} else {
+				$pay[] = 'We confirm your order by phone, then share how to pay.';
+				$pay[] = 'Questions: ' . $s['phone'];
+			}
+			// Work out the height first, so the box always holds its text.
+			$pdf->SetFont( 'Helvetica', '', 8 );
+			$url_lines = max( 1, (int) ceil( $pdf->GetStringWidth( $d['pay_url'] ) / 78 ) );
+			$hl = 8 + 5 * count( $pay );
+			$hr = 8 + 4 * $url_lines + 6;
+			$h  = max( $hl, $hr ) + 4;
+			if ( $pdf->GetY() + $h > 277 ) {
+				$pdf->AddPage();
+			}
 			$y = $pdf->GetY();
-			$bk = array_filter( (array) ( isset( $s['bank'] ) ? $s['bank'] : array() ) );
-			$pdf->Rect( 15, $y, 180, ! empty( $bk['account'] ) ? 34 : 24, 'F' );
+			self::color( $pdf, array( 238, 245, 255 ), 'fill' );
+			$pdf->Rect( 15, $y, 180, $h, 'F' );
 			$pdf->SetXY( 20, $y + 3 );
 			$pdf->SetFont( 'Helvetica', 'B', 10 );
 			self::color( $pdf, array( 10, 143, 60 ) );
 			$pdf->Cell( 80, 5, 'How to pay', 0, 2 );
 			self::color( $pdf, self::INK );
 			$pdf->SetFont( 'Helvetica', '', 9.5 );
-			if ( $ins['number'] ) {
-				$pdf->Cell( 80, 5, self::t( 'M-Pesa ' . $ins['kind'] . ': ' . $ins['number'] ), 0, 2 );
-				if ( $ins['account'] ) {
-					$pdf->Cell( 80, 5, self::t( 'Account number: ' . $ins['account'] ), 0, 2 );
-				}
-			} elseif ( empty( $bk['account'] ) ) {
-				$pdf->Cell( 80, 5, self::t( 'We confirm your order by phone, then share how to pay. Questions: ' . $s['phone'] ), 0, 2 );
+			foreach ( $pay as $pl ) {
+				$pdf->SetX( 20 );
+				$pdf->MultiCell( 80, 5, self::t( $pl ), 0, 'L' );
 			}
-			if ( ! empty( $bk['account'] ) ) {
-				$pdf->Cell( 80, 5, self::t( 'Bank: ' . ( isset( $bk['name'] ) ? $bk['name'] : '' ) . ( ! empty( $bk['branch'] ) ? ', ' . $bk['branch'] : '' ) ), 0, 2 );
-				$pdf->Cell( 80, 5, self::t( 'Account: ' . $bk['account'] . ( ! empty( $bk['account_name'] ) ? ' (' . $bk['account_name'] . ')' : '' ) ), 0, 2 );
-				$pdf->Cell( 80, 5, self::t( 'Reference: ' . $d['number'] ), 0, 2 );
-			}
-			$pdf->SetXY( 105, $y + 3 );
+			$pdf->SetXY( 108, $y + 3 );
 			$pdf->SetFont( 'Helvetica', 'B', 9.5 );
-			$pdf->Cell( 85, 5, 'Track this order online', 0, 2 );
+			$pdf->Cell( 82, 5, 'Track this order online', 0, 2 );
 			$pdf->SetFont( 'Helvetica', '', 8 );
 			self::color( $pdf, self::BLUE );
-			$pdf->MultiCell( 85, 4, self::t( $d['pay_url'] ) );
+			$pdf->SetX( 108 );
+			$pdf->MultiCell( 82, 4, self::t( $d['pay_url'] ), 0, 'L' );
 			self::color( $pdf, self::INK );
-			$pdf->SetY( $y + 28 );
+			$pdf->SetY( $y + $h + 4 );
 		}
 		if ( $s['bank_details'] && 'receipt' !== $d['type'] ) {
 			$pdf->SetFont( 'Helvetica', 'B', 9 );
@@ -255,7 +299,7 @@ final class Soko_PDF {
 			self::color( $pdf, self::SOFT );
 			$pdf->Cell( 0, 5, self::t( 'KRA eTIMS invoice: ' . $d['etims_ref'] ), 0, 1 );
 		}
-		$note = trim( $d['notes'] . ( ! in_array( $d['type'], array( 'receipt', 'credit' ), true ) ? "\n" . $s['invoice_note'] : '' ) );
+		$note = trim( $d['notes'] . ( 'invoice' === $d['type'] ? "\n" . $s['invoice_note'] : '' ) );
 		if ( $note ) {
 			$pdf->Ln( 2 );
 			$pdf->SetFont( 'Helvetica', '', 8.5 );
@@ -263,6 +307,18 @@ final class Soko_PDF {
 			$pdf->MultiCell( 0, 4.3, self::t( $note ) );
 		}
 		return $pdf->Output( 'S' );
+	}
+
+	/** A payment method as people say it: M-Pesa, Cash, or the bank account's own name. */
+	public static function method_name( $m ) {
+		$m = trim( (string) $m );
+		if ( preg_match( '/^\d{4}$/', $m ) ) {
+			$ch = Soko_Accounts::chart();
+			return isset( $ch[ $m ] ) ? $ch[ $m ]['name'] : 'Bank';
+		}
+		$k = strtolower( str_replace( array( '-', ' ' ), '', $m ) );
+		$map = array( 'mpesa' => 'M-Pesa', 'cash' => 'Cash', 'bank' => 'Bank transfer', 'banktransfer' => 'Bank transfer', 'card' => 'Card', 'cheque' => 'Cheque' );
+		return isset( $map[ $k ] ) ? $map[ $k ] : ucfirst( $m );
 	}
 
 	/** Write a document PDF to a temp file (for email attachments). */

@@ -22,7 +22,7 @@
     K.api('accounts').then(function (r) {
       var acc = r.accounts, by = {}; acc.forEach(function (a) { by[a.code] = a; });
       var bal = function (c) { return by[c] ? by[c].balance : 0; };
-      var cash = bal('1000') + bal('1010') + bal('1020');
+      var cash = acc.filter(function (a) { return a.money; }).reduce(function (t, a) { return t + (+a.balance || 0); }, 0);
       var pr = period(st.p);
       v.innerHTML = K.head('Accounts', 'Your books are kept automatically from invoices, payments, expenses and purchases. Add opening balances and manual entries here, reconcile your money accounts, and download the full accounts pack.',
         '<label class="tiny" for="accpp" style="align-self:center">Pack period</label><select id="accpp" data-pp style="width:auto">' + PERIODS.map(function (o) { return '<option value="' + o[0] + '"' + (st.p === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><span data-pcd' + (st.p === 'custom' ? '' : ' hidden') + ' style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-pf value="' + period('custom')[0] + '" aria-label="From"><span class="tiny">to</span><input type="date" data-pt value="' + period('custom')[1] + '" aria-label="To"></span><button class="btn sun" data-pack="pdf">' + ic(I.dl) + 'Accounts pack (PDF)</button><button class="btn" data-pack="xlsx">Excel</button>') +
@@ -32,7 +32,12 @@
         '<div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "payables"}}\'><small>Owed to suppliers</small><b>' + money(bal('2000')) + '</b></div>' +
         '<div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "vat", "p": "month"}}\'><small>' + (r.vat_month >= 0 ? 'VAT due for this month' : 'VAT to reclaim this month') + '</small><b>' + money(Math.abs(r.vat_month)) + '</b></div></div>' +
         '<div class="kpis"><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "bs"}}\'><small>Balance sheet</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "pl", "p": "year"}}\'><small>Profit and loss</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "tb"}}\'><small>Trial balance</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "gl", "p": "month"}}\'><small>General ledger</small><b style="font-size:16px">Open</b></div></div>' +
+        '<div class="toolbar lockbar"><span class="sub" style="margin:0">' + (K.me.settings.lock_date ? 'Books closed up to <b>' + K.d(K.me.settings.lock_date) + '</b>. Nothing on or before that date can be added, changed or deleted.' : 'Books are open. Close a month once it is checked, so nothing in it can change by accident.') + '</span><button class="btn" data-lock style="margin-left:auto">' + ic(I.check) + (K.me.settings.lock_date ? 'Change closing date' : 'Close the books') + '</button></div>' +
         K.tabs('acc', [['chart', 'Chart of accounts'], ['journal', 'Journal entries'], ['opening', 'Opening balances'], ['recon', 'Reconcile']], st.tab) + '<div data-ab></div>';
+      $('[data-lock]', v).onclick = function () {
+        var m = K.modal('Close the books', '<p class="sub">Everything dated on or before this date is locked.' + (K.can('settings') ? ' Leave it blank to reopen all months.' : ' Only the owner can reopen months once closed.') + '</p>' + K.field('Closed up to and including', 'date', K.me.settings.lock_date || '', 'date'), '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-go>Save</button>');
+        $('[data-go]', m).onclick = function () { var f = K.read(m); K.api('accounts/lock', { body: { date: f.date } }).then(function (r) { K.me.settings.lock_date = r.lock_date; K.closeModal(); K.toast(r.message); K.V.accounts(v); }).catch(K.fail); };
+      };
       $('[data-pp]', v).onchange = function (e) { st.p = e.target.value; $('[data-pcd]', v).hidden = st.p !== 'custom'; };
       $('[data-pf]', v).onchange = function (e) { st.pf = e.target.value; };
       $('[data-pt]', v).onchange = function (e) { st.pt = e.target.value; };
@@ -105,7 +110,7 @@
       $('[data-mv]', host).onclick = function () {
         var mon = acc.filter(function (a) { return a.money; }).map(function (a) { return [a.code, a.name]; });
         var m = K.modal('Move money between accounts', '<p class="sub">For example banking the day\'s cash, or moving M-Pesa to the bank. It is not income or spending.</p><div class="grid2">' + K.field('From', 'from', mon[0] ? mon[0][0] : '', 'select', { options: mon }) + K.field('To', 'to', mon[2] ? mon[2][0] : (mon[1] ? mon[1][0] : ''), 'select', { options: mon }) + '</div><div class="grid3">' + K.field('Amount', 'amount', '', 'number') + K.field('Charges (optional)', 'fee', '', 'number') + K.field('Date', 'date', K.today(), 'date') + '</div>', '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-go>Move</button>');
-        $('[data-go]', m).onclick = function () { K.api('accounts/transfer', { body: K.read(m) }).then(function (r) { K.closeModal(); K.toast(r.message); K.route(); }).catch(K.fail); };
+        $('[data-go]', m).onclick = function () { var f = K.read(m); var post = function () { K.api('accounts/transfer', { body: f }).then(function (r) { K.closeModal(); K.toast(r.message); K.route(); }).catch(function (e) { if (e.code === 'soko_overdraw') { K.confirm(esc(e.message), 'Post it anyway').then(function (y) { if (y) { f.confirm_overdraw = 1; post(); } }); return; } K.fail(e); }); }; post(); };
       };
       $$('[data-jd]', host).forEach(function (b) { b.onclick = function () { K.confirm('Delete this journal entry? The accounts will update straight away.', 'Delete', true).then(function (y) { if (y) K.api('journal/' + b.dataset.jd, { method: 'DELETE' }).then(function (r) { K.toast(r.message); K.route(); }).catch(K.fail); }); }; });
     }).catch(K.fail);
@@ -127,7 +132,7 @@
     m.addEventListener('change', function (e) { if (e.target.dataset.jc != null) lines[e.target.dataset.jc].code = e.target.value; });
     m.addEventListener('click', function (e) { var x = e.target.closest('[data-jx]'); if (x) { lines.splice(+x.dataset.jx, 1); draw(); } });
     $('[data-ja]', m).onclick = function () { lines.push({ code: '6000', debit: '', credit: '' }); draw(); };
-    $('[data-js]', m).onclick = function () { var f = K.read(m); f.lines = lines.map(function (l) { return { code: l.code, debit: +l.debit || 0, credit: +l.credit || 0 }; }); K.api('journal', { body: f }).then(function (r) { K.closeModal(); K.toast(r.message); K.route(); }).catch(K.fail); };
+    $('[data-js]', m).onclick = function () { var f = K.read(m); f.lines = lines.map(function (l) { return { code: l.code, debit: +l.debit || 0, credit: +l.credit || 0 }; }); var post = function () { K.api('journal', { body: f }).then(function (r) { K.closeModal(); K.toast(r.message); K.route(); }).catch(function (e) { if (e.code === 'soko_control') { K.confirm(esc(e.message), 'Post it anyway').then(function (y) { if (y) { f.confirm_control = 1; post(); } }); return; } K.fail(e); }); }; post(); };
   }
 
   function opening(host, acc, op) {
@@ -161,7 +166,7 @@
         '<button class="btn sm" data-rch>' + ic(I.plus) + 'Charges or interest</button></div>' +
         '<p class="tiny">' + (last ? 'Last reconciled to ' + K.d(last.date) + ' by ' + esc(last.by) + '. Beginning balance ' + K.moneyx(r.begin) + '.' : 'First reconciliation for this account: tick everything on the statement up to its date.') + '</p>' +
         '<div class="kpis"><div class="kpi"><small>Balance in the books at ' + K.d(r.to) + '</small><b>' + K.moneyx(r.book) + '</b></div><div class="kpi"><small>Ticked as on the statement</small><b>' + K.moneyx(r.cleared) + '</b></div><div class="kpi"><small>Difference</small><b class="' + (diff === null ? '' : ok ? 'up' : 'down') + '">' + (diff === null ? '—' : K.moneyx(diff)) + '</b><i class="mut">' + (diff === null ? 'Enter the statement balance' : ok ? 'Matches the statement' : 'Tick entries that appear on the statement') + '</i></div></div>' +
-        '<div class="toolbar"><label class="tiny" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-rall' + (st.rall ? ' checked' : '') + '> Show items already ticked</label>' + (rows.some(function (x) { return !x.done; }) ? '<button class="btn sm" data-rtall>Tick all shown</button>' : '') + '<button class="btn sm" data-rprint>' + ic(I.dl) + 'Print</button>' + (ok ? '<button class="btn pri sm" data-rfin style="margin-left:auto">' + ic(I.check) + 'Finish reconciliation</button>' : '') + '</div>' +
+        '<div class="toolbar"><label class="tiny" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-rall' + (st.rall ? ' checked' : '') + '> Show items already ticked</label>' + (rows.some(function (x) { return !x.done; }) ? '<button class="btn sm" data-rtall>Tick all shown</button>' : '') + '<button class="btn sm" data-rprint><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Print</button>' + (ok ? '<button class="btn pri sm" data-rfin style="margin-left:auto">' + ic(I.check) + 'Finish reconciliation</button>' : '') + '</div>' +
         K.table([
           { k: 'done', label: 'On statement', f: function (x) { return '<input type="checkbox" data-rk="' + esc(x.key) + '"' + (x.done ? ' checked' : '') + ' aria-label="On statement">'; } },
           { k: 'date', label: 'Date', f: function (x) { return K.ds(x.date); } },
@@ -178,7 +183,7 @@
       $('[data-rall]', host).onchange = function (e) { st.rall = e.target.checked; recon(host, acc, r); };
       var ta = $('[data-rtall]', host);
       if (ta) ta.onclick = function () { post({ keys: rows.filter(function (x) { return !x.done; }).map(function (x) { return x.key; }), on: 1 }).catch(K.fail); };
-      $('[data-rprint]', host).onclick = function () { window.print(); };
+      $('[data-rprint]', host).onclick = function () { document.body.classList.add('printing-recon'); window.print(); setTimeout(function () { document.body.classList.remove('printing-recon'); }, 500); };
       var fin = $('[data-rfin]', host);
       if (fin) fin.onclick = function () { post({ do: 'finish' }).then(function () { K.toast('Reconciliation saved.'); }).catch(K.fail); };
       $('[data-rch]', host).onclick = function () {

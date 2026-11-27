@@ -180,11 +180,11 @@ JS;
 <style>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);font:16px/1.5 Inter,system-ui,sans-serif;color:#0f1d36;background:#fff}
 .art{background:<?php echo esc_html( $b['deep'] ); ?>;color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
-.art h1{font:700 clamp(34px,4vw,52px)/1.05 Outfit,sans-serif;letter-spacing:-.02em;margin:0;max-width:12ch}.art p{color:#c9d7f2;max-width:40ch;font-size:18px}
+.art h1{font:700 clamp(34px,4vw,52px)/1.05 Poppins,sans-serif;letter-spacing:-.02em;margin:0;max-width:12ch}.art p{color:#c9d7f2;max-width:40ch;font-size:18px}
 .art svg{position:absolute;right:-60px;bottom:-40px;width:70%;opacity:.95}
-.brand{display:flex;align-items:center;gap:12px;font:700 20px Outfit;position:relative}.brand img{height:44px;background:#fff;border-radius:10px;padding:4px 8px}
+.brand{display:flex;align-items:center;gap:12px;font:700 20px Poppins;position:relative}.brand img{height:44px;background:#fff;border-radius:10px;padding:4px 8px}
 form{align-self:center;justify-self:center;width:min(400px,calc(100% - 32px));padding:24px 0}
-h2{font:700 30px Outfit;letter-spacing:-.02em;margin:0 0 6px}.sub{color:#5a6780;margin:0 0 24px}
+h2{font:700 30px Poppins;letter-spacing:-.02em;margin:0 0 6px}.sub{color:#5a6780;margin:0 0 24px}
 label{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}input[type=text],input[type=password],input[type=email]{width:100%;height:48px;border:1px solid #d6deea;border-radius:12px;padding:0 14px;font:16px Inter}
 input:focus{outline:3px solid <?php echo esc_html( $b['accent'] ); ?>;outline-offset:1px;border-color:transparent}
 .rem{display:flex;gap:8px;align-items:center;font-weight:500;margin:16px 0}

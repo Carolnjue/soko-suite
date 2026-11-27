@@ -278,7 +278,7 @@ class Soko_Accounts {
 		}
 
 		// 3. Customer payments.
-		foreach ( $wpdb->get_results( 'SELECT p.id, p.method, p.code, p.amount, p.status, p.received, p.payer, d.number FROM ' . soko_t( 'payments' ) . " p LEFT JOIN $D d ON d.id = p.doc_id WHERE p.method <> 'credit'", ARRAY_A ) as $p ) { // phpcs:ignore
+		foreach ( $wpdb->get_results( 'SELECT p.id, p.method, p.code, p.amount, p.status, p.received, p.payer, d.number FROM ' . soko_t( 'payments' ) . " p LEFT JOIN $D d ON d.id = p.doc_id WHERE p.method <> 'credit' AND p.status <> 'void'", ARRAY_A ) as $p ) { // phpcs:ignore
 			$against = 'matched' === $p['status'] ? '1100' : '2200';
 			$memo    = ( 'matched' === $p['status'] ? 'Payment from ' : 'Payment not yet matched, from ' ) . ( $p['payer'] ? $p['payer'] : 'customer' ) . ( 'matched' === $p['status'] && $p['number'] ? ' for ' . $p['number'] : '' );
 			self::add( $out, $p['received'], $memo, $p['code'], 'payment', $p['id'], array( array( self::money_account( $p['method'] ), $p['amount'] ), array( $against, -$p['amount'] ) ) );
@@ -418,6 +418,9 @@ class Soko_Accounts {
 			$when = substr( $po['received'] ? $po['received'] : $po['date'], 0, 10 );
 			if ( $rest > 0.005 && $when <= $to ) {
 				$out[ $po['number'] ] = ( isset( $out[ $po['number'] ] ) ? $out[ $po['number'] ] : 0 ) + $rest;
+			} elseif ( $rest < -0.005 && isset( $out[ $po['number'] ] ) ) {
+				// Part of this payment was moved onto the order holding the rest of the goods.
+				$out[ $po['number'] ] = max( 0, $out[ $po['number'] ] + $rest );
 			}
 		}
 		return $out;
@@ -553,7 +556,13 @@ class Soko_Accounts {
 		if ( abs( $net ) > 0.005 ) {
 			$lines[] = array( 'code' => '3050', 'debit' => max( 0, -$net ), 'credit' => max( 0, $net ) );
 		}
+		if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', (string) $date, $mm ) || ! checkdate( (int) $mm[2], (int) $mm[3], (int) $mm[1] ) || $date > soko_today() ) {
+			return new WP_Error( 'soko', 'Pick the date your figures start from: a real date, today or earlier.', array( 'status' => 400 ) );
+		}
 		$lk = self::locked( $date );
+		if ( ! $lk && ! empty( $was['date'] ) ) {
+			$lk = self::locked( $was['date'] );
+		}
 		if ( $lk ) {
 			return $lk;
 		}
@@ -600,6 +609,19 @@ class Soko_Accounts {
 	public static function reconciled( $code ) {
 		$r = get_option( 'soko_recon', array() );
 		return isset( $r[ $code ] ) && is_array( $r[ $code ] ) ? $r[ $code ] : array();
+	}
+
+	/** Is any posting of this record ticked in a bank reconciliation? */
+	public static function is_reconciled( $source, $id ) {
+		$r = get_option( 'soko_recon', array() );
+		foreach ( (array) $r as $code => $keys ) {
+			foreach ( (array) $keys as $k => $when ) {
+				if ( 0 === strpos( (string) $k, $source . ':' . $id . ':' ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public static function set_reconciled( $code, $keys, $on ) {

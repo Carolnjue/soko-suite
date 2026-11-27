@@ -119,6 +119,8 @@ final class Soko_Mpesa_Free {
 		$cols = array();
 		$new  = 0;
 		$seen = 0;
+		$skip_locked = 0;
+		$skip_future = 0;
 		$unm  = 0;
 		while ( ( $r = fgetcsv( $fh ) ) !== false ) {
 			if ( ! $head ) {
@@ -154,6 +156,15 @@ final class Soko_Mpesa_Free {
 			$name = trim( preg_replace( '/[\d*]{6,}/', ' ', $name ), " -\t" );
 			$time  = null !== $cols['time'] && ! empty( $r[ $cols['time'] ] ) ? self::when( $r[ $cols['time'] ] ) : soko_now();
 			$seen++;
+			$day = substr( $time, 0, 10 );
+			if ( $day > soko_today() ) {
+				$skip_future++;
+				continue;
+			}
+			if ( Soko_Accounts::locked( $day ) ) {
+				$skip_locked++;
+				continue;
+			}
 			$before = Soko_Ledger::payment_exists( $r[ $cols['code'] ] );
 			Soko_Ledger::record_payment(
 				array(
@@ -183,6 +194,12 @@ final class Soko_Mpesa_Free {
 		soko_log( 'Imported M-Pesa statement', 'payments', $new . ' new payments' );
 		$msg = $seen . ' payments read, ' . $new . ' new.';
 		$msg .= $new ? ( $unm ? ' ' . ( $new - $unm ) . ' matched to invoices; ' . $unm . ' need matching by hand.' : ' All matched to their invoices.' ) : ' Nothing new to add.';
+		if ( $skip_locked ) {
+			$msg .= ' ' . $skip_locked . ' skipped because they fall in closed months.';
+		}
+		if ( $skip_future ) {
+			$msg .= ' ' . $skip_future . ' skipped because their date is in the future. Check the statement dates.';
+		}
 		return array( 'ok' => true, 'message' => $msg );
 	}
 

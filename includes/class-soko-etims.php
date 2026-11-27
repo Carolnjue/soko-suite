@@ -41,7 +41,7 @@ final class Soko_Etims {
 		global $wpdb;
 		$t = soko_t( 'docs' );
 		return array(
-			'pending' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM $t WHERE type = 'invoice' AND status <> 'void' AND etims_status = 'pending'" ), // phpcs:ignore
+			'pending' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM $t d WHERE type = 'invoice' AND status <> 'void' AND etims_status = 'pending' AND " . Soko_Accounts::confirmed_sql( 'd' ) ), // phpcs:ignore
 			'signed'  => (int) $wpdb->get_var( "SELECT COUNT(*) FROM $t WHERE type = 'invoice' AND etims_status = 'signed'" ), // phpcs:ignore
 			'mode'    => self::mode(),
 		);

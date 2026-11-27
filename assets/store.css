@@ -514,7 +514,7 @@ html[data-theme=dark] .logo img,html[data-theme=dark] .logo-w img,html[data-them
 html[data-theme=dark] .soko select,html[data-theme=dark] .soko input,html[data-theme=dark] .soko textarea{background:var(--muted);color:var(--ink);border-color:var(--line2)}
 html[data-theme=dark] .b-line{color:var(--ink)}
 html[data-theme=dark] .hpic img{box-shadow:0 30px 60px -36px #000}
-html[data-theme=dark] .paybox{background:#11301f;border-color:#1d5a37}.paybox p{color:inherit}
+html[data-theme=dark] .paybox{background:#11301f;border-color:#1d5a37}html[data-theme=dark] .paybox p{color:inherit}
 html[data-theme=dark] .mnav.on{background:var(--bg)}
 html[data-theme=dark] .drawer,html[data-theme=dark] .dhead,html[data-theme=dark] .buybar{background:var(--card)}
 html[data-theme=dark] .addbtn{background:var(--sun);color:#1b1100}
@@ -1063,3 +1063,47 @@ html[data-theme=dark] .card,html[data-theme=dark] .panel{box-shadow:0 8px 20px -
 input,select,textarea{border-color:var(--line2)}
 html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#14171b;border-color:var(--line2)}
 @media(max-width:400px){.btn{white-space:normal;text-align:center;line-height:1.25;height:auto;min-height:48px;padding-top:10px;padding-bottom:10px}}
+.paybill b.nowrap{white-space:nowrap}
+/* ---- Run 8 storefront fixes ---- */
+/* Call-back band: inputs keep normal height inside their field wrappers */
+.cb{align-items:center}.cb .f input{flex:none;min-height:46px}.cb .f{justify-content:center}
+.cb .btn{align-self:center}
+/* Compare pill clear of the discount badge, full tap height */
+.cmpbtn{height:34px}.cmpbtn::after{inset:-6px -4px}
+@media(max-width:600px){.cmpbtn{width:36px;height:36px;padding:0;justify-content:center;border-radius:50%}.cmpbtn span{display:none}}
+/* Toasts always show above pop-ups */
+.toast{z-index:120}
+/* Checkout delivery options: titles wrap instead of running into the price */
+.opts label>span{flex:1;min-width:0}.opts label>span b,.opts label>span strong{overflow-wrap:anywhere}
+.opts label>em,.opts label>.fee,.opts label>b:last-child{flex:none;white-space:nowrap}
+@media(max-width:700px){.paybox{flex-direction:column;align-items:flex-start}}
+/* Cards on small phones: stock line and spec chips are readable in full */
+@media(max-width:400px){.card .stock{white-space:normal;overflow:visible}.price b{font-size:16px}}
+.chips li{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+/* Compare table on phones: narrow label column, two products in view */
+@media(max-width:600px){.cmptable{min-width:0;font-size:13px}.cmptable tbody th{white-space:normal;width:84px;max-width:84px}.cmptable td,.cmptable thead th{min-width:120px}.cmptable thead img{max-width:110px}.cmpscroll{position:relative;background:linear-gradient(to right,var(--card) 30%,transparent),linear-gradient(to left,var(--card) 30%,transparent) right,linear-gradient(to right,rgba(15,29,54,.12),transparent 70%),linear-gradient(to left,rgba(15,29,54,.12),transparent 70%) right;background-repeat:no-repeat;background-size:30px 100%,30px 100%,12px 100%,12px 100%;background-attachment:local,local,scroll,scroll}}
+/* Top bar: bigger tap areas without making the bar taller */
+.ann-m a{position:relative}.ann-m a::after,.tmini::after{content:"";position:absolute;inset:-8px -4px}
+.tmini{position:relative}
+.crumbs a{display:inline-block;padding:6px 2px}
+/* About gallery captions stay readable on bright photos */
+.gallery figcaption,.team-act figcaption,.tact figcaption{background:linear-gradient(to top,rgba(5,12,26,.88),rgba(5,12,26,.55) 60%,transparent);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+/* Related products on tablets: no lone card on its own row */
+@media(min-width:601px) and (max-width:1024px){.rel-h+.grid>:nth-child(4){display:none}}
+.track-b .row{margin-top:14px}
+[data-track] .sum+.row{margin-top:16px}
+/* Search suggestions: names wrap cleanly */
+.sugg b,.sugg a span{overflow-wrap:anywhere}
+.gal figcaption{background:linear-gradient(to top,rgba(5,12,26,.9),rgba(5,12,26,.6) 55%,transparent);padding-top:40px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.card.seeall{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px;text-decoration:none;background:var(--sky);border:1px dashed var(--blue);color:var(--head);min-height:140px}
+.card.seeall[hidden]{display:none}
+.card.seeall b{display:block;font:700 18px var(--hf),Poppins}.card.seeall small{color:var(--soft);font-size:13px}
+.card.seeall i{font-style:normal;font-size:22px;color:var(--blue)}
+html[data-theme=dark] .card.seeall{background:#1d2127;border-color:#f7941d}html[data-theme=dark] .card.seeall i{color:#f7a440}
+.warnbox{background:#fff2e0;color:#8a4700;border:1px solid #f5cf9a;border-radius:12px;padding:12px 14px;font-size:14.5px;margin:12px 0}
+html[data-theme=dark] .warnbox{background:#2e2414;color:#f3c98a;border-color:#5a4220}
+.buybar{flex-wrap:wrap}.buybar .bbtot{flex-basis:100%;display:flex;justify-content:space-between;align-items:baseline;font-size:15px;padding:0 2px 4px}.buybar .bbtot b{font:700 18px var(--hf),Poppins;color:var(--head)}
+.qty button:disabled{opacity:.35;cursor:default}
+.co.co-empty{grid-template-columns:minmax(0,1fr);max-width:640px;margin-inline:auto}
+html.locked,html.locked body{overflow:hidden}
+.rv:focus-within{opacity:1;transform:none}

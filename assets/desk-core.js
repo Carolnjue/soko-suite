@@ -63,9 +63,12 @@
     var ph = String(phone || '').replace(/\D/g, '').replace(/^254/, '').replace(/^0/, '');
     return !!d && ph.indexOf(d) > -1;
   };
-  K.method = function (m) { var map = { mpesa: 'M-Pesa', bank: 'Bank transfer', cash: 'Cash', card: 'Card', cheque: 'Cheque' }; m = String(m || ''); return map[m.toLowerCase()] || (m.charAt(0).toUpperCase() + m.slice(1)); };
+  K.method = function (m) { var map = { mpesa: 'M-Pesa', 'm-pesa': 'M-Pesa', bank: 'Bank transfer', cash: 'Cash', card: 'Card', cheque: 'Cheque' }; m = String(m || ''); if (/^\d{4}$/.test(m)) { var bk = ((window.DESK && DESK.banks) || []).filter(function (b) { return String(b[0]) === m; })[0]; if (bk) return bk[1]; } return map[m.toLowerCase()] || (m.charAt(0).toUpperCase() + m.slice(1)); };
   K.waNum = function (p) { var d = String(p || '').replace(/\D/g, ''); if (/^0\d{9}$/.test(d)) d = '254' + d.slice(1); else if (/^[17]\d{8}$/.test(d)) d = '254' + d; return d; };
   K.url = function (path) { return D.api + path + (path.indexOf('?') > -1 ? '&' : '?') + '_wpnonce=' + D.nonce; };
+  /* A website order counts as a sale once the team confirms it or it is paid. */
+  K.searchHint = function () { var w = [['sales', 'invoices'], ['crm', 'customers'], ['payments', 'payments'], ['stock', 'products'], ['jobs', 'jobs'], ['purchases', 'orders']].filter(function (x) { return K.can(x[0]); }).map(function (x) { return x[1]; }).slice(0, 4); return w.length ? 'Search ' + (w.length > 1 ? w.slice(0, -1).join(', ') + ' and ' + w[w.length - 1] : w[0]) : 'Search'; };
+  K.confirmed = function (r) { return !r || r.source !== 'web' || +r.paid > 0 || ['to_pack', 'packed', 'dispatched', 'delivered'].indexOf(r.fulfil) > -1; };
   K.withBanks = function (o) { return o.concat(((window.DESK && DESK.banks) || []).map(function (b) { return [b[0], b[1]]; })); };
   K.open = function (path) { window.open(K.url(path), '_blank', 'noopener'); };
 
@@ -132,6 +135,17 @@
     else if (type === 'toggle') return '<label class="tog"><span>' + esc(label) + (opts.hint ? '<br><small class="tiny">' + esc(opts.hint) + '</small>' : '') + '</span><input type="checkbox" class="sw" name="' + name + '"' + (+v ? ' checked' : '') + '></label>';
     else inp = '<input id="' + id + '" name="' + name + '" type="' + (type || 'text') + '" value="' + esc(v) + '"' + (opts.ph ? ' placeholder="' + esc(opts.ph) + '"' : '') + (opts.req ? ' required' : '') + (opts.step ? ' step="' + opts.step + '"' : '') + (opts.list ? ' list="' + opts.list + '"' : '') + (opts.min != null ? ' min="' + opts.min + '"' : '') + '>';
     return '<div class="f"><label for="' + id + '">' + esc(label) + '</label>' + inp + (opts.hint ? '<span class="hint">' + esc(opts.hint) + '</span>' : '') + '</div>';
+  };
+  /* Change your own password without leaving the Desk. */
+  K.myPassword = function () {
+    var m = K.modal('Change my password', K.field('Current password', 'current', '', 'password') + K.field('New password', 'password', '', 'password', { hint: 'At least 8 characters' }) + K.field('Type the new password again', 'again', '', 'password'), '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-go>Save password</button>');
+    $('[data-go]', m).onclick = function () {
+      var f = K.read(m);
+      if (!f.current) { K.toast('Enter your current password.', true); return; }
+      if ((f.password || '').length < 8) { K.toast('Use at least 8 characters for the new password.', true); return; }
+      if (f.password !== f.again) { K.toast('The two new passwords are not the same.', true); return; }
+      K.api('me/password', { body: { current: f.current, password: f.password } }).then(function (r) { if (r.nonce) D.nonce = r.nonce; K.closeModal(); K.toast(r.message); }).catch(K.fail);
+    };
   };
   K.read = function (root) {
     var o = {};
@@ -219,17 +233,25 @@
     app.innerHTML = '<aside class="side" data-side><a class="brand" href="#home"><img src="' + esc(D.logo) + '" alt=""><span><b>Dynamic Desk</b><small>' + esc(K.me.settings.business) + '</small></span></a>' +
       order.map(function (g) { return '<h4>' + esc(g) + '</h4>' + groups[g].map(function (m) { return '<a href="#' + m.id + '" data-nav="' + m.id + '">' + K.ic(K.ICONS[m.id] || K.ICONS.home) + esc(m.label) + '<em data-badge="' + m.id + '" hidden></em></a>'; }).join(''); }).join('') +
       '<div class="foot">Signed in as ' + esc(K.me.role) + '<br><a href="' + esc(D.site) + '" target="_blank" rel="noopener">View website</a> · <a href="' + esc(D.logout) + '">Sign out</a></div></aside>' +
-      '<main><div class="top"><button class="btn ghost mbtn" data-menu aria-label="Menu">' + K.ic(K.ICONS.menu) + '</button><button class="btn sun sm" data-install hidden>' + K.ic(K.ICONS.dl || K.ICONS.plus) + 'Install app</button><a class="mbrand" href="#home" aria-label="Dashboard"><img src="' + esc(D.logo) + '" alt="' + esc(K.me.settings.business || 'Home') + '"></a><button class="btn ghost msearch" data-msearch aria-label="Search">' + K.ic(K.ICONS.search) + '</button><div class="gsearch">' + K.ic(K.ICONS.search) + '<input type="search" placeholder="Search invoices, customers, payments, products" aria-label="Search" data-gs><div class="gres" hidden data-gr></div></div>' +
+      '<main><div class="top"><button class="btn ghost mbtn" data-menu aria-label="Menu">' + K.ic(K.ICONS.menu) + '</button><button class="btn sun sm" data-install hidden>' + K.ic(K.ICONS.dl || K.ICONS.plus) + 'Install app</button><a class="mbrand" href="#home" aria-label="Dashboard"><img src="' + esc(D.logo) + '" alt="' + esc(K.me.settings.business || 'Home') + '"></a><button class="btn ghost msearch" data-msearch aria-label="Search">' + K.ic(K.ICONS.search) + '</button><div class="gsearch">' + K.ic(K.ICONS.search) + '<input type="search" placeholder="' + esc(K.searchHint()) + '" aria-label="Search" data-gs><div class="gres" hidden data-gr></div></div>' +
       '<div class="tright"><button class="btn ghost themebtn" data-themebtn aria-label="Light or dark mode" title="Light or dark mode"><svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></button><a class="btn sitebtn" href="' + esc(D.site) + '" target="_blank" rel="noopener" aria-label="Open the website">' + K.ic(K.ICONS.ext) + '<span>Website</span></a><button class="me" data-me><span class="av">' + esc((K.me.name || '?').split(' ').map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase()) + '</span><span><b>' + esc(K.me.first) + '</b><small>' + esc(K.me.role) + '</small></span></button></div></div><div id="view"></div></main>' +
       '<div class="scrim"></div><aside class="drawer" role="dialog" aria-modal="true"></aside><div class="modal"></div><div class="toast" role="status"></div>';
-    $('[data-menu]').onclick = function () { $('[data-side]').classList.toggle('on'); };
+    var sideScrim = document.createElement('div'); sideScrim.className = 'sidescrim'; document.body.appendChild(sideScrim);
+    var setSide = function (on) { $('[data-side]').classList.toggle('on', on); sideScrim.classList.toggle('on', on); document.body.classList.toggle('side-open', on); };
+    K.closeSide = function () { setSide(false); };
+    $('[data-menu]').onclick = function (e) { e.stopPropagation(); setSide(!$('[data-side]').classList.contains('on')); };
+    sideScrim.addEventListener('click', function () { setSide(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('[data-side]').classList.contains('on')) setSide(false); });
+    $('[data-side]').addEventListener('click', function (e) { if (e.target.closest('a[href]')) setSide(false); });
     $('[data-themebtn]').onclick = function () { var d = document.documentElement, dk = d.getAttribute('data-theme') !== 'dark'; if (dk) d.setAttribute('data-theme', 'dark'); else d.removeAttribute('data-theme'); try { localStorage.setItem('soko_desk_theme', dk ? 'dark' : 'light'); } catch (e) {} };
     $('[data-me]').onclick = function (e) {
       e.stopPropagation();
       var b = $('[data-me]'), p = $('.menu-pop', b);
       if (p) { p.remove(); return; }
-      b.insertAdjacentHTML('beforeend', '<div class="menu-pop"><a href="' + esc(D.site) + '" target="_blank" rel="noopener">View website</a>' + (K.me.admin ? '<a href="' + esc(D.site) + 'wp-admin/">WordPress admin</a>' : '') + '<button data-pw>Change my password</button><a href="' + esc(D.logout) + '">Sign out</a></div>');
-      $('[data-pw]', b).onclick = function () { location.href = D.site + 'wp-login.php?action=lostpassword'; };
+      b.insertAdjacentHTML('beforeend', '<div class="menu-pop"><a href="' + esc(D.site) + '" target="_blank" rel="noopener">View website</a>' + (K.me.admin ? '<a href="' + esc(D.site) + 'wp-admin/">WordPress admin</a>' : '') + '<button data-pw>Change my password</button><button data-thm class="mthm">Light or dark mode</button><a href="' + esc(D.logout) + '">Sign out</a></div>');
+      $('[data-pw]', b).onclick = K.myPassword;
+      $('[data-thm]', b).onclick = function (ev) { ev.stopPropagation(); var pp = $('.menu-pop'); if (pp) pp.remove(); $('[data-themebtn]').click(); };
+      $('[data-pw]', b).onclick = function (ev) { ev.stopPropagation(); var pp = $('.menu-pop'); if (pp) pp.remove(); K.myPassword(); };
     };
     document.addEventListener('click', function (e) { if (!e.target.closest('[data-me]')) { var p = $('.menu-pop'); if (p) p.remove(); } if (!e.target.closest('.gsearch')) { var g = $('[data-gr]'); if (g) g.hidden = true; } });
     var gs = $('[data-gs]'), gr = $('[data-gr]'), gT;
@@ -261,8 +283,15 @@
   K.route = function () {
     var h = location.hash.replace(/^#/, ''), parts = h.split('/'), m = parts[0] || '', arg = parts.slice(1).join('/');
     if (!K.can(m)) m = K.me.modules.length ? K.me.modules[0].id : '';
+    // Leaving Site Studio with unpublished changes: ask first, so nothing is lost by accident.
+    if (K.mod === 'studio' && m !== 'studio' && K.studioDirty && K.studioDirty()) {
+      var target = location.hash;
+      history.replaceState(null, '', '#studio');
+      K.confirm('You have changes in Site Studio that are not published yet. Leave and lose them?', 'Leave without publishing', true).then(function (y) { if (y) { K.studioDirty(false); location.hash = target; } });
+      return;
+    }
     $$('[data-nav]').forEach(function (a) { a.classList.toggle('on', a.dataset.nav === m); });
-    $('[data-side]').classList.remove('on');
+    if (K.closeSide) K.closeSide(); else $('[data-side]').classList.remove('on');
     K.dirty = false; K.closeDrawer();
     var old = $('#view'), v = old.cloneNode(false);
     old.parentNode.replaceChild(v, old); // late replies from the previous screen land in the detached copy, never on this one
@@ -272,6 +301,13 @@
     try { K.V[m](v, arg); } catch (e) { v.innerHTML = '<div class="empty"><b>This screen hit a problem</b>' + esc(e.message) + '</div>'; if (window.console) console.error(e); }
     window.scrollTo(0, 0);
   };
+  /* A link to a screen this person cannot open explains why, instead of landing somewhere else. */
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a || !K.me) return;
+    var mod = a.getAttribute('href').slice(1).split('/')[0];
+    if (mod && mod !== 'home' && K.V && K.V[mod] && !K.can(mod)) { e.preventDefault(); K.toast('That screen is for the ' + (mod === 'settings' ? 'owner' : 'team that looks after ' + mod) + '. Ask the owner if you need it.', true); }
+  }, true);
   K.go = function (h) { if (location.hash === '#' + h) K.route(); else location.hash = h; };
   K.head = function (title, sub, acts) { return '<div class="head"><div><h1>' + title + '</h1>' + (sub ? '<p>' + sub + '</p>' : '') + '</div><div class="acts">' + (acts || '') + '</div></div>'; };
   K.tabs = function (key, list, on) { return '<div class="tabs" data-tabs="' + key + '">' + list.map(function (t) { return '<button data-t="' + t[0] + '" class="' + (on === t[0] ? 'on' : '') + '">' + esc(t[1]) + (t[2] ? '<em>' + t[2] + '</em>' : '') + '</button>'; }).join('') + '</div>'; };

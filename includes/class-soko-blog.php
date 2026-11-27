@@ -44,6 +44,10 @@ final class Soko_Blog {
 			'post_status'  => ( isset( $b['status'] ) && 'publish' === $b['status'] ) ? 'publish' : 'draft',
 		);
 		if ( $id ) {
+			$post = get_post( $id );
+			if ( ! $post || 'post' !== $post->post_type ) {
+				return new WP_Error( 'soko', 'That article was not found.', array( 'status' => 404 ) );
+			}
 			$data['ID'] = $id;
 			wp_update_post( $data );
 		} else {

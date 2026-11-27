@@ -191,7 +191,7 @@
   }
   function publish() {
     var b = $('[data-pub]'); if (b) { b.disabled = true; b.textContent = 'Publishing…'; }
-    K.api('site', { body: S.site }).then(function () { S.dirty = false; K.toast('Published. The website is updated.'); drawPanel(); preview(); }).catch(function (e) { K.fail(e); drawPanel(); });
+    K.api('site', { body: S.site }).then(function (r) { if (r && r._ver) S.site._ver = r._ver; S.dirty = false; K.toast('Published. The website is updated.'); drawPanel(); preview(); }).catch(function (e) { K.fail(e); drawPanel(); });
   }
   function load(reset) {
     K.api('site').then(function (s) { S.site = s; S.dirty = false; if (!S.site.pages[S.page]) S.page = 'home'; S.sec = null; drawPanel(); if (reset) preview(); }).catch(K.fail);
@@ -218,6 +218,7 @@
       $('[data-url]', v).textContent = pageUrl(S.page);
       preview();
     }).catch(K.fail);
+    K.studioDirty = function (v) { if (v === false) S.dirty = false; return S.dirty; };
     window.onbeforeunload = function () { return S.dirty && K.mod === 'studio' ? 'You have unpublished changes.' : undefined; };
   };
 })();

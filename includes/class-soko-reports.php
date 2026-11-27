@@ -343,9 +343,24 @@ final class Soko_Reports {
 				$n   = self::pl_numbers( $from, $to );
 				$ein = Soko_Accounts::sum( '1300', $from, $to, array( 'expense' ) );
 				$pin = Soko_Accounts::sum( '1300', $from, $to, array( 'bill' ) );
-				$net = $n['vat'] - $ein - $pin;
-				$out['kpis'] = array( array( 'Output VAT', soko_money( $n['vat'] ) ), array( 'Input VAT', soko_money( $ein + $pin ) ), array( $net >= 0 ? 'VAT payable' : 'VAT credit', soko_money( abs( $net ) ) ) );
-				$out['sections'][] = array( 'title' => 'VAT position', 'head' => array( 'Line', 'KES' ), 'rows' => array( array( 'Output VAT on sales', $n['vat'] ), array( 'Input VAT on purchases', -round( $pin, 2 ) ), array( 'Input VAT on expenses', -round( $ein, 2 ) ), array( $net >= 0 ? 'Payable to KRA' : 'Credit carried forward', round( $net, 2 ), '_b' => 1 ) ), 'widths' => array( 130, 50 ) );
+				// Goods sent back to a supplier reverse the VAT claimed on them.
+				$rin = Soko_Accounts::sum( '1300', $from, $to, array( 'supplier_return' ) );
+				$all = Soko_Accounts::sum( '1300', $from, $to ) - Soko_Accounts::sum( '1300', $from, $to, array( 'opening' ) );
+				$oin = round( $all - $ein - $pin - $rin, 2 );
+				$out_books = -Soko_Accounts::sum( '2100', $from, $to, array( 'invoice', 'credit' ) );
+				$net = $n['vat'] - $all;
+				$vrows = array( array( 'Output VAT on sales', $n['vat'] ), array( 'Input VAT on purchases', -round( $pin, 2 ) ), array( 'Input VAT on expenses', -round( $ein, 2 ) ) );
+				if ( abs( $rin ) > 0.005 ) {
+					$vrows[] = array( 'Input VAT reversed on goods returned to suppliers', -round( $rin, 2 ) );
+				}
+				if ( abs( $oin ) > 0.005 ) {
+					$vrows[] = array( 'Other input VAT entries (journals)', -$oin );
+				}
+				$vrows[] = array( $net >= 0 ? 'Payable to KRA' : 'Credit carried forward', round( $net, 2 ), '_b' => 1 );
+				$out['kpis'] = array( array( 'Output VAT', soko_money( $n['vat'] ) ), array( 'Input VAT', soko_money( $all ) ), array( $net >= 0 ? 'VAT payable' : 'VAT credit', soko_money( abs( $net ) ) ) );
+				$out['sections'][] = array( 'title' => 'VAT position', 'head' => array( 'Line', 'KES' ), 'rows' => $vrows, 'widths' => array( 130, 50 ) );
+				$diff = round( ( $out_books - $all ) - $net, 2 );
+				$out['sections'][] = array( 'title' => 'Agrees with the books', 'head' => array( 'Check', 'KES' ), 'rows' => array( array( 'Output VAT in the books (2100)', round( $out_books, 2 ) ), array( 'Input VAT in the books (1300)', -round( $all, 2 ) ), array( abs( $diff ) < 0.01 ? 'Difference: none' : 'Difference to look into', $diff, '_b' => 1 ) ), 'widths' => array( 130, 50 ) );
 				$inv = $wpdb->get_results( $wpdb->prepare( "SELECT d.number, d.date, c.name, c.kra, d.subtotal, d.vat, d.total, d.etims_ref FROM $D d LEFT JOIN $C c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ) . " AND d.date BETWEEN %s AND %s ORDER BY d.date", $from, $to ), ARRAY_A ); // phpcs:ignore
 				$out['sections'][] = array( 'title' => 'Sales invoices', 'head' => array( 'Invoice', 'Date', 'Customer', 'KRA PIN', 'Net', 'VAT', 'eTIMS' ), 'rows' => array_merge( array_map( function ( $r ) { return array( $r['number'], $r['date'], $r['name'], $r['kra'], round( $r['subtotal'], 2 ), round( $r['vat'], 2 ), $r['etims_ref'] ); }, $inv ), array( array( 'Total', '', '', '', round( array_sum( wp_list_pluck( $inv, 'subtotal' ) ), 2 ), round( array_sum( wp_list_pluck( $inv, 'vat' ) ), 2 ), '', '_b' => 1 ) ) ), 'widths' => array( 22, 22, 45, 26, 22, 18, 25 ) );
 				$cn = $wpdb->get_results( $wpdb->prepare( "SELECT d.number, d.date, c.name, d.subtotal, d.vat FROM $D d LEFT JOIN $C c ON c.id = d.customer_id WHERE d.type = 'credit' AND d.status <> 'void' AND d.date BETWEEN %s AND %s ORDER BY d.date", $from, $to ), ARRAY_A ); // phpcs:ignore

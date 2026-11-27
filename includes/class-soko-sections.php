@@ -419,6 +419,7 @@ final class Soko_Sections {
 		$cur = get_option( 'soko_site' );
 		self::remember( is_array( $cur ) ? $cur : soko_rel( self::site() ), 'restore of an earlier version' );
 		update_option( 'soko_site', $ver, false );
+		update_option( 'soko_site_ver', (string) microtime( true ), false );
 		update_option( 'soko_flush', 1, false );
 		return $ver;
 	}
@@ -428,7 +429,11 @@ final class Soko_Sections {
 			$data = $data['site'];
 		}
 		$draft = ! empty( $data['_draft'] );
-		unset( $data['_draft'] );
+		$base  = isset( $data['_ver'] ) ? (string) $data['_ver'] : '';
+		unset( $data['_draft'], $data['_ver'] );
+		if ( ! $draft && $base && $base !== (string) get_option( 'soko_site_ver', '' ) ) {
+			return new WP_Error( 'soko_conflict', 'Someone else published changes to the website while you were editing. Discard your changes to load theirs, then make your edits again.', array( 'status' => 409 ) );
+		}
 		$site = soko_rel( self::clean( $data ) );
 		if ( $draft ) {
 			set_transient( 'soko_site_draft_' . get_current_user_id(), $site, DAY_IN_SECONDS );
@@ -441,7 +446,20 @@ final class Soko_Sections {
 			if ( ! isset( $old['pages'][ $k ] ) ) {
 				$what[] = 'new page ' . ( isset( $pg['title'] ) ? $pg['title'] : $k );
 			} elseif ( wp_json_encode( $old['pages'][ $k ] ) !== wp_json_encode( $pg ) ) {
-				$what[] = ( isset( $pg['title'] ) ? $pg['title'] : $k ) . ' page';
+				// Name the sections that changed, so versions can be told apart.
+				$secs = array();
+				$on   = isset( $pg['sections'] ) ? (array) $pg['sections'] : array();
+				$oo   = isset( $old['pages'][ $k ]['sections'] ) ? (array) $old['pages'][ $k ]['sections'] : array();
+				foreach ( $on as $si => $sec ) {
+					if ( ! isset( $oo[ $si ] ) || wp_json_encode( $oo[ $si ] ) !== wp_json_encode( $sec ) ) {
+						$lab = ! empty( $sec['title'] ) ? $sec['title'] : ( isset( $sec['type'] ) ? ucfirst( str_replace( '_', ' ', $sec['type'] ) ) : 'a section' );
+						$secs[] = wp_strip_all_tags( $lab );
+					}
+				}
+				if ( count( $oo ) > count( $on ) ) {
+					$secs[] = 'a section removed';
+				}
+				$what[] = ( isset( $pg['title'] ) ? $pg['title'] : $k ) . ' page' . ( $secs ? ' (' . implode( ', ', array_slice( array_unique( $secs ), 0, 3 ) ) . ')' : '' );
 			}
 		}
 		foreach ( array( 'header' => 'header and menu', 'footer' => 'footer' ) as $k => $lab ) {
@@ -457,8 +475,10 @@ final class Soko_Sections {
 		}
 		self::remember( $old, 'changes to ' . implode( ', ', array_slice( $what, 0, 4 ) ) );
 		update_option( 'soko_site', $site, false );
+		update_option( 'soko_site_ver', (string) microtime( true ), false );
 		delete_transient( 'soko_site_draft_' . get_current_user_id() );
 		update_option( 'soko_flush', 1, false );
+		$site['_ver'] = (string) get_option( 'soko_site_ver' );
 		return $site;
 	}
 

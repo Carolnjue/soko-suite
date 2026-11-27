@@ -22,7 +22,7 @@ final class Soko_Ledger {
 		}
 		global $wpdb;
 		$since = gmdate( 'Y-m-d H:i:s', strtotime( soko_now() . ' -48 hours' ) );
-		$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT l.product_id AS pid, SUM(l.qty) AS q FROM ' . soko_t( 'lines' ) . ' l JOIN ' . soko_t( 'docs' ) . " d ON d.id = l.doc_id WHERE d.type = 'invoice' AND d.source = 'web' AND d.status <> 'void' AND d.paid < d.total AND d.fulfil <> 'delivered' AND d.created >= %s AND l.product_id > 0 GROUP BY l.product_id", $since ), ARRAY_A ); // phpcs:ignore
+		$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT l.product_id AS pid, SUM(l.qty) AS q FROM ' . soko_t( 'lines' ) . ' l JOIN ' . soko_t( 'docs' ) . " d ON d.id = l.doc_id WHERE d.type = 'invoice' AND d.source = 'web' AND d.status <> 'void' AND d.paid < d.total AND d.fulfil <> 'delivered' AND COALESCE(d.meta,'') NOT LIKE %s AND d.created >= %s AND l.product_id > 0 GROUP BY l.product_id", '%stock_done%', $since ), ARRAY_A ); // phpcs:ignore
 		self::$held_cache = array();
 		foreach ( (array) $rows as $x ) {
 			self::$held_cache[ (int) $x['pid'] ] = (float) $x['q'];
@@ -96,12 +96,47 @@ final class Soko_Ledger {
 		if ( ! empty( $args['q'] ) ) {
 			// Common local spellings: "invertor", "betri", "panal", "charge controler".
 			$args['q'] = preg_replace( array( '/invertor/i', '/\bbet(t)?r(i|y)\b/i', '/panal/i', '/controler/i', '/bateri/i', '/camera?s?\b/i' ), array( 'inverter', 'batter', 'panel', 'controller', 'batter', 'cam' ), trim( $args['q'] ) );
-			$like    = '%' . $wpdb->esc_like( $args['q'] ) . '%';
-			$syn     = preg_match( '/repair|fault|fix|broken|service|not working/i', $args['q'] );
-			$where[] = '(name LIKE %s OR sku LIKE %s OR brand LIKE %s OR runs LIKE %s OR description LIKE %s' . ( $syn ? ' OR name LIKE %s OR name LIKE %s' : '' ) . ')';
-			array_push( $vals, $like, $like, $like, $like, $like );
-			if ( $syn ) {
-				array_push( $vals, '%maintenance%', '%survey%' );
+			$syn   = preg_match( '/repair|fault|fix|broken|service|not working/i', $args['q'] );
+			$cats  = soko_categories();
+			$stop  = array( 'and', 'for', 'the', 'with', 'of', 'a', 'an', 'in', 'to', 'solar' );
+			$words = array_values( array_filter( preg_split( '/[\s,\/]+/', strtolower( $args['q'] ) ), function ( $w ) { return '' !== $w; } ) );
+			if ( count( $words ) > 1 ) {
+				$words = array_values( array_diff( $words, $stop ) ) ?: $words; // "solar kit" still finds kits
+			}
+			$parts = array();
+			foreach ( array_slice( $words, 0, 6 ) as $w ) {
+				// Plurals: panels, batteries, inverters, heaters, "5kw" and "5 kw".
+				$stem = preg_replace( array( '/ies$/', '/(ches|shes|xes|ses)$/', '/s$/' ), array( 'y', '', '' ), $w );
+				$stem = preg_replace( '/^(\d+(?:\.\d+)?)\s*(kw|kva|kwh|w|ah|v)$/', '$1 $2', $stem );
+				$stem = strlen( $stem ) >= 3 || is_numeric( $stem ) ? $stem : $w;
+				if ( 'battery' === $stem ) {
+					$stem = 'batter';
+				}
+				$alts = array_unique( array( $stem, str_replace( ' ', '', $stem ) ) );
+				$or   = array();
+				foreach ( $alts as $a ) {
+					$lk  = '%' . $wpdb->esc_like( $a ) . '%';
+					$or[] = 'name LIKE %s OR sku LIKE %s OR brand LIKE %s OR runs LIKE %s OR description LIKE %s OR specs LIKE %s';
+					array_push( $vals, $lk, $lk, $lk, $lk, $lk, $lk );
+				}
+				$cm = array();
+				foreach ( $cats as $c ) {
+					if ( false !== stripos( $c['name'], $stem ) || false !== stripos( $c['id'], $stem ) ) {
+						$cm[] = $c['id'];
+					}
+				}
+				if ( $cm ) {
+					$or[] = 'cat IN (' . implode( ',', array_fill( 0, count( $cm ), '%s' ) ) . ')';
+					$vals = array_merge( $vals, $cm );
+				}
+				if ( $syn ) {
+					$or[] = 'name LIKE %s OR name LIKE %s';
+					array_push( $vals, '%maintenance%', '%survey%' );
+				}
+				$parts[] = '(' . implode( ' OR ', $or ) . ')';
+			}
+			if ( $parts ) {
+				$where[] = '(' . implode( ' AND ', $parts ) . ')';
 			}
 		}
 		$order = 'sort ASC, id ASC';
@@ -227,8 +262,14 @@ final class Soko_Ledger {
 		if ( $phone ) {
 			$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $t WHERE phone = %s", $phone ) );
 			if ( $id ) {
-				$upd = array();
+				$upd  = array();
+				$acct = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE id = %d", $id ), ARRAY_A ); // phpcs:ignore
+				$same = empty( $d['name'] ) || 0 === strcasecmp( trim( $d['name'] ), trim( (string) $acct['name'] ) );
 				foreach ( array( 'email', 'kra', 'county', 'address' ) as $k ) {
+					// Someone else on a shared phone: fill gaps only, never replace the account holder's details.
+					if ( ! $same && ! empty( $acct[ $k ] ) ) {
+						continue;
+					}
 					if ( ! empty( $d[ $k ] ) && ( 'email' !== $k || is_email( $d[ $k ] ) ) ) {
 						$upd[ $k ] = sanitize_text_field( $d[ $k ] );
 					}
@@ -312,6 +353,13 @@ final class Soko_Ledger {
 			if ( ! empty( $d['meta']['contact'] ) && ! empty( $d['customer'] ) ) {
 				$d['customer']['account_name'] = $d['customer']['name'];
 				$d['customer']['name']         = $d['meta']['contact'];
+				if ( array_key_exists( 'contact_email', $d['meta'] ) ) {
+					$d['customer']['email'] = $d['meta']['contact_email'];
+				}
+				if ( array_key_exists( 'contact_address', $d['meta'] ) ) {
+					$d['customer']['address'] = $d['meta']['contact_address'];
+					$d['customer']['county']  = '';
+				}
 			}
 		}
 		$d['pay_url'] = home_url( '/track/?doc=' . rawurlencode( $d['number'] ) . '&t=' . $d['token'] );
@@ -371,7 +419,14 @@ final class Soko_Ledger {
 			$typed = trim( sanitize_text_field( isset( $d['customer']['name'] ) ? $d['customer']['name'] : '' ) );
 			$known = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT name FROM ' . soko_t( 'customers' ) . ' WHERE id = %d', $d['customer_id'] ) ); // phpcs:ignore
 			if ( $typed && strcasecmp( $typed, $known ) ) {
-				$d['meta'] = array_merge( isset( $d['meta'] ) ? (array) $d['meta'] : array(), array( 'contact' => $typed ) );
+				$d['meta'] = array_merge(
+					isset( $d['meta'] ) ? (array) $d['meta'] : array(),
+					array(
+						'contact'         => $typed,
+						'contact_email'   => isset( $d['customer']['email'] ) && is_email( $d['customer']['email'] ) ? sanitize_email( $d['customer']['email'] ) : '',
+						'contact_address' => trim( sanitize_text_field( ( isset( $d['customer']['address'] ) ? $d['customer']['address'] : '' ) . ( ! empty( $d['customer']['county'] ) ? ', ' . $d['customer']['county'] : '' ) ), ', ' ),
+					)
+				);
 			}
 		}
 		// When editing, keep what was not sent, and keep the cost each item was sold at.
@@ -447,7 +502,8 @@ final class Soko_Ledger {
 			$wpdb->insert( soko_t( 'lines' ), $l );
 		}
 		$doc = self::doc( $id );
-		if ( 'invoice' === $type && 'issued' === $doc['status'] ) {
+		// A website order is only a request until the team confirms it or it is paid.
+		if ( 'invoice' === $type && 'issued' === $doc['status'] && ( 'web' !== $doc['source'] || (float) $doc['paid'] > 0 || in_array( (string) $doc['fulfil'], array( 'to_pack', 'packed', 'dispatched', 'delivered' ), true ) ) ) {
 			Soko_Etims::queue( $doc );
 		}
 		soko_log( ( $id ? 'Saved ' : 'Created ' ) . ( 'quote' === $type ? 'quotation' : $type ) . ' ' . $doc['number'], $type, $doc['number'] );
@@ -486,7 +542,7 @@ final class Soko_Ledger {
 				'lines'       => $q['lines'],
 				'notes'       => $q['notes'],
 				'parent_id'   => $q['id'],
-				'meta'        => array( 'quote' => $q['number'], 'deposit' => $deposit ? (int) soko_setting( 'deposit_percent', 60 ) : 0 ),
+				'meta'        => array_merge( array( 'quote' => $q['number'], 'deposit' => $deposit ? (int) soko_setting( 'deposit_percent', 60 ) : 0 ), self::contact_meta( $q ) ),
 			)
 		);
 		global $wpdb;
@@ -516,8 +572,17 @@ final class Soko_Ledger {
 					return (int) $r['id'];
 				}
 			}
-			$digits = preg_replace( '/\D/', '', $ref );
-			if ( strlen( $digits ) >= 3 ) {
+			// A reference quoting a quotation pays the invoice made from it, never an unrelated invoice with the same digits.
+			foreach ( $wpdb->get_results( "SELECT number, meta FROM $t WHERE type = 'quote' ORDER BY id DESC LIMIT 2000", ARRAY_A ) as $q ) { // phpcs:ignore
+				if ( self::norm( $q['number'] ) === $ref ) {
+					$qm = json_decode( (string) $q['meta'], true );
+					return ! empty( $qm['invoice_id'] ) ? (int) $qm['invoice_id'] : 0;
+				}
+			}
+			$digits  = preg_replace( '/\D/', '', $ref );
+			$letters = preg_replace( '/[^A-Z]/', '', strtoupper( $ref ) );
+			$prefix  = preg_replace( '/[^A-Z]/', '', strtoupper( (string) soko_setting( 'prefix_invoice', 'INV' ) ) );
+			if ( strlen( $digits ) >= 3 && ( '' === $letters || $letters === $prefix ) ) {
 				foreach ( $rows as $r ) {
 					if ( preg_replace( '/\D/', '', $r['number'] ) === $digits ) {
 						return (int) $r['id'];
@@ -594,8 +659,15 @@ final class Soko_Ledger {
 		$pt  = soko_t( 'payments' );
 		$pay = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $pt WHERE id = %d", $payment_id ), ARRAY_A );
 		$inv = self::doc( $doc_id );
-		if ( ! $pay || ! $inv || 'matched' === $pay['status'] ) {
-			return new WP_Error( 'soko', 'Payment already applied or invoice missing.' );
+		if ( ! $pay || ! $inv || 'matched' === $pay['status'] || 'void' === $pay['status'] ) {
+			return new WP_Error( 'soko', 'Payment already applied or invoice missing.', array( 'status' => 400 ) );
+		}
+		if ( 'invoice' !== $inv['type'] || 'void' === $inv['status'] ) {
+			return new WP_Error( 'soko', 'Payments can only go on an open invoice. Convert the quotation to an invoice first.', array( 'status' => 400 ) );
+		}
+		$lk = Soko_Accounts::locked( substr( $pay['received'], 0, 10 ) );
+		if ( $lk ) {
+			return $lk;
 		}
 		$was_paid = 'paid' === $inv['state'];
 		$paid     = (float) $inv['paid'] + (float) $pay['amount'];
@@ -614,7 +686,7 @@ final class Soko_Ledger {
 				'total'       => $pay['amount'],
 				'paid'        => $pay['amount'],
 				'parent_id'   => $inv['id'],
-				'meta'        => wp_json_encode( array( 'invoice' => $inv['number'], 'code' => $pay['code'], 'method' => $pay['method'], 'balance' => max( 0, $inv['total'] - $paid ), 'credit' => max( 0, round( $paid - $inv['total'], 2 ) ) ) ),
+				'meta'        => wp_json_encode( array_merge( array( 'invoice' => $inv['number'], 'code' => $pay['code'], 'method' => $pay['method'], 'balance' => max( 0, $inv['total'] - $paid ), 'credit' => max( 0, round( $paid - $inv['total'], 2 ) ) ), self::contact_meta( $inv ) ) ),
 				'token'       => wp_generate_password( 20, false ),
 				'demo'        => $pay['demo'],
 				'created'     => soko_now(),
@@ -623,15 +695,25 @@ final class Soko_Ledger {
 		$rid = (int) $wpdb->insert_id;
 		$wpdb->update( $pt, array( 'status' => 'matched', 'doc_id' => $inv['id'], 'receipt_id' => $rid ), array( 'id' => $payment_id ) );
 		$inv = self::doc( $inv['id'] );
+		if ( 'issued' === $inv['status'] ) {
+			Soko_Etims::queue( $inv );
+		}
 		if ( ! $was_paid && 'paid' === $inv['state'] ) {
 			self::fulfil_stock( $inv );
-			if ( 'web' === $inv['source'] ) {
+			// Paying in full confirms a waiting order; it never moves a packed or sent order backwards.
+			if ( 'web' === $inv['source'] && in_array( (string) $inv['fulfil'], array( '', 'awaiting_payment' ), true ) ) {
 				$wpdb->update( soko_t( 'docs' ), array( 'fulfil' => 'to_pack' ), array( 'id' => $inv['id'] ) );
 			}
 		}
 		soko_log( 'Payment ' . $pay['code'] . ' matched to ' . $inv['number'], 'payment', $pay['code'] );
 		self::send_receipt( $rid );
 		return array( 'invoice' => $inv, 'receipt' => self::doc( $rid ) );
+	}
+
+	/** The person an order was placed under on a shared phone, to carry onto its receipts, credit notes and jobs. */
+	public static function contact_meta( $doc ) {
+		$m = isset( $doc['meta'] ) && is_array( $doc['meta'] ) ? $doc['meta'] : array();
+		return array_intersect_key( $m, array_flip( array( 'contact', 'contact_email', 'contact_address' ) ) );
 	}
 
 	/** Take sold items out of stock once, when an invoice is fully paid or delivered. */
@@ -666,22 +748,62 @@ final class Soko_Ledger {
 		self::email_doc( $r, $r['customer']['email'] );
 	}
 
+	/** A short update to the customer when their order moves on. Only for website orders with an email. */
+	public static function notify_customer( $doc, $step ) {
+		if ( ! $doc || empty( $doc['customer']['email'] ) || ! empty( $doc['demo'] ) || 'web' !== $doc['source'] ) {
+			return false;
+		}
+		$pickup = isset( $doc['meta']['delivery'] ) && (int) $doc['meta']['delivery'] >= 0 && preg_match( '/pick\s?-?up|collect/i', (string) $doc['notes'] );
+		$install = ! empty( $doc['meta']['install'] );
+		$lines = array(
+			'confirmed'  => 'We have confirmed your order and are getting it ready.',
+			'to_pack'    => 'We have confirmed your order and are getting it ready.',
+			'packed'     => $pickup ? 'Your order is packed and ready to collect' . ( soko_setting( 'pickup_address' ) ? ' at ' . soko_setting( 'pickup_address' ) : '' ) . '.' : 'Your order is packed and will be on its way soon.',
+			'dispatched' => $install ? 'Our team is on the way to install your system.' : 'Your order is on its way to you.',
+			'delivered'  => $install ? 'Your system has been installed. Thank you for choosing us.' : ( $pickup ? 'Your order has been collected. Thank you for shopping with us.' : 'Your order has been delivered. Thank you for shopping with us.' ),
+			'cancelled'  => 'Your order has been cancelled. If you did not ask for this, please call us.',
+		);
+		if ( ! isset( $lines[ $step ] ) ) {
+			return false;
+		}
+		$name = soko_setting( 'business' );
+		$body = sprintf(
+			"Hello %s,\n\nOrder %s: %s\n\nTrack your order: %s\n\n%s\n%s",
+			$doc['customer']['name'],
+			$doc['number'],
+			$lines[ $step ],
+			$doc['pay_url'],
+			$name,
+			soko_setting( 'phone' )
+		);
+		return soko_mail( $doc['customer']['email'], 'Order ' . $doc['number'] . ' update from ' . $name, $body );
+	}
+
 	/** Email a document as a PDF attachment. */
 	public static function email_doc( $doc, $to, $message = '' ) {
 		$file = Soko_PDF::doc_file( $doc );
 		$name = soko_setting( 'business' );
 		$kind = array( 'quote' => 'Quotation', 'invoice' => 'Invoice', 'receipt' => 'Receipt', 'credit' => 'Credit note' );
 		$subj = $kind[ $doc['type'] ] . ' ' . $doc['number'] . ' from ' . $name;
-		$body = $message ? $message : sprintf(
-			"Hello %s,\n\nPlease find your %s %s attached.\n\n%s\n\nView or pay online: %s\n\n%s\n%s",
-			$doc['customer'] ? $doc['customer']['name'] : '',
-			strtolower( $kind[ $doc['type'] ] ),
-			$doc['number'],
-			'invoice' === $doc['type'] && $doc['balance'] > 0 ? 'Amount due: ' . soko_money( $doc['balance'] ) . '. Please use ' . $doc['number'] . ' as the payment reference.' : '',
-			$doc['pay_url'],
-			$name,
-			soko_setting( 'phone' )
-		);
+		if ( ! $message ) {
+			$parts = array( 'Hello ' . ( $doc['customer'] ? $doc['customer']['name'] : '' ) . ',', 'Please find your ' . strtolower( $kind[ $doc['type'] ] ) . ' ' . $doc['number'] . ' attached.' );
+			if ( 'invoice' === $doc['type'] ) {
+				if ( $doc['balance'] > 0 ) {
+					$parts[] = 'Amount due: ' . soko_money( $doc['balance'] ) . '. Please use ' . $doc['number'] . ' as the payment reference.';
+				}
+				$parts[] = 'View or pay online: ' . $doc['pay_url'];
+			} elseif ( in_array( $doc['type'], array( 'receipt', 'credit' ), true ) && $doc['parent_id'] ) {
+				$par = self::doc( (int) $doc['parent_id'] );
+				if ( $par ) {
+					$parts[] = 'See your order ' . $par['number'] . ' online: ' . $par['pay_url'];
+				}
+			} elseif ( 'quote' === $doc['type'] ) {
+				$parts[] = 'To go ahead, reply to this email or call us and we will raise the invoice.';
+			}
+			$parts[] = $name . "\n" . soko_setting( 'phone' );
+			$message = implode( "\n\n", $parts );
+		}
+		$body = $message;
 		$ok = soko_mail( $to, $subj, $body, array(), $file ? array( $file ) : array() );
 		if ( $file ) {
 			wp_delete_file( $file );

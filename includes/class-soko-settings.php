@@ -142,6 +142,12 @@ final class Soko_Settings {
 		}
 		if ( ! $full ) {
 			unset( $s['mpesa']['secret'], $s['mpesa']['passkey'], $s['mpesa']['key'], $s['smtp'] );
+			// Staff without Settings access get only what their screens use.
+			$keep = array( 'business', 'kra_pin', 'tagline', 'phone', 'email', 'currency', 'vat_registered', 'vat_rate', 'prices_incl_vat', 'quote_valid', 'invoice_due', 'deposit_percent', 'expense_cats', 'lead_stages', 'job_stages', 'checklist', 'etims', 'mpesa', 'delivery', 'pickup_address', 'bank', 'lock_date', 'notify_email', 'reports', 'prefix_quote', 'prefix_invoice', 'prefix_receipt' );
+			$s    = array_intersect_key( $s, array_flip( $keep ) );
+			if ( isset( $s['mpesa'] ) && is_array( $s['mpesa'] ) ) {
+				$s['mpesa'] = array_intersect_key( $s['mpesa'], array_flip( array( 'env', 'type', 'shortcode', 'till', 'stk' ) ) );
+			}
 		} else {
 			foreach ( array( 'secret', 'passkey', 'key' ) as $k ) {
 				$s['mpesa'][ $k ] = $s['mpesa'][ $k ] ? '••••••' . substr( $s['mpesa'][ $k ], -4 ) : '';

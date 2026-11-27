@@ -18,6 +18,13 @@ final class Soko_Ledger {
 		$r          = (array) $r;
 		$r['specs'] = soko_json( $r['specs'] );
 		$r['images'] = soko_abs( soko_json( $r['images'] ) );
+		if ( ! $r['images'] ) {
+			$cat = soko_category( $r['cat'] );
+			if ( ! empty( $cat['image'] ) ) {
+				$r['images']   = array( $cat['image'] );
+				$r['cat_image'] = 1;
+			}
+		}
 		foreach ( array( 'id', 'featured', 'visible', 'vatable', 'sort' ) as $k ) {
 			$r[ $k ] = (int) $r[ $k ];
 		}

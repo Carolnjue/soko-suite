@@ -108,7 +108,7 @@ final class Soko_Desk {
 		$s    = Soko_Settings::all();
 		$logo = $b['logo'] ? $b['logo'] : SOKO_URL . 'assets/img/dss-logo.png';
 		?><!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sign in · Dynamic Desk</title><meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);font:16px/1.5 Inter,system-ui,sans-serif;color:#0f1d36;background:#fff}
 .art{background:<?php echo esc_html( $b['deep'] ); ?>;color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
@@ -145,7 +145,7 @@ button{width:100%;height:50px;border:0;border-radius:12px;background:<?php echo 
 		$b = self::brand();
 		$css = SOKO_URL . 'assets/desk.css?v=' . SOKO_VERSION;
 		?><!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dynamic Desk</title><meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?php echo esc_url( $css ); ?>">
 <style>:root{--brand:<?php echo esc_html( $b['primary'] ); ?>;--side:<?php echo esc_html( $b['deep'] ); ?>;--sun:<?php echo esc_html( $b['accent'] ); ?>}</style>
 </head><body>

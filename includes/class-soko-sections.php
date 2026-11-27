@@ -28,6 +28,8 @@ final class Soko_Sections {
 				'desc'   => 'Full-width sliding banners at the top of a page.',
 				'fields' => array(
 					array( 'k' => 'slides', 'label' => 'Slides', 'type' => 'items', 'fields' => array(
+						array( 'k' => 'tab', 'label' => 'Tab label', 'type' => 'text' ),
+						array( 'k' => 'kicker', 'label' => 'Small line above headline', 'type' => 'text' ),
 						array( 'k' => 'title', 'label' => 'Headline', 'type' => 'text' ),
 						array( 'k' => 'text', 'label' => 'Text', 'type' => 'textarea' ),
 						array( 'k' => 'cta_label', 'label' => 'Main button', 'type' => 'text' ),
@@ -35,7 +37,9 @@ final class Soko_Sections {
 						array( 'k' => 'cta2_label', 'label' => 'Second button', 'type' => 'text' ),
 						array( 'k' => 'cta2_link', 'label' => 'Second button link', 'type' => 'link' ),
 						array( 'k' => 'scene', 'label' => 'Illustration', 'type' => 'select', 'options' => array( 'home' => 'Home with rooftop solar', 'business' => 'Business and carport', 'farm' => 'Farm and borehole', 'water' => 'Solar water heating', 'light' => 'Street lights at dusk' ) ),
-						array( 'k' => 'image', 'label' => 'Photo instead of illustration (optional)', 'type' => 'image' ),
+						array( 'k' => 'image', 'label' => 'Photo', 'type' => 'image' ),
+						array( 'k' => 'fact', 'label' => 'Badge figure (e.g. 70 kW)', 'type' => 'text' ),
+						array( 'k' => 'fact_text', 'label' => 'Badge text', 'type' => 'text' ),
 					) ),
 					array( 'k' => 'autoplay', 'label' => 'Slide automatically', 'type' => 'toggle' ),
 				),
@@ -80,6 +84,7 @@ final class Soko_Sections {
 						array( 'k' => 'title', 'label' => 'Title', 'type' => 'text' ),
 						array( 'k' => 'text', 'label' => 'Text', 'type' => 'textarea' ),
 						array( 'k' => 'link', 'label' => 'Link', 'type' => 'link' ),
+						array( 'k' => 'image', 'label' => 'Photo', 'type' => 'image' ),
 					) ),
 				) ),
 			),
@@ -187,12 +192,12 @@ final class Soko_Sections {
 			return array( 'id' => substr( md5( $type . wp_json_encode( $props ) . wp_rand() ), 0, 8 ), 'type' => $type, 'on' => 1, 'props' => $props );
 		};
 		$services = array(
-			array( 'icon' => 'panel', 'title' => 'Solar PV systems', 'text' => 'On-grid, off-grid and hybrid systems for homes, businesses and institutions, sized to how you use power.', 'link' => '/shop/kits/' ),
-			array( 'icon' => 'heater', 'title' => 'Solar water heating', 'text' => 'Pressurised heaters from 150 to 350 litres, supplied, installed and tested.', 'link' => '/shop/heaters/' ),
-			array( 'icon' => 'pump', 'title' => 'Borehole solarisation', 'text' => 'Pumps and pumping inverters that run boreholes and farm machinery on sunshine.', 'link' => '/shop/pumps/' ),
-			array( 'icon' => 'street', 'title' => 'Solar lighting', 'text' => 'Floodlights and street lights for compounds, estates, schools and farms.', 'link' => '/shop/street/' ),
-			array( 'icon' => 'battery', 'title' => 'Power backup', 'text' => 'Lithium storage and inverters that keep you running through blackouts.', 'link' => '/shop/lithium/' ),
-			array( 'icon' => 'cctv', 'title' => 'IT and security', 'text' => 'Solar CCTV, networking and IT consultancy for offices and remote sites.', 'link' => '/shop/cctv/' ),
+			array( 'icon' => 'panel', 'image' => 'soko:seed/team-roof.jpg', 'title' => 'Solar PV systems', 'text' => 'On-grid, off-grid and hybrid systems for homes, businesses and institutions, sized to how you use power.', 'link' => '/shop/kits/' ),
+			array( 'icon' => 'heater', 'image' => 'soko:seed/team-heater.jpg', 'title' => 'Solar water heating', 'text' => 'Pressurised heaters from 150 to 350 litres, supplied, installed and tested.', 'link' => '/shop/heaters/' ),
+			array( 'icon' => 'pump', 'image' => 'soko:seed/proj-baraka.jpg', 'title' => 'Borehole solarisation', 'text' => 'Pumps and pumping inverters that run boreholes and farm machinery on sunshine.', 'link' => '/shop/pumps/' ),
+			array( 'icon' => 'street', 'image' => 'soko:seed/team-street.jpg', 'title' => 'Solar lighting', 'text' => 'Floodlights and street lights for compounds, estates, schools and farms.', 'link' => '/shop/street/' ),
+			array( 'icon' => 'battery', 'image' => 'soko:seed/proj-bunyore.jpg', 'title' => 'Power backup', 'text' => 'Lithium storage and inverters that keep you running through blackouts.', 'link' => '/shop/lithium/' ),
+			array( 'icon' => 'cctv', 'image' => 'soko:stock/smart-panel.jpg', 'title' => 'IT and security', 'text' => 'Solar CCTV, networking and IT consultancy for offices and remote sites.', 'link' => '/shop/cctv/' ),
 		);
 		$steps = array(
 			array( 'icon' => 'bulb', 'title' => 'Consultation', 'text' => 'Tell us what you want to power. We advise for free, by phone or on site.' ),
@@ -202,7 +207,7 @@ final class Soko_Sections {
 		);
 		$cta = array( 'title' => 'Not sure what you need? We will come and look.', 'text' => 'Book a site survey and an engineer will size the right system for your home, business or farm.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Try the Power Planner', 'cta2_link' => '/planner/', 'color' => 'sun' );
 		return array(
-			'brand'    => array( 'primary' => '#1b4f9e', 'accent' => '#f7941d', 'deep' => '#0f3474', 'head_font' => 'Outfit', 'body_font' => 'Inter', 'logo' => 'soko:img/dss-logo.png', 'radius' => 18 ),
+			'brand'    => array( 'primary' => '#1b4f9e', 'accent' => '#f7941d', 'deep' => '#1d2156', 'head_font' => 'Poppins', 'body_font' => 'Inter', 'logo' => 'soko:img/dss-logo.png', 'radius' => 18 ),
 			'header'   => array(
 				'announce'    => 'Free site survey in Nairobi and Kiambu this month',
 				'announce_on' => 1,
@@ -237,9 +242,10 @@ final class Soko_Sections {
 					'desc'     => 'Buy solar kits, panels, lithium batteries, inverters, water heaters and pumps online and pay by M-Pesa. Installed by EPRA-licensed engineers.',
 					'sections' => array(
 						$sec( 'hero_carousel', array( 'autoplay' => 1, 'slides' => array(
-							array( 'title' => 'Solar sized for your home in one tap', 'text' => 'Pick what you want to power. We match the panels, inverter and battery, show the price, and you pay by M-Pesa.', 'cta_label' => 'Plan my system', 'cta_link' => '/planner/', 'cta2_label' => 'Shop all products', 'cta2_link' => '/shop/', 'scene' => 'home' ),
-							array( 'title' => 'Cut your business power bill', 'text' => 'Hybrid and grid-tied systems for hotels, schools, bakeries and offices, designed and installed by EPRA-licensed engineers.', 'cta_label' => 'Request a quote', 'cta_link' => '/contact/', 'cta2_label' => 'See our projects', 'cta2_link' => '/projects/', 'scene' => 'business' ),
-							array( 'title' => 'Solarise your borehole and farm', 'text' => 'Pump water and run machinery on sunshine. No diesel runs, no pump downtime.', 'cta_label' => 'See water pumps', 'cta_link' => '/shop/pumps/', 'cta2_label' => 'Talk to an engineer', 'cta2_link' => '/contact/', 'scene' => 'farm' ),
+							array( 'tab' => 'Homes', 'kicker' => 'Home solar kits', 'title' => 'Keep the lights, TV and fridge on through every blackout', 'text' => 'Complete kits with panels, inverter and lithium battery, priced in full with installation. Pay by M-Pesa and book your installation date.', 'cta_label' => 'Shop home kits', 'cta_link' => '/shop/kits/', 'cta2_label' => 'Size my system', 'cta2_link' => '/planner/', 'image' => 'soko:stock/home-family.jpg', 'fact' => '3–10 kW', 'fact_text' => 'complete home kits' ),
+							array( 'tab' => 'Businesses', 'kicker' => 'Commercial and institutional', 'title' => 'Lower power bills for hotels, schools and offices', 'text' => 'Hybrid and grid-tied systems designed and installed by EPRA-licensed engineers, from a 10 kW bakery to a 70 kW hotel.', 'cta_label' => 'Request a quote', 'cta_link' => '/contact/', 'cta2_label' => 'See our projects', 'cta2_link' => '/projects/', 'image' => 'soko:stock/business-team.jpg', 'fact' => '70 kW', 'fact_text' => 'largest hotel install' ),
+							array( 'tab' => 'Installation', 'kicker' => 'Design, supply and install', 'title' => 'One team from site survey to switch-on', 'text' => 'Our technicians mount, wire and commission every system, then hand over with a warranty and aftercare visits.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Our services', 'cta2_link' => '/services/', 'image' => 'soko:stock/installer-roof.jpg', 'fact' => 'EPRA', 'fact_text' => 'licensed technicians' ),
+							array( 'tab' => 'Smart systems', 'kicker' => 'Power backup, CCTV and IT', 'title' => 'Smart power and security for your premises', 'text' => 'Backup power, CCTV, solar street lighting and IT consultancy, installed and supported by the same people.', 'cta_label' => 'Shop CCTV and lighting', 'cta_link' => '/shop/cctv/', 'cta2_label' => 'Talk to an engineer', 'cta2_link' => '/contact/', 'image' => 'soko:stock/smart-panel.jpg' ),
 						) ) ),
 						$sec( 'trust_strip', array( 'items' => array(
 							array( 'icon' => 'shield', 'title' => 'EPRA-licensed', 'text' => 'technicians and engineers' ),
@@ -248,8 +254,8 @@ final class Soko_Sections {
 							array( 'icon' => 'tools', 'title' => 'Aftercare', 'text' => 'maintenance visits' ),
 						) ) ),
 						$sec( 'categories', array( 'title' => 'Shop by need', 'text' => 'Every category, one tap away.' ) ),
-						$sec( 'planner', array( 'title' => 'What do you want to power?', 'text' => 'Tap your appliances. We size the panels, inverter and battery and show you the price, instantly.' ) ),
 						$sec( 'products', array( 'title' => 'Best sellers', 'text' => 'Tap any product for full specs, what it runs, warranty and installation.', 'source' => 'featured', 'limit' => 8 ) ),
+						$sec( 'planner', array( 'title' => 'What do you want to power?', 'text' => 'Tap your appliances. We size the panels, inverter and battery and show you the price, instantly.' ) ),
 						$sec( 'services', array( 'title' => 'What we do', 'text' => 'An all-in-one, customised solution from a single team.', 'items' => $services ) ),
 						$sec( 'projects', array( 'title' => 'Recent projects', 'text' => 'From a 10 kW bakery in Voi to a 70 kW hotel in Kisumu.', 'limit' => 4 ) ),
 						$sec( 'steps', array( 'title' => 'How we work', 'text' => 'Clear steps, one point of contact, no surprises on price.', 'items' => $steps ) ),
@@ -496,18 +502,26 @@ final class Soko_Sections {
 		if ( ! $slides ) {
 			return '';
 		}
-		$h = '<section class="hero" data-autoplay="' . ( ! empty( $p['autoplay'] ) ? 1 : 0 ) . '"><div class="slides">';
+		$n = count( $slides );
+		$h = '<section class="hero" aria-roledescription="carousel" data-autoplay="' . ( ! empty( $p['autoplay'] ) ? 1 : 0 ) . '"><div class="wrap hero-in"><div class="hstage">';
 		foreach ( $slides as $i => $s ) {
-			$photo = ! empty( $s['image'] );
-			$h    .= '<div class="slide' . ( $photo ? ' photo' : '' ) . '" aria-roledescription="slide" aria-label="' . ( $i + 1 ) . ' of ' . count( $slides ) . '">';
-			$h    .= $photo ? '<img class="scene" src="' . esc_url( $s['image'] ) . '" alt="" ' . ( $i ? 'loading="lazy"' : 'fetchpriority="high"' ) . '>' : self::scene( isset( $s['scene'] ) ? $s['scene'] : 'home', 'h' . $i );
-			$h    .= '<div class="copy"><div>' . ( 0 === $i ? '<h1>' : '<h2 class="h1">' ) . self::e( $s['title'] ) . ( 0 === $i ? '</h1>' : '</h2>' ) . '<p>' . self::e( $s['text'] ) . '</p><div class="row">' . self::btn( $s['cta_label'], $s['cta_link'] ) . self::btn( isset( $s['cta2_label'] ) ? $s['cta2_label'] : '', isset( $s['cta2_link'] ) ? $s['cta2_link'] : '', 'b-line' ) . '</div></div></div></div>';
+			$img  = ! empty( $s['image'] ) ? '<img src="' . esc_url( $s['image'] ) . '" alt="" ' . ( $i ? 'loading="lazy"' : 'fetchpriority="high"' ) . '>' : self::scene( isset( $s['scene'] ) ? $s['scene'] : 'home', 'h' . $i );
+			$kick = ! empty( $s['kicker'] ) ? '<span class="kick">' . self::e( $s['kicker'] ) . '</span>' : '';
+			$fact = ! empty( $s['fact'] ) ? '<div class="hfact"><b>' . self::e( $s['fact'] ) . '</b><span>' . self::e( isset( $s['fact_text'] ) ? $s['fact_text'] : '' ) . '</span></div>' : '';
+			$h   .= '<div class="hslide' . ( 0 === $i ? ' on' : '' ) . '" role="group" aria-roledescription="slide" aria-label="' . ( $i + 1 ) . ' of ' . $n . '"' . ( $i ? ' aria-hidden="true"' : '' ) . '>';
+			$h   .= '<div class="hcopy">' . $kick . ( 0 === $i ? '<h1>' : '<h2 class="h1">' ) . self::e( $s['title'] ) . ( 0 === $i ? '</h1>' : '</h2>' ) . '<p>' . self::e( $s['text'] ) . '</p><div class="row">' . self::btn( $s['cta_label'], $s['cta_link'] ) . self::btn( isset( $s['cta2_label'] ) ? $s['cta2_label'] : '', isset( $s['cta2_link'] ) ? $s['cta2_link'] : '', 'b-line' ) . '</div></div>';
+			$h   .= '<div class="hpic">' . $img . $fact . '</div></div>';
 		}
 		$h .= '</div>';
-		if ( count( $slides ) > 1 ) {
-			$h .= '<div class="hero-ctrl"><button class="hprev" aria-label="Previous slide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 6l-6 6 6 6"/></svg></button><div class="dots">' . str_repeat( '<i></i>', count( $slides ) ) . '</div><button class="hnext" aria-label="Next slide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></button></div>';
+		if ( $n > 1 ) {
+			$h .= '<div class="htabs" role="tablist">';
+			foreach ( $slides as $i => $s ) {
+				$label = ! empty( $s['tab'] ) ? $s['tab'] : ( 'Slide ' . ( $i + 1 ) );
+				$h    .= '<button role="tab" aria-selected="' . ( 0 === $i ? 'true' : 'false' ) . '"' . ( 0 === $i ? ' class="on"' : '' ) . '><span>0' . ( $i + 1 ) . '</span>' . self::e( $label ) . '<i></i></button>';
+			}
+			$h .= '</div>';
 		}
-		return $h . '</section>';
+		return $h . '</div></section>';
 	}
 
 	private static function r_page_hero( $p ) {
@@ -535,11 +549,16 @@ final class Soko_Sections {
 
 	private static function r_categories( $p ) {
 		$h = '<section class="band"><div class="wrap">' . self::head( $p, '<a class="btn b-line" href="' . esc_url( home_url( '/shop/' ) ) . '">View all products</a>' ) . '<div class="cats">';
+		$count = array();
+		foreach ( Soko_Ledger::products( array( 'visible' => 1 ) ) as $pr ) {
+			$count[ $pr['cat'] ] = isset( $count[ $pr['cat'] ] ) ? $count[ $pr['cat'] ] + 1 : 1;
+		}
 		foreach ( soko_categories() as $c ) {
 			if ( 'services' === $c['id'] ) {
 				continue;
 			}
-			$h .= '<a class="cat" href="' . esc_url( home_url( '/shop/' . $c['id'] . '/' ) ) . '">' . ( ! empty( $c['image'] ) ? '<img src="' . esc_url( $c['image'] ) . '" alt="">' : soko_icon( $c['icon'], 46 ) ) . '<span>' . self::e( $c['name'] ) . '</span></a>';
+			$n  = isset( $count[ $c['id'] ] ) ? $count[ $c['id'] ] : 0;
+			$h .= '<a class="cat" href="' . esc_url( home_url( '/shop/' . $c['id'] . '/' ) ) . '"><div class="cimg">' . ( ! empty( $c['image'] ) ? '<img src="' . esc_url( $c['image'] ) . '" alt="" loading="lazy">' : '' ) . soko_icon( $c['icon'], 24 ) . '</div><span>' . self::e( $c['name'] ) . ( $n ? '<small>' . $n . '</small>' : '' ) . '</span></a>';
 		}
 		return $h . '</div></div></section>';
 	}
@@ -576,7 +595,8 @@ final class Soko_Sections {
 	private static function r_services( $p ) {
 		$h = '<section class="band"><div class="wrap">' . self::head( $p ) . '<div class="svc">';
 		foreach ( (array) ( isset( $p['items'] ) ? $p['items'] : array() ) as $i ) {
-			$h .= '<a href="' . self::link( isset( $i['link'] ) ? $i['link'] : '' ) . '">' . soko_icon( isset( $i['icon'] ) ? $i['icon'] : 'panel', 50 ) . '<div><h3>' . self::e( $i['title'] ) . '</h3><p>' . self::e( $i['text'] ) . '</p></div></a>';
+			$img = ! empty( $i['image'] ) ? '<span class="simg"><img src="' . esc_url( $i['image'] ) . '" alt="" loading="lazy"></span>' : '';
+			$h  .= '<a class="' . ( $img ? 'has-img' : '' ) . '" href="' . self::link( isset( $i['link'] ) ? $i['link'] : '' ) . '">' . $img . '<span class="sbody">' . soko_icon( isset( $i['icon'] ) ? $i['icon'] : 'panel', 26 ) . '<h3>' . self::e( $i['title'] ) . '</h3><p>' . self::e( $i['text'] ) . '</p><em>Learn more <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></em></span></a>';
 		}
 		return $h . '</div></div></section>';
 	}

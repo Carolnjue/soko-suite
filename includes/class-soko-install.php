@@ -324,21 +324,21 @@ final class Soko_Install {
 	/** Default categories used by the storefront mega menu and the Desk. */
 	public static function default_categories() {
 		return array(
-			array( 'id' => 'kits', 'name' => 'Solar kits', 'icon' => 'kit', 'group' => 'Complete systems' ),
-			array( 'id' => 'panels', 'name' => 'Solar panels', 'icon' => 'panel', 'group' => 'Generate' ),
-			array( 'id' => 'hybrid', 'name' => 'Hybrid inverters', 'icon' => 'inverter', 'group' => 'Convert' ),
-			array( 'id' => 'gridtie', 'name' => 'Grid-tie inverters', 'icon' => 'inverter', 'group' => 'Convert' ),
-			array( 'id' => 'lithium', 'name' => 'Lithium batteries', 'icon' => 'battery', 'group' => 'Store energy' ),
-			array( 'id' => 'gel', 'name' => 'Gel batteries', 'icon' => 'battery', 'group' => 'Store energy' ),
-			array( 'id' => 'stations', 'name' => 'Portable power stations', 'icon' => 'station', 'group' => 'Store energy' ),
-			array( 'id' => 'heaters', 'name' => 'Solar water heaters', 'icon' => 'heater', 'group' => 'Water' ),
-			array( 'id' => 'pumps', 'name' => 'Solar water pumps', 'icon' => 'pump', 'group' => 'Water' ),
-			array( 'id' => 'flood', 'name' => 'Solar floodlights', 'icon' => 'bulb', 'group' => 'Light and security' ),
-			array( 'id' => 'street', 'name' => 'Solar street lights', 'icon' => 'street', 'group' => 'Light and security' ),
-			array( 'id' => 'cctv', 'name' => 'Solar CCTV', 'icon' => 'cctv', 'group' => 'Light and security' ),
-			array( 'id' => 'car', 'name' => 'Car batteries', 'icon' => 'carbat', 'group' => 'More' ),
-			array( 'id' => 'acc', 'name' => 'Accessories', 'icon' => 'cable', 'group' => 'More' ),
-			array( 'id' => 'services', 'name' => 'Services', 'icon' => 'tools', 'group' => 'More' ),
+			array( 'id' => 'kits', 'image' => 'soko:seed/proj-hoho.jpg', 'name' => 'Solar kits', 'icon' => 'kit', 'group' => 'Complete systems' ),
+			array( 'id' => 'panels', 'image' => 'soko:stock/cat-panels.jpg', 'name' => 'Solar panels', 'icon' => 'panel', 'group' => 'Generate' ),
+			array( 'id' => 'hybrid', 'image' => 'soko:seed/prod-inverters.jpg', 'name' => 'Hybrid inverters', 'icon' => 'inverter', 'group' => 'Convert' ),
+			array( 'id' => 'gridtie', 'image' => 'soko:seed/proj-karen.jpg', 'name' => 'Grid-tie inverters', 'icon' => 'inverter', 'group' => 'Convert' ),
+			array( 'id' => 'lithium', 'image' => 'soko:seed/prod-lithium.jpg', 'name' => 'Lithium batteries', 'icon' => 'battery', 'group' => 'Store energy' ),
+			array( 'id' => 'gel', 'image' => 'soko:stock/cat-storage.jpg', 'name' => 'Gel batteries', 'icon' => 'battery', 'group' => 'Store energy' ),
+			array( 'id' => 'stations', 'image' => 'soko:seed/prod-station.jpg', 'name' => 'Portable power stations', 'icon' => 'station', 'group' => 'Store energy' ),
+			array( 'id' => 'heaters', 'image' => 'soko:seed/prod-heaters.jpg', 'name' => 'Solar water heaters', 'icon' => 'heater', 'group' => 'Water' ),
+			array( 'id' => 'pumps', 'image' => 'soko:seed/prod-pump.jpg', 'name' => 'Solar water pumps', 'icon' => 'pump', 'group' => 'Water' ),
+			array( 'id' => 'flood', 'image' => 'soko:stock/cat-flood.jpg', 'name' => 'Solar floodlights', 'icon' => 'bulb', 'group' => 'Light and security' ),
+			array( 'id' => 'street', 'image' => 'soko:stock/cat-street.jpg', 'name' => 'Solar street lights', 'icon' => 'street', 'group' => 'Light and security' ),
+			array( 'id' => 'cctv', 'image' => 'soko:stock/cat-cctv.jpg', 'name' => 'Solar CCTV', 'icon' => 'cctv', 'group' => 'Light and security' ),
+			array( 'id' => 'car', 'image' => 'soko:stock/cat-car.jpg', 'name' => 'Car batteries', 'icon' => 'carbat', 'group' => 'More' ),
+			array( 'id' => 'acc', 'image' => 'soko:seed/prod-accessories.jpg', 'name' => 'Accessories', 'icon' => 'cable', 'group' => 'More' ),
+			array( 'id' => 'services', 'image' => 'soko:seed/team-roof.jpg', 'name' => 'Services', 'icon' => 'tools', 'group' => 'More' ),
 		);
 	}
 

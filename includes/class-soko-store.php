@@ -176,14 +176,18 @@ final class Soko_Store {
 			'tag'     => $p['tag'],
 			'brand'   => $p['brand'],
 		);
-		$h  = '<article class="card" data-p="' . esc_attr( wp_json_encode( $data ) ) . '">';
-		$h .= '<a class="art" href="' . esc_url( $p['url'] ) . '" tabindex="-1">' . self::art( $p ) . ( $p['tag'] ? '<span class="tag">' . esc_html( $p['tag'] ) . '</span>' : '' ) . ( $spec ? '<span class="spec">' . esc_html( $spec ) . '</span>' : '' ) . '</a>';
-		$h .= '<div class="body"><span class="cat-name">' . esc_html( $p['cat_name'] ) . '</span><h3><a href="' . esc_url( $p['url'] ) . '">' . esc_html( $p['name'] ) . '</a></h3><p class="runs">' . esc_html( $p['runs'] ) . '</p>';
-		$h .= '<div class="price"><b>' . esc_html( soko_money( $p['price'] ) ) . '</b>' . ( $p['was'] > $p['price'] ? '<s>' . esc_html( soko_money( $p['was'] ) ) . '</s>' : '' ) . '</div>';
-		if ( 'product' === $p['kind'] ) {
-			$h .= '<span class="stock' . ( $low ? ' low' : '' ) . ( $out ? ' out' : '' ) . '">' . ( $out ? 'Order in, about a week' : ( $low ? 'Only ' . (int) $p['stock'] . ' left' : 'In stock' ) ) . '</span>';
+		$chips = '';
+		foreach ( array_slice( (array) $p['specs'], 0, 3 ) as $k => $v ) {
+			$chips .= '<li title="' . esc_attr( $k ) . '">' . esc_html( $v ) . '</li>';
 		}
-		$h .= '<div class="acts"><button class="btn b-blue" data-add="' . (int) $p['id'] . '">Add to cart</button><button class="btn b-line" data-quick>Quick look</button></div></div></article>';
+		$h  = '<article class="card" data-p="' . esc_attr( wp_json_encode( $data ) ) . '">';
+		$h .= '<div class="media"><a class="art" href="' . esc_url( $p['url'] ) . '" tabindex="-1" aria-hidden="true">' . self::art( $p ) . '</a>' . ( $p['tag'] ? '<span class="tag">' . esc_html( $p['tag'] ) . '</span>' : '' ) . ( $p['was'] > $p['price'] ? '<span class="off">−' . (int) round( 100 - $p['price'] / $p['was'] * 100 ) . '%</span>' : '' ) . '<button class="qv" data-quick aria-label="Quick view: ' . esc_attr( $p['name'] ) . '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Quick view</button></div>';
+		$h .= '<div class="body"><span class="cat-name">' . esc_html( $p['brand'] ? $p['brand'] . ' · ' . $p['cat_name'] : $p['cat_name'] ) . '</span><h3><a href="' . esc_url( $p['url'] ) . '">' . esc_html( $p['name'] ) . '</a></h3>' . ( $chips ? '<ul class="chips">' . $chips . '</ul>' : '' ) . '<p class="runs">' . esc_html( $p['runs'] ) . '</p>';
+		$h .= '<div class="pfoot"><div><div class="price"><b>' . esc_html( soko_money( $p['price'] ) ) . '</b>' . ( $p['was'] > $p['price'] ? '<s>' . esc_html( soko_money( $p['was'] ) ) . '</s>' : '' ) . '</div>';
+		if ( 'product' === $p['kind'] ) {
+			$h .= '<span class="stock' . ( $low ? ' low' : '' ) . ( $out ? ' out' : '' ) . '"><i></i>' . ( $out ? 'Order in, about a week' : ( $low ? 'Only ' . (int) $p['stock'] . ' left' : 'In stock' ) ) . '</span>';
+		}
+		$h .= '</div><button class="addbtn" data-add="' . (int) $p['id'] . '" aria-label="Add ' . esc_attr( $p['name'] ) . ' to cart"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><path d="M14 4v6M11 7h6"/></svg></button></div></div></article>';
 		return $h;
 	}
 

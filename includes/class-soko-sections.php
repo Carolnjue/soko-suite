@@ -239,7 +239,6 @@ final class Soko_Sections {
 					array( 'label' => 'Projects', 'link' => '/projects/' ),
 					array( 'label' => 'Blog', 'link' => '/blog/' ),
 					array( 'label' => 'Contact', 'link' => '/contact/' ),
-					array( 'label' => 'Track an order', 'link' => '/track/' ),
 				),
 				'cta_label'   => 'Request a Quote',
 				'cta_link'    => '/contact/',

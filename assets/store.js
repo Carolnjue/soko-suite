@@ -67,10 +67,18 @@
     return '<div><span>Items</span><span>' + money(s) + '</span></div><div><span>Delivery</span><span>' + (fee ? money(fee) : 'Free') + '</span></div>' + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + fee) + '</span></div>';
   }
   function emptyCart() { return '<h3>Your cart is empty</h3><p class="muted" style="margin:8px 0 18px">Start with the solar calculator or browse the shop.</p><div class="row"><a class="btn b-sun" href="' + S.home + 'planner/">Calculate my system</a><a class="btn b-line" href="' + S.home + 'shop/">Go to the shop</a></div>'; }
+  function upsell() {
+    var inCart = cart.map(function (c) { return +c.id; });
+    var hasSystem = cart.some(function (c) { var p = byId[c.id]; return p && /kits|hybrid|gridtie|panels|lithium/.test(p.cat); });
+    if (!hasSystem) return '';
+    var recs = (S.products || []).filter(function (p) { return (p.cat === 'acc' || p.cat === 'services') && inCart.indexOf(+p.id) < 0; }).slice(0, 2);
+    if (!recs.length) return '';
+    return '<div class="ups"><h4>Often added with solar systems</h4>' + recs.map(function (p) { return '<div class="line">' + thumb(p) + '<div><h4>' + esc(p.name) + '</h4><small>' + money(p.price) + '</small></div><button class="btn b-line" style="min-height:38px;padding:0 14px" data-add="' + p.id + '">Add</button></div>'; }).join('') + '</div>';
+  }
   function cartDrawer() {
     var x = '<div class="dhead"><b>Your cart</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
     if (!cart.length) return openDrawer(x + '<div class="dbody">' + emptyCart() + '</div>');
-    openDrawer(x + '<div class="dbody">' + linesHTML(true) + '<div class="sum" style="margin-top:12px">' + sumHTML(0) + '</div><p class="muted" style="font-size:14px;margin-top:8px">Delivery is chosen at checkout.</p></div><div class="buybar"><a class="btn b-line" href="' + S.home + 'cart/">View cart</a><a class="btn b-sun" href="' + S.home + 'checkout/">Checkout</a></div>');
+    openDrawer(x + '<div class="dbody">' + linesHTML(true) + '<div class="sum" style="margin-top:12px">' + sumHTML(0) + '</div><p class="muted" style="font-size:14px;margin-top:8px">Delivery is chosen at checkout.</p>' + upsell() + '</div><div class="buybar"><a class="btn b-line" href="' + S.home + 'cart/">View cart</a><a class="btn b-sun" href="' + S.home + 'checkout/">Checkout</a></div>');
   }
   function renderCartPage() {
     var el = $('[data-cart-page]');
@@ -400,7 +408,7 @@
   /* ---------------- global clicks ---------------- */
   document.addEventListener('click', function (e) {
     var t = e.target;
-    var a = t.closest('[data-add]'); if (a) { e.preventDefault(); add(a.dataset.add, 1, 0); return; }
+    var a = t.closest('[data-add]'); if (a) { e.preventDefault(); add(a.dataset.add, 1, 0, !!a.closest('.drawer')); if (a.closest('.drawer')) cartDrawer(); return; }
     var qk = t.closest('[data-quick]'); if (qk) { quick(JSON.parse(qk.closest('.card').dataset.p)); return; }
     var qa = t.closest('[data-q-add]'); if (qa) { var r = $('[name=qinst]:checked'); add(qa.dataset.qAdd, 1, r && r.value === '1'); closeDrawer(); return; }
     var qb = t.closest('[data-q-buy]'); if (qb) { var r2 = $('[name=qinst]:checked'); add(qb.dataset.qBuy, 1, r2 && r2.value === '1', true); location.href = S.home + 'checkout/'; return; }
@@ -525,4 +533,16 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
     if (!el.classList.contains('tl')) { el.classList.add('rv'); el.style.transitionDelay = (i % 4) * 0.05 + 's'; }
     io.observe(el);
   });
+})();
+/* product page: sticky buy bar on phones once the main buttons scroll away */
+(function () {
+  var row = document.querySelector('.buyrow'), pdp = document.querySelector('[data-product]');
+  if (!row || !pdp || !('IntersectionObserver' in window)) return;
+  var d = {}; try { d = JSON.parse(pdp.dataset.product); } catch (e) {}
+  var priceEl = document.querySelector('.buy .price b');
+  var bar = document.createElement('div'); bar.className = 'sbuy';
+  bar.innerHTML = '<div><small>' + (d.name || '') + '</small><b>' + (priceEl ? priceEl.textContent : '') + '</b></div><button class="btn b-sun" type="button">Add to cart</button>';
+  document.body.appendChild(bar);
+  bar.querySelector('button').addEventListener('click', function () { var b = document.querySelector('[data-add-pdp]'); if (b) b.click(); });
+  new IntersectionObserver(function (es) { bar.classList.toggle('on', !es[0].isIntersecting && es[0].boundingClientRect.top < 0); }).observe(row);
 })();

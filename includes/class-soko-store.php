@@ -325,7 +325,7 @@ final class Soko_Store {
 		foreach ( $p['specs'] as $k => $v ) {
 			echo '<tr><th scope="row">' . esc_html( $k ) . '</th><td>' . esc_html( $v ) . '</td></tr>';
 		}
-		echo '<tr><th scope="row">SKU</th><td>' . esc_html( $p['sku'] ) . '</td></tr><tr><th scope="row">Warranty</th><td>' . esc_html( $p['warranty'] ) . '</td></tr></table>';
+		echo '<tr><th scope="row">Product code</th><td>' . esc_html( $p['sku'] ) . '</td></tr><tr><th scope="row">Warranty</th><td>' . esc_html( $p['warranty'] ) . '</td></tr></table>';
 		if ( $p['description'] ) {
 			echo '<div class="rich">' . wp_kses_post( wpautop( $p['description'] ) ) . '</div>';
 		}

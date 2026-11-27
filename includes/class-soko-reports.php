@@ -197,7 +197,7 @@ final class Soko_Reports {
 					$rows[] = array( $p['sku'], $p['name'], $p['stock'] + 0, round( $p['cost'] ), round( $v ), $p['stock'] <= $p['reorder'] ? 'Reorder' : '' );
 				}
 				$out['kpis'] = array( array( 'Stock value at cost', soko_money( $tv ) ), array( 'Products', count( $rows ) ), array( 'To reorder', count( array_filter( $rows, function ( $r ) { return 'Reorder' === $r[5]; } ) ) ) );
-				$out['sections'][] = array( 'title' => 'Stock on hand', 'head' => array( 'SKU', 'Product', 'Qty', 'Unit cost', 'Value', 'Status' ), 'rows' => $rows, 'widths' => array( 24, 70, 16, 25, 27, 18 ) );
+				$out['sections'][] = array( 'title' => 'Stock on hand', 'head' => array( 'Code', 'Product', 'Qty', 'Unit cost', 'Value', 'Status' ), 'rows' => $rows, 'widths' => array( 24, 70, 16, 25, 27, 18 ) );
 				break;
 
 			case 'payments':

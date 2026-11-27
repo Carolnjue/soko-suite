@@ -262,3 +262,12 @@ html[data-theme=dark] .side a{color:#c3cbe0}html[data-theme=dark] .side a.on{col
 html[data-theme=dark] .brand,html[data-theme=dark] .side a:hover{color:#fff}
 .side>*{flex-shrink:0}.brand small{display:block}
 .steps-mini{margin:6px 0 16px;padding-left:20px;display:grid;gap:6px;color:var(--soft)}.steps-mini b{color:var(--ink)}
+/* Solar night: indigo sky, warm accents, cards that lift off the background */
+html[data-theme=dark]{--bg:#121941;--card:#1b2459;--alt:#172051;--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.16);--sky:#25307a;--grey:#232d6b;--soft:#aab4da}
+html[data-theme=dark] body{background:radial-gradient(900px 500px at 100% -10%,rgba(247,148,29,.16),transparent 60%),radial-gradient(700px 600px at 0 100%,rgba(77,122,255,.14),transparent 60%),linear-gradient(180deg,#111842,#151c4c);background-attachment:fixed}
+html[data-theme=dark] .side{background:linear-gradient(180deg,#0e1436,#161a4a 60%,#2a1d48);border-right-color:rgba(255,255,255,.06)}
+html[data-theme=dark] .side a.on{background:linear-gradient(90deg,rgba(247,148,29,.22),rgba(247,148,29,.04));box-shadow:inset 3px 0 0 #f7941d}
+html[data-theme=dark] .kpi{background:linear-gradient(160deg,#222d6e,#1a2358);position:relative;overflow:hidden}
+html[data-theme=dark] .kpi::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#f7941d,#ffc46b)}
+html[data-theme=dark] .kpi:nth-child(2)::before{background:linear-gradient(90deg,#2fbf71,#8be0b1)}html[data-theme=dark] .kpi:nth-child(3)::before{background:linear-gradient(90deg,#e5534b,#ff9b8f)}html[data-theme=dark] .kpi:nth-child(4)::before{background:linear-gradient(90deg,#5b7cff,#9fb2ff)}
+html[data-theme=dark] .top{background:color-mix(in srgb,#121941 88%,transparent)}

@@ -44,6 +44,8 @@ final class Soko_Store {
 		foreach ( array( 'planner', 'cart', 'checkout', 'track' ) as $r ) {
 			add_rewrite_rule( '^' . $r . '/?$', $q . $r, 'top' );
 		}
+		add_rewrite_rule( '^blog/?$', $q . 'blog', 'top' );
+		add_rewrite_rule( '^blog/([^/]+)/?$', $q . 'blog&soko_arg=$matches[1]', 'top' );
 		add_rewrite_rule( '^desk/?$', $q . 'desk', 'top' );
 		add_rewrite_rule( '^desk/login/?$', $q . 'desk&soko_arg=login', 'top' );
 		add_rewrite_rule( '^desk/logout/?$', $q . 'desk&soko_arg=logout', 'top' );
@@ -126,6 +128,23 @@ final class Soko_Store {
 			case 'checkout':
 				self::$title = 'Checkout | ' . soko_setting( 'business' );
 				self::checkout();
+				break;
+			case 'blog':
+				if ( $arg ) {
+					$r = Soko_Blog::render_post( $arg );
+					if ( ! $r ) {
+						self::not_found();
+						break;
+					}
+					self::$title = $r['post']['title'] . ' | ' . soko_setting( 'business' );
+					self::$desc  = $r['post']['excerpt'];
+					self::$image = $r['post']['image'];
+					echo $r['html']; // phpcs:ignore
+				} else {
+					self::$title = 'Solar guides and news | ' . soko_setting( 'business' );
+					self::$desc  = 'Guides on sizing solar systems, choosing batteries, water heating and maintenance from Dynamic Smart Systems engineers.';
+					echo Soko_Blog::render_list(); // phpcs:ignore
+				}
 				break;
 			case 'track':
 				self::$title = 'Track your order | ' . soko_setting( 'business' );
@@ -423,51 +442,58 @@ final class Soko_Store {
 </head>
 <body class="soko soko-<?php echo esc_attr( self::$route ); ?>">
 <a class="skip" href="#main">Skip to content</a>
-<?php if ( ! empty( $h['announce_on'] ) && $h['announce'] ) : ?>
-<div class="announce"><div class="wrap"><span><b>Offer</b> <?php echo esc_html( $h['announce'] ); ?></span><span class="ann-r"><a href="tel:<?php echo esc_attr( soko_phone( $s['phone'] ) ); ?>"><?php echo esc_html( $s['phone'] ); ?></a><?php if ( $s['phone2'] ) : ?><a href="tel:<?php echo esc_attr( soko_phone( $s['phone2'] ) ); ?>"><?php echo esc_html( $s['phone2'] ); ?></a><?php endif; ?><a href="<?php echo esc_url( home_url( '/track/' ) ); ?>">Track an order</a></span></div></div>
-<?php endif; ?>
+<?php
+$all   = Soko_Ledger::products( array( 'visible' => 1 ) );
+$bycat = array();
+foreach ( $all as $pr ) {
+	$bycat[ $pr['cat'] ][] = $pr;
+}
+$chev = '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+?>
+<div class="announce"><div class="wrap"><span class="ann-l"><a href="tel:<?php echo esc_attr( soko_phone( $s['phone'] ) ); ?>"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><?php echo esc_html( $s['phone'] ); ?></a><?php if ( $s['phone2'] ) : ?><a href="tel:<?php echo esc_attr( soko_phone( $s['phone2'] ) ); ?>"><?php echo esc_html( $s['phone2'] ); ?></a><?php endif; ?><a href="mailto:<?php echo esc_attr( $s['email'] ); ?>" class="ann-mail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><?php echo esc_html( $s['email'] ); ?></a></span><span class="ann-r"><?php foreach ( (array) ( isset( $h['utility'] ) ? $h['utility'] : array() ) as $u ) : ?><a href="<?php echo Soko_Sections::link( $u['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $u['label'] ); ?></a><?php endforeach; ?></span></div></div>
 <header class="main"><div class="wrap nav">
 <a class="logo" href="<?php echo esc_url( home_url( '/' ) ); ?>"><img src="<?php echo esc_url( $logo ); ?>" alt="<?php echo esc_attr( $s['business'] ); ?>" width="180" height="60"></a>
-<nav aria-label="Main"><ul class="menu">
-<?php foreach ( (array) $h['menu'] as $m ) : ?>
-<li class="<?php echo ! empty( $m['mega'] ) ? 'has' : ''; ?>"><a href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $m['label'] ); ?></a>
-<?php if ( ! empty( $m['mega'] ) ) : ?>
-<div class="mega"><div class="wrap"><?php
-$groups = array();
-foreach ( $cats as $c ) {
-	$groups[ $c['group'] ][] = $c;
-}
-$cols = array_chunk( $groups, (int) ceil( count( $groups ) / 3 ), true );
-foreach ( $cols as $col ) {
-	echo '<div>';
-	foreach ( $col as $g => $items ) {
-		echo '<h4>' . esc_html( $g ) . '</h4>';
-		foreach ( $items as $c ) {
-			echo '<a href="' . esc_url( home_url( '/shop/' . $c['id'] . '/' ) ) . '">' . soko_icon( $c['icon'], 26 ) . esc_html( $c['name'] ) . '</a>'; // phpcs:ignore
+<form class="search" action="<?php echo esc_url( home_url( '/shop/' ) ); ?>" role="search"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input name="q" placeholder="Search panels, inverters, batteries, water heaters…" aria-label="Search products" autocomplete="off" data-search><div class="sugg" data-sugg hidden></div></form>
+<div class="tools">
+<a class="ico lbl" href="<?php echo esc_url( home_url( '/track/' ) ); ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>My orders</span></a>
+<button class="ico lbl" data-open-cart aria-label="Cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11h11l2-8H6.2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg><span>Cart</span><b class="count" data-cart-count>0</b></button>
+<?php if ( ! empty( $h['cta_label'] ) ) : ?><a class="btn b-sun hcta" href="<?php echo Soko_Sections::link( $h['cta_link'] ); // phpcs:ignore ?>"><?php echo esc_html( $h['cta_label'] ); ?></a><?php endif; ?>
+<button class="ico burger" data-burger aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</div></div>
+<nav class="catbar" aria-label="Shop by category"><div class="wrap"><ul class="menu">
+<?php foreach ( (array) $h['menu'] as $m ) :
+	$ids = ! empty( $m['cats'] ) ? array_values( array_filter( array_map( 'trim', explode( ',', $m['cats'] ) ) ) ) : array();
+	$top = array();
+	foreach ( $ids as $cid ) {
+		foreach ( isset( $bycat[ $cid ] ) ? $bycat[ $cid ] : array() as $pr ) {
+			$top[] = $pr;
 		}
 	}
-	echo '</div>';
-}
-?><div class="mega-promo"><h3>Not sure what to buy?</h3><p>Tap the appliances you want to run and get a full system with a price in seconds.</p><a class="btn b-sun" href="<?php echo esc_url( home_url( '/planner/' ) ); ?>">Open Power Planner</a></div></div></div>
+	usort( $top, function ( $x, $y ) { return $y['featured'] - $x['featured']; } );
+	$top = array_slice( $top, 0, 3 );
+	?>
+<li class="<?php echo $ids ? 'has' : ''; ?>"><a href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $m['label'] ); ?><?php echo $ids ? $chev : ''; // phpcs:ignore ?></a>
+<?php if ( $ids ) : ?>
+<div class="mega"><div class="wrap dd">
+<div class="dd-cats"><h4><?php echo esc_html( $m['label'] ); ?></h4><?php foreach ( $ids as $cid ) : $c = soko_category( $cid ); $n = isset( $bycat[ $cid ] ) ? count( $bycat[ $cid ] ) : 0; ?><a href="<?php echo esc_url( home_url( '/shop/' . $cid . '/' ) ); ?>"><span class="ci"><?php if ( ! empty( $c['image'] ) ) : ?><img src="<?php echo esc_url( $c['image'] ); ?>" alt="" loading="lazy"><?php endif; ?></span><span><b><?php echo esc_html( $c['name'] ); ?></b><small><?php echo (int) $n; ?> <?php echo 1 === $n ? 'product' : 'products'; ?></small></span></a><?php endforeach; ?><a class="dd-all" href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>">View all <?php echo esc_html( strtolower( $m['label'] ) ); ?> →</a></div>
+<div class="dd-top"><h4>Popular</h4><div class="dd-grid"><?php foreach ( $top as $pr ) : ?><a href="<?php echo esc_url( $pr['url'] ); ?>"><span class="pi"><?php if ( $pr['images'] ) : ?><img src="<?php echo esc_url( $pr['images'][0] ); ?>" alt="" loading="lazy"><?php endif; ?></span><b><?php echo esc_html( $pr['name'] ); ?></b><small><?php echo esc_html( $pr['runs'] ); ?></small><em><?php echo esc_html( soko_money( $pr['price'] ) ); ?></em></a><?php endforeach; ?></div></div>
+<div class="mega-promo"><?php if ( isset( $m['promo'] ) && 'planner' === $m['promo'] ) : ?><h3>Not sure what size you need?</h3><p>Tap the appliances you want to run and get the right system, priced with installation.</p><a class="btn b-sun" href="<?php echo esc_url( home_url( '/planner/' ) ); ?>">Size my system</a><?php else : ?><h3>Need it installed?</h3><p>Our EPRA-licensed technicians supply, install and commission, with aftercare visits.</p><a class="btn b-sun" href="<?php echo Soko_Sections::link( $h['cta_link'] ); // phpcs:ignore ?>">Request a quote</a><?php endif; ?></div>
+</div></div>
 <?php endif; ?></li>
 <?php endforeach; ?>
-</ul></nav>
-<div class="tools">
-<form class="search" action="<?php echo esc_url( home_url( '/shop/' ) ); ?>" role="search"><input name="q" placeholder="Search products" aria-label="Search products" autocomplete="off" data-search><button aria-label="Search"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button><div class="sugg" data-sugg hidden></div></form>
-<a class="ico" href="<?php echo esc_url( home_url( '/track/' ) ); ?>" aria-label="Track an order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></a>
-<button class="ico" data-open-cart aria-label="Cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11h11l2-8H6.2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg><span class="count" data-cart-count>0</span></button>
-<button class="ico burger" data-burger aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-</div></div></header>
+</ul></div></nav>
+</header>
 <nav class="mnav" data-mnav aria-label="Mobile"><div class="mtop"><img src="<?php echo esc_url( $logo ); ?>" alt="" height="40"><button class="ico" data-close-mnav aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <form action="<?php echo esc_url( home_url( '/shop/' ) ); ?>" class="msearch"><input name="q" placeholder="Search products" aria-label="Search products"></form>
 <?php foreach ( (array) $h['menu'] as $m ) : ?><a href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $m['label'] ); ?></a>
-<?php if ( ! empty( $m['mega'] ) ) : ?><div class="sub"><?php foreach ( $cats as $c ) : ?><a href="<?php echo esc_url( home_url( '/shop/' . $c['id'] . '/' ) ); ?>"><?php echo esc_html( $c['name'] ); ?></a><?php endforeach; ?></div><?php endif; ?>
-<?php endforeach; ?><a href="<?php echo esc_url( home_url( '/track/' ) ); ?>">Track an order</a></nav>
+<?php if ( ! empty( $m['cats'] ) ) : ?><div class="sub"><?php foreach ( array_filter( array_map( 'trim', explode( ',', $m['cats'] ) ) ) as $cid ) : $c = soko_category( $cid ); ?><a href="<?php echo esc_url( home_url( '/shop/' . $cid . '/' ) ); ?>"><?php echo esc_html( $c['name'] ); ?></a><?php endforeach; ?></div><?php endif; ?>
+<?php endforeach; ?><?php foreach ( (array) ( isset( $h['utility'] ) ? $h['utility'] : array() ) as $u ) : ?><a href="<?php echo Soko_Sections::link( $u['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $u['label'] ); ?></a><?php endforeach; ?>
+<?php if ( ! empty( $h['cta_label'] ) ) : ?><a class="btn b-sun" style="margin-top:16px" href="<?php echo Soko_Sections::link( $h['cta_link'] ); // phpcs:ignore ?>"><?php echo esc_html( $h['cta_label'] ); ?></a><?php endif; ?></nav>
 <main id="main"><?php echo $body; // phpcs:ignore ?></main>
 <footer class="foot"><div class="wrap">
 <div><span class="logo-w"><img src="<?php echo esc_url( $logo ); ?>" alt="<?php echo esc_attr( $s['business'] ); ?>" height="44"></span><p><?php echo esc_html( $site['footer']['about'] ); ?></p></div>
 <div><h4>Shop</h4><?php foreach ( array_slice( $cats, 0, 6 ) as $c ) : ?><a href="<?php echo esc_url( home_url( '/shop/' . $c['id'] . '/' ) ); ?>"><?php echo esc_html( $c['name'] ); ?></a><?php endforeach; ?></div>
-<div><h4>Company</h4><?php foreach ( (array) $h['menu'] as $m ) : if ( ! empty( $m['mega'] ) || '/' === $m['link'] ) { continue; } ?><a href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $m['label'] ); ?></a><?php endforeach; ?><a href="<?php echo esc_url( home_url( '/track/' ) ); ?>">Track an order</a></div>
+<div><h4>Company</h4><a href="<?php echo esc_url( home_url( '/about/' ) ); ?>">About us</a><a href="<?php echo esc_url( home_url( '/services/' ) ); ?>">Installation and services</a><a href="<?php echo esc_url( home_url( '/projects/' ) ); ?>">Projects</a><a href="<?php echo esc_url( home_url( '/planner/' ) ); ?>">Size my system</a><a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>">Contact</a><a href="<?php echo esc_url( home_url( '/track/' ) ); ?>">Track an order</a></div>
 <div><h4>Talk to us</h4><a href="tel:<?php echo esc_attr( soko_phone( $s['phone'] ) ); ?>"><?php echo esc_html( $s['phone'] ); ?></a><?php if ( $s['phone2'] ) : ?><a href="tel:<?php echo esc_attr( soko_phone( $s['phone2'] ) ); ?>"><?php echo esc_html( $s['phone2'] ); ?></a><?php endif; ?><a href="mailto:<?php echo esc_attr( $s['email'] ); ?>"><?php echo esc_html( $s['email'] ); ?></a><span><?php echo esc_html( $s['address'] ); ?></span><span><?php echo esc_html( $s['hours'] ); ?></span></div>
 </div><div class="wrap legal"><span>© <?php echo esc_html( current_time( 'Y' ) . ' ' . $s['business'] ); ?>. <?php echo esc_html( $site['footer']['note'] ); ?></span><span class="paywith">Pay with <b class="mpesa">M-Pesa</b></span></div></footer>
 <a class="wa" href="<?php echo esc_url( $wa ); ?>" target="_blank" rel="noopener" aria-label="Chat on WhatsApp"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.2c0-.1-.2-.2-.5-.3z"/></svg><span>Chat with an engineer</span></a>

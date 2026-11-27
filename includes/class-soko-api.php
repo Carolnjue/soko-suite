@@ -104,6 +104,10 @@ final class Soko_API {
 		$r( '/reports/(?P<type>[a-z]+)', 'GET', array( __CLASS__, 'report' ), self::perm( 'soko_reports' ) );
 		$r( '/activity', 'GET', array( __CLASS__, 'activity' ), self::perm( 'soko_settings', array( 'soko_reports' ) ) );
 
+		$r( '/blog', 'GET', function () { return Soko_Blog::posts( array( 'publish', 'draft' ) ); }, self::perm( 'soko_site' ) );
+		$r( '/blog', 'POST', function ( $req ) { return Soko_Blog::save( $req->get_json_params() ); }, self::perm( 'soko_site' ) );
+		$r( '/blog/(?P<id>\d+)', 'GET', function ( $req ) { $p = get_post( (int) $req['id'] ); return $p && 'post' === $p->post_type ? Soko_Blog::row( $p, true ) : new WP_Error( 'nf', 'Not found', array( 'status' => 404 ) ); }, self::perm( 'soko_site' ) );
+		$r( '/blog/(?P<id>\d+)', 'DELETE', function ( $req ) { $p = get_post( (int) $req['id'] ); if ( $p && 'post' === $p->post_type ) { wp_trash_post( $p->ID ); soko_log( 'Deleted blog post', 'blog', $p->post_title ); } return array( 'ok' => true ); }, self::perm( 'soko_site' ) );
 		$r( '/site', 'GET', function () { return Soko_Sections::site(); }, self::perm( 'soko_site' ) );
 		$r( '/site', 'POST', array( __CLASS__, 'save_site' ), self::perm( 'soko_site' ) );
 		$r( '/site/schema', 'GET', function () { return Soko_Sections::schema(); }, self::perm( 'soko_site' ) );

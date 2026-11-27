@@ -768,3 +768,51 @@
     }
   };
 })();
+
+/* Blog: write and publish articles without WordPress */
+(function () {
+  var $ = K.$, esc = K.esc;
+  K.V.blog = function (v) {
+    v.innerHTML = '<div class="ph"><div><h1>Blog</h1><p class="sub">Guides and news shown at /blog on the website. Write here, then publish.</p></div><div class="acts"><button class="btn pri" data-new>' + K.ic(K.ICONS.plus) + 'New article</button></div></div><div class="card" data-list><div class="empty">Loading…</div></div>';
+    var load = function () {
+      K.api('blog').then(function (rows) {
+        var l = $('[data-list]', v);
+        if (!rows.length) { l.innerHTML = '<div class="empty">No articles yet. Write your first one.</div>'; return; }
+        l.innerHTML = K.table([
+          { label: 'Article', f: function (r) { return '<b>' + esc(r.title) + '</b><br><span class="tiny">' + esc(r.excerpt).slice(0, 90) + '</span>'; } },
+          { label: 'Topic', k: 'topic' }, { label: 'Date', k: 'date' },
+          { label: 'Status', f: function (r) { return r.status === 'publish' ? K.badge('paid', 'Published') : K.badge('draft', 'Draft'); } },
+          { label: '', f: function (r) { return '<button class="btn sm" data-ed="' + r.id + '">Edit</button> ' + (r.status === 'publish' ? '<a class="btn sm ghost" target="_blank" href="' + esc(r.url) + '">View</a>' : ''); } }
+        ], rows);
+      }).catch(K.fail);
+    };
+    var edit = function (p) {
+      p = p || { title: '', topic: '', excerpt: '', content: '', image: '', status: 'draft' };
+      var d = K.drawer(p.id ? 'Edit article' : 'New article',
+        K.field('Title', 'title', p.title, 'text', { req: 1 }) +
+        '<div class="grid2">' + K.field('Topic', 'topic', p.topic, 'text', { ph: 'e.g. Buying guide' }) + '<div class="f"><label>Cover photo</label><div class="row"><img data-img src="' + esc(p.image || '') + '" alt="" style="width:96px;height:64px;object-fit:cover;border-radius:8px;background:#eef1f6' + (p.image ? '' : ';display:none') + '"><button type="button" class="btn sm" data-pick>Choose photo</button></div></div></div>' +
+        K.field('Short summary (shown on the blog page)', 'excerpt', p.excerpt, 'textarea') +
+        '<div class="f"><label>Article</label><div class="row" style="gap:6px;margin-bottom:6px"><button type="button" class="btn sm" data-fmt="h2">Heading</button><button type="button" class="btn sm" data-fmt="b">Bold</button><button type="button" class="btn sm" data-fmt="li">List item</button><button type="button" class="btn sm" data-fmt="a">Link</button></div><textarea name="content" style="min-height:340px">' + esc(p.content) + '</textarea><span class="hint">Leave an empty line between paragraphs.</span></div>',
+        '<button class="btn" data-draft>Save draft</button><button class="btn pri" data-pub>' + (p.status === 'publish' ? 'Update' : 'Publish') + '</button>' + (p.id ? '<button class="btn danger" data-del style="margin-right:auto">Delete</button>' : ''));
+      var img = p.image || '';
+      $('[data-pick]', d).onclick = function () { K.pickImage().then(function (u) { if (u) { img = u; var i = $('[data-img]', d); i.src = u; i.style.display = ''; } }); };
+      var ta = $('textarea[name=content]', d);
+      d.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-fmt]'); if (!b) return;
+        var s = ta.selectionStart, en = ta.selectionEnd, sel = ta.value.slice(s, en) || 'text', t = b.dataset.fmt, out;
+        if (t === 'h2') out = '\n<h2>' + sel + '</h2>\n'; else if (t === 'b') out = '<strong>' + sel + '</strong>'; else if (t === 'li') out = '<ul><li>' + sel + '</li></ul>'; else { var u = prompt('Link address'); if (!u) return; out = '<a href="' + u + '">' + sel + '</a>'; }
+        ta.setRangeText(out, s, en, 'end'); ta.focus();
+      });
+      var save = function (status) {
+        var f = K.read(d); if (!f.title) { K.toast('Add a title', true); return; }
+        K.api('blog', { body: { id: p.id, title: f.title, topic: f.topic, excerpt: f.excerpt, content: f.content, image: img, status: status } }).then(function () { K.toast(status === 'publish' ? 'Published' : 'Draft saved'); K.closeDrawer(); load(); }).catch(K.fail);
+      };
+      $('[data-draft]', d).onclick = function () { save('draft'); };
+      $('[data-pub]', d).onclick = function () { save('publish'); };
+      if (p.id) $('[data-del]', d).onclick = function () { K.confirm('Delete this article?', 'Delete', true).then(function (y) { if (y) K.api('blog/' + p.id, { method: 'DELETE' }).then(function () { K.toast('Deleted'); K.closeDrawer(); load(); }).catch(K.fail); }); };
+    };
+    $('[data-new]', v).onclick = function () { edit(); };
+    v.addEventListener('click', function (e) { var b = e.target.closest('[data-ed]'); if (b) K.api('blog/' + b.dataset.ed).then(edit).catch(K.fail); });
+    load();
+  };
+})();

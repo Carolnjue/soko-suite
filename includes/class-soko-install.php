@@ -17,6 +17,8 @@ final class Soko_Install {
 			self::seed_catalogue();
 			update_option( 'soko_seeded', 1 );
 		}
+		Soko_Blog::seed();
+		update_option( 'soko_flush', 1, false );
 		if ( ! get_option( 'soko_site' ) ) {
 			update_option( 'soko_site', Soko_Sections::default_site(), false );
 		}

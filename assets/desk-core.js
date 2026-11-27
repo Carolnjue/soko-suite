@@ -24,7 +24,7 @@
     crm: 'M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-2a4 4 0 0 0-3-3.9M16 2.1a4 4 0 0 1 0 7.8', jobs: 'M14 6l4 4-9 9H5v-4zM12 8l4 4',
     schedule: 'M4 5h16v16H4zM4 10h16M9 3v4M15 3v4', stock: 'M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10', purchases: 'M3 3h2l3 12h11l2-8H7M10 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
     expenses: 'M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6', reports: 'M4 20V10M10 20V4M16 20v-8M22 20H2', compliance: 'M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6zM9 12l2 2 4-4',
-    studio: 'M3 5h18v14H3zM3 9h18M7 13h5M7 16h8', users: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6', settings: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+    studio: 'M3 5h18v14H3zM3 9h18M7 13h5M7 16h8', blog: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5', users: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6', settings: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
     plus: 'M12 5v14M5 12h14', x: 'M6 6l12 12M18 6L6 18', search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4', menu: 'M4 7h16M4 12h16M4 17h16', ext: 'M14 4h6v6M10 14L20 4M19 13v6H5V5h6',
     dl: 'M12 4v12M7 11l5 5 5-5M4 20h16', mail: 'M3 5h18v14H3zM3 7l9 6 9-6', wa: 'M3 21l1.6-4.6A8.5 8.5 0 1 1 8 20z', phone: 'M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 6a2 2 0 0 1 2-2',
     edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', copy: 'M8 8h12v12H8zM4 16V4h12', trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3', check: 'M5 12l5 5 9-10', up: 'M12 19V5M6 11l6-6 6 6', down: 'M12 5v14M6 13l6 6 6-6',

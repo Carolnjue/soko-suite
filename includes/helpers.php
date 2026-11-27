@@ -71,6 +71,7 @@ function soko_modules() {
 		'reports'    => array( 'Reports', 'soko_reports', 'Money' ),
 		'compliance' => array( 'Tax and compliance', 'soko_compliance', 'Money' ),
 		'studio'     => array( 'Site Studio', 'soko_site', 'Website' ),
+		'blog'       => array( 'Blog', 'soko_site', 'Website' ),
 		'users'      => array( 'Team and access', 'soko_users', 'Admin' ),
 		'settings'   => array( 'Settings', 'soko_settings', 'Admin' ),
 	);

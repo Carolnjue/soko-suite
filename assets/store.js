@@ -441,3 +441,8 @@
   saveCart();
   filterShop();
 })();
+/* collapsed header search: first tap opens the field */
+document.querySelectorAll('form.search').forEach(function (f) {
+  var i = f.querySelector('input');
+  f.addEventListener('submit', function (e) { if (!i.value.trim()) { e.preventDefault(); i.focus(); } });
+});

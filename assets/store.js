@@ -278,7 +278,7 @@
     payBtn.disabled = false;
     lines.innerHTML = linesHTML(false);
     sum.innerHTML = sumHTML(deliveryFee());
-    payBtn.textContent = 'Pay ' + money(subtotal() + deliveryFee()) + ' with M-Pesa';
+    payBtn.textContent = S.stk ? 'Pay ' + money(subtotal() + deliveryFee()) + ' with M-Pesa' : 'Place order · ' + money(subtotal() + deliveryFee());
     var inst = $('.inst-date', co); if (inst) inst.hidden = !cart.some(function (c) { return c.install; });
   }
   var coForm = $('[data-co-form]');

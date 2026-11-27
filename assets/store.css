@@ -1052,3 +1052,13 @@ html[data-theme=dark] .tl .dot svg{color:#f7a440;stroke:#f7a440}
 .cmptable tbody th{color:var(--soft);font-weight:500;white-space:nowrap;position:sticky;left:0;background:var(--card)}
 .cmptable .btn{height:40px;padding:0 14px}
 .cat span{align-items:flex-start}.cat span>em,.cat span>small,.cat span>i{flex:none;margin-top:2px}
+/* clearer separation in both modes */
+:root{--line:#d6dfeb;--line2:#bcc8d9;--muted:#eef2f8;--alt:#f2f6fc}
+html[data-theme=dark]{--bg:#0d0f12;--card:#1b1f25;--alt:#15181d;--muted:#262b32;--line:#363d47;--line2:#4b535f;--soft:#a9afb8}
+.card,.panel,.box,.cat,.svc>*,.bcard,.pj,.faq details,.opts label,.cmptray,.pjbox{border-color:var(--line)}
+.card{box-shadow:0 1px 2px rgba(15,29,54,.05),0 6px 18px -12px rgba(15,29,54,.18)}
+html[data-theme=dark] .card,html[data-theme=dark] .panel{box-shadow:0 8px 20px -14px rgba(0,0,0,.7)}
+.band.tint,.band.alt,section.tint{background:var(--alt)}
+.line{border-bottom-color:var(--line)}
+input,select,textarea{border-color:var(--line2)}
+html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#14171b;border-color:var(--line2)}

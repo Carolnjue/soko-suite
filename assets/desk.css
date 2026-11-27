@@ -360,3 +360,17 @@ html[data-theme=dark] .k-del{background:#0f2d33;color:#a7e6ef}html[data-theme=da
 /* run 7: reports on phones */
 @media(max-width:640px){.kpi b{font-size:clamp(15px,4.6vw,20px);white-space:normal}.kpi{min-width:0;overflow:hidden}
 .box .scroll table td,.box .scroll table th{padding:6px 6px;font-size:13px}.box .scroll table td:first-child{min-width:118px}}
+/* clearer separation in both modes: the page, cards, rows and inputs each stand apart */
+:root{--bg:#edf1f7;--line:#d3dbe7;--line2:#b8c4d6;--grey:#e8edf4;--sky:#e8f0fc}
+html[data-theme=dark]{--bg:#0d0f12;--card:#1b1f25;--alt:#171a1f;--line:#353c46;--line2:#4a525e;--grey:#262b32;--sky:#20262e;--soft:#a7adb6}
+.box,.kpi,.drawer .box{border-color:var(--line);box-shadow:0 1px 2px rgba(15,29,54,.06),0 4px 14px -8px rgba(15,29,54,.12)}
+html[data-theme=dark] .box,html[data-theme=dark] .kpi{box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 6px 16px -10px rgba(0,0,0,.6)}
+th{background:var(--grey);color:var(--ink);border-bottom:1px solid var(--line2)}
+thead th:first-child{border-top-left-radius:8px}thead th:last-child{border-top-right-radius:8px}
+td{border-bottom:1px solid var(--line)}
+tbody tr:hover td{background:var(--sky)}
+input,select,textarea{border-color:var(--line2)}
+input:focus,select:focus,textarea:focus{border-color:#1b4f9e;box-shadow:0 0 0 3px rgba(27,79,158,.15);outline:0}
+html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#14171b;border-color:var(--line2)}
+.modal .mbox,.drawer{border:1px solid var(--line)}
+@media(max-width:640px){.stack tr{border-bottom:1px solid var(--line2);padding:10px 0}.stack tbody tr:hover td{background:none}}

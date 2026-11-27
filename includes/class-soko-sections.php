@@ -48,7 +48,7 @@ final class Soko_Sections {
 				'label'  => 'Page banner',
 				'desc'   => 'A heading band for inner pages.',
 				'fields' => array_merge( $head, $cta, array(
-					array( 'k' => 'style', 'label' => 'Style', 'type' => 'select', 'options' => array( 'sky' => 'Light sky', 'blue' => 'Deep blue', 'photo' => 'Photo', 'split' => 'Text beside photo' ) ),
+					array( 'k' => 'style', 'label' => 'Style', 'type' => 'select', 'options' => array( 'sky' => 'Light sky', 'blue' => 'Soft gradient', 'photo' => 'Photo', 'split' => 'Text beside photo', 'mosaic' => 'Project photo mosaic with figures', 'actions' => 'Quick contact buttons' ) ),
 					array( 'k' => 'image', 'label' => 'Photo', 'type' => 'image' ),
 					array( 'k' => 'scene', 'label' => 'Illustration (when no photo)', 'type' => 'select', 'options' => array( '' => 'None', 'home' => 'Home', 'business' => 'Business', 'farm' => 'Farm', 'water' => 'Water heating', 'light' => 'Street lights' ) ),
 				) ),
@@ -304,7 +304,7 @@ final class Soko_Sections {
 					'seo'      => 'Solar projects: hotels, schools, farms and homes | Dynamic Smart Systems',
 					'desc'     => 'Solar installations delivered by Dynamic Smart Systems across Kenya.',
 					'sections' => array(
-						$sec( 'page_hero', array( 'title' => 'Projects we have delivered', 'text' => 'Hotels, schools, farms, bakeries and homes across Kenya, designed and installed by our own engineers.', 'style' => 'sky' ) ),
+						$sec( 'page_hero', array( 'title' => 'Projects we have delivered', 'text' => 'Hotels, schools, farms, bakeries and homes across Kenya, designed and installed by our own engineers.', 'style' => 'mosaic' ) ),
 						$sec( 'projects', array( 'title' => '', 'text' => '', 'limit' => 0, 'filters' => 1 ) ),
 						$sec( 'cta_band', array_merge( $cta, array( 'title' => 'Planning a project like these?', 'color' => 'blue' ) ) ),
 					),
@@ -335,7 +335,7 @@ final class Soko_Sections {
 					'seo'      => 'Contact Dynamic Smart Systems | Get a solar quote',
 					'desc'     => 'Request a solar quote or book a site survey. Call or WhatsApp 0712 936 685.',
 					'sections' => array(
-						$sec( 'page_hero', array( 'title' => 'Get a quote or book a site survey', 'text' => 'Tell us what you need powered or installed, and an engineer will get back to you with advice and a quote.', 'style' => 'blue' ) ),
+						$sec( 'page_hero', array( 'title' => 'Get a quote or book a site survey', 'text' => 'Tell us what you need powered or installed, and an engineer will get back to you with advice and a quote.', 'style' => 'actions' ) ),
 						$sec( 'contact', array( 'title' => '', 'text' => '' ) ),
 						$sec( 'faq', array( 'title' => 'Common questions', 'text' => '', 'items' => array(
 							array( 'q' => 'Do you install outside Nairobi?', 'a' => 'Yes. We have installed in Kisumu, Vihiga, Voi, Machakos and beyond. Delivery and installation costs depend on distance.' ),
@@ -557,6 +557,35 @@ final class Soko_Sections {
 		}
 		if ( 'photo' === $style && $img ) {
 			return '<section class="phero photo" style="--img:url(' . $img . ')"><div class="wrap"><div class="pcopy">' . $copy . '</div></div></section>';
+		}
+		if ( 'mosaic' === $style ) {
+			$site  = self::current();
+			$pj    = (array) $site['projects'];
+			$kw    = 0;
+			foreach ( $pj as $x ) {
+				if ( preg_match( '/([\d.]+)\s*kW/i', $x['size'], $mm ) ) {
+					$kw += (float) $mm[1];
+				}
+			}
+			$sect  = count( array_unique( wp_list_pluck( $pj, 'sector' ) ) );
+			$tiles = '';
+			foreach ( array_slice( $pj, 0, 3 ) as $k => $x ) {
+				$tiles .= '<figure class="mz mz' . $k . '"><img src="' . esc_url( $x['img'] ) . '" alt="" ' . ( $k ? 'loading="lazy"' : '' ) . '><figcaption>' . self::e( $x['name'] ) . '</figcaption></figure>';
+			}
+			return '<section class="phero mosaic"><div class="wrap"><div class="pcopy">' . $copy . '<div class="mzstats"><div><b>' . count( $pj ) . '</b><span>featured projects</span></div><div><b>' . esc_html( rtrim( rtrim( number_format( $kw, 1 ), '0' ), '.' ) ) . ' kW</b><span>of solar in these projects</span></div><div><b>' . (int) $sect . '</b><span>sectors served</span></div></div></div><div class="mzgrid">' . $tiles . '</div></div></section>';
+		}
+		if ( 'actions' === $style ) {
+			$st  = Soko_Settings::all();
+			$wa  = 'https://wa.me/' . preg_replace( '/\D/', '', $st['whatsapp'] );
+			$ico = function ( $d ) {
+				return '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' . $d . '"/></svg>';
+			};
+			return '<section class="phero actions"><div class="wrap"><div class="pcopy">' . $copy . '</div><div class="qa">'
+				. '<a href="tel:' . esc_attr( soko_phone( $st['phone'] ) ) . '"><i>' . $ico( 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2' ) . '</i><b>Call us</b><span>' . self::e( $st['phone'] ) . '</span></a>'
+				. '<a href="' . esc_url( $wa ) . '" target="_blank" rel="noopener" class="wa2"><i>' . $ico( 'M3 21l1.6-4.6A8.5 8.5 0 1 1 8 20z' ) . '</i><b>WhatsApp</b><span>Chat with an engineer</span></a>'
+				. '<a href="mailto:' . esc_attr( $st['email'] ) . '"><i>' . $ico( 'M3 5h18v14H3zM3 7l9 6 9-6' ) . '</i><b>Email</b><span>' . self::e( $st['email'] ) . '</span></a>'
+				. '<a href="#quote"><i>' . $ico( 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' ) . '</i><b>Quote form</b><span>Reply with advice and a price</span></a>'
+				. '</div></div></section>';
 		}
 		$scene = ! empty( $p['scene'] ) && 'sky' === $style ? self::scene( $p['scene'], 'p' ) : '';
 		return '<section class="phero ' . esc_attr( $style ) . ( $scene ? ' has-scene' : '' ) . '">' . $scene . '<div class="wrap"><div class="pcopy">' . $copy . '</div></div></section>';
@@ -782,7 +811,7 @@ final class Soko_Sections {
 		};
 		$wa  = 'https://wa.me/' . preg_replace( '/\D/', '', $s['whatsapp'] );
 		$map = ! empty( $p['map'] ) && false !== strpos( $p['map'], 'google.com/maps' ) ? '<iframe class="map" src="' . esc_url( $p['map'] ) . '" loading="lazy" title="Map"></iframe>' : '';
-		return '<section class="band"><div class="wrap contact">' . self::head( $p ) . '<div class="cinfo">'
+		return '<section class="band" id="quote"><div class="wrap contact">' . self::head( $p ) . '<div class="cinfo">'
 			. '<a href="tel:' . esc_attr( soko_phone( $s['phone'] ) ) . '">' . $ico( 'M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 6a2 2 0 0 1 2-2' ) . '<span><b>Call</b>' . self::e( $s['phone'] . ( $s['phone2'] ? ' · ' . $s['phone2'] : '' ) ) . '</span></a>'
 			. '<a href="' . esc_url( $wa ) . '" target="_blank" rel="noopener">' . $ico( 'M3 21l1.6-4.6A8.5 8.5 0 1 1 8 20z' ) . '<span><b>WhatsApp</b>Chat with an engineer</span></a>'
 			. '<a href="mailto:' . esc_attr( $s['email'] ) . '">' . $ico( 'M3 5h18v14H3zM3 7l9 6 9-6' ) . '<span><b>Email</b>' . self::e( $s['email'] ) . '</span></a>'

@@ -18,9 +18,19 @@ final class Soko_Ledger {
 		$r          = (array) $r;
 		$r['specs'] = soko_json( $r['specs'] );
 		$r['images'] = soko_abs( soko_json( $r['images'] ) );
+		if ( $r['images'] && 1 === count( $r['images'] ) && false !== strpos( $r['images'][0], '/assets/seed/prod-' ) ) {
+			$cat0 = soko_category( $r['cat'] );
+			if ( ! empty( $cat0['gallery'] ) && count( $cat0['gallery'] ) > 1 ) {
+				$r['images'] = array(); // sample photo shared by several products: rotate through the category gallery
+			}
+		}
 		if ( ! $r['images'] ) {
 			$cat = soko_category( $r['cat'] );
-			if ( ! empty( $cat['image'] ) ) {
+			if ( ! empty( $cat['gallery'] ) ) {
+				$g             = array_values( (array) $cat['gallery'] );
+				$r['images']   = array( $g[ (int) $r['id'] % count( $g ) ] );
+				$r['cat_image'] = 1;
+			} elseif ( ! empty( $cat['image'] ) ) {
 				$r['images']   = array( $cat['image'] );
 				$r['cat_image'] = 1;
 			}

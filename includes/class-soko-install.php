@@ -35,7 +35,7 @@ final class Soko_Install {
 
 	public static function maybe_upgrade() {
 		if ( get_option( 'soko_db_version' ) !== SOKO_DB_VERSION ) {
-			if ( in_array( get_option( 'soko_db_version' ), array( '1', '2', '3', '4' ), true ) ) {
+			if ( in_array( get_option( 'soko_db_version' ), array( '1', '2', '3', '4', '5' ), true ) ) {
 				// 1.x staging sites: take the redesigned header, pages and category photos.
 				update_option( 'soko_site', Soko_Sections::default_site(), false );
 				delete_option( 'soko_categories' );
@@ -331,21 +331,21 @@ final class Soko_Install {
 	/** Default categories used by the storefront mega menu and the Desk. */
 	public static function default_categories() {
 		return array(
-			array( 'id' => 'kits', 'image' => 'soko:seed/proj-hoho.jpg', 'name' => 'Solar kits', 'icon' => 'kit', 'group' => 'Complete systems' ),
-			array( 'id' => 'panels', 'image' => 'soko:stock/cat-panels.jpg', 'name' => 'Solar panels', 'icon' => 'panel', 'group' => 'Generate' ),
-			array( 'id' => 'hybrid', 'image' => 'soko:seed/prod-inverters.jpg', 'name' => 'Hybrid inverters', 'icon' => 'inverter', 'group' => 'Convert' ),
+			array( 'id' => 'kits', 'gallery' => array( 'soko:seed/proj-hoho.jpg', 'soko:seed/proj-bunyore.jpg', 'soko:seed/proj-karen.jpg' ), 'image' => 'soko:seed/proj-hoho.jpg', 'name' => 'Solar kits', 'icon' => 'kit', 'group' => 'Complete systems' ),
+			array( 'id' => 'panels', 'gallery' => array( 'soko:stock/cat-panels.jpg', 'soko:stock/panel-2.jpg', 'soko:stock/panel-3.jpg' ), 'image' => 'soko:stock/cat-panels.jpg', 'name' => 'Solar panels', 'icon' => 'panel', 'group' => 'Generate' ),
+			array( 'id' => 'hybrid', 'gallery' => array( 'soko:seed/prod-inverters.jpg', 'soko:seed/proj-hoho.jpg' ), 'image' => 'soko:seed/prod-inverters.jpg', 'name' => 'Hybrid inverters', 'icon' => 'inverter', 'group' => 'Convert' ),
 			array( 'id' => 'gridtie', 'image' => 'soko:seed/proj-karen.jpg', 'name' => 'Grid-tie inverters', 'icon' => 'inverter', 'group' => 'Convert' ),
-			array( 'id' => 'lithium', 'image' => 'soko:seed/prod-lithium.jpg', 'name' => 'Lithium batteries', 'icon' => 'battery', 'group' => 'Store energy' ),
+			array( 'id' => 'lithium', 'gallery' => array( 'soko:seed/prod-lithium.jpg', 'soko:seed/proj-bunyore.jpg' ), 'image' => 'soko:seed/prod-lithium.jpg', 'name' => 'Lithium batteries', 'icon' => 'battery', 'group' => 'Store energy' ),
 			array( 'id' => 'gel', 'image' => 'soko:stock/cat-storage.jpg', 'name' => 'Gel batteries', 'icon' => 'battery', 'group' => 'Store energy' ),
 			array( 'id' => 'stations', 'image' => 'soko:seed/prod-station.jpg', 'name' => 'Portable power stations', 'icon' => 'station', 'group' => 'Store energy' ),
-			array( 'id' => 'heaters', 'image' => 'soko:seed/prod-heaters.jpg', 'name' => 'Solar water heaters', 'icon' => 'heater', 'group' => 'Water' ),
-			array( 'id' => 'pumps', 'image' => 'soko:seed/prod-pump.jpg', 'name' => 'Solar water pumps', 'icon' => 'pump', 'group' => 'Water' ),
-			array( 'id' => 'flood', 'image' => 'soko:stock/cat-flood.jpg', 'name' => 'Solar floodlights', 'icon' => 'bulb', 'group' => 'Light and security' ),
-			array( 'id' => 'street', 'image' => 'soko:stock/cat-street.jpg', 'name' => 'Solar street lights', 'icon' => 'street', 'group' => 'Light and security' ),
+			array( 'id' => 'heaters', 'gallery' => array( 'soko:seed/prod-heaters.jpg', 'soko:seed/team-heater.jpg', 'soko:seed/proj-domestic.jpg' ), 'image' => 'soko:seed/prod-heaters.jpg', 'name' => 'Solar water heaters', 'icon' => 'heater', 'group' => 'Water' ),
+			array( 'id' => 'pumps', 'gallery' => array( 'soko:seed/prod-pump.jpg', 'soko:seed/proj-baraka.jpg' ), 'image' => 'soko:seed/prod-pump.jpg', 'name' => 'Solar water pumps', 'icon' => 'pump', 'group' => 'Water' ),
+			array( 'id' => 'flood', 'gallery' => array( 'soko:stock/cat-flood.jpg', 'soko:seed/prod-streetlight.jpg' ), 'image' => 'soko:stock/cat-flood.jpg', 'name' => 'Solar floodlights', 'icon' => 'bulb', 'group' => 'Light and security' ),
+			array( 'id' => 'street', 'gallery' => array( 'soko:stock/cat-street.jpg', 'soko:seed/team-street.jpg', 'soko:seed/prod-streetlight.jpg' ), 'image' => 'soko:stock/cat-street.jpg', 'name' => 'Solar street lights', 'icon' => 'street', 'group' => 'Light and security' ),
 			array( 'id' => 'cctv', 'image' => 'soko:stock/cat-cctv.jpg', 'name' => 'Solar CCTV', 'icon' => 'cctv', 'group' => 'Light and security' ),
 			array( 'id' => 'car', 'image' => 'soko:stock/cat-car.jpg', 'name' => 'Car batteries', 'icon' => 'carbat', 'group' => 'More' ),
 			array( 'id' => 'acc', 'image' => 'soko:seed/prod-accessories.jpg', 'name' => 'Accessories', 'icon' => 'cable', 'group' => 'More' ),
-			array( 'id' => 'services', 'image' => 'soko:seed/team-roof.jpg', 'name' => 'Services', 'icon' => 'tools', 'group' => 'More' ),
+			array( 'id' => 'services', 'gallery' => array( 'soko:seed/team-roof.jpg', 'soko:seed/team-crew.jpg' ), 'image' => 'soko:seed/team-roof.jpg', 'name' => 'Services', 'icon' => 'tools', 'group' => 'More' ),
 		);
 	}
 

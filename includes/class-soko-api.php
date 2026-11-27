@@ -142,7 +142,7 @@ final class Soko_API {
 		$r( '/users', 'GET', array( __CLASS__, 'users' ), self::perm( 'soko_users' ) );
 		$r( '/users', 'POST', array( __CLASS__, 'save_user' ), self::perm( 'soko_users' ) );
 		$r( '/users/(?P<id>\d+)', 'POST', array( __CLASS__, 'save_user' ), self::perm( 'soko_users' ) );
-		$r( '/users/(?P<id>\d+)/link', 'POST', array( __CLASS__, 'signin_link' ), self::perm( 'soko_users' ) );
+		$r( '/cleanup', 'POST', array( __CLASS__, 'cleanup' ), function () { return current_user_can( 'manage_options' ); } );
 		$r( '/me/password', 'POST', array( __CLASS__, 'my_password' ), $staff );
 		$r( '/team', 'GET', array( __CLASS__, 'team' ), $staff );
 	}
@@ -2133,6 +2133,13 @@ final class Soko_API {
 			$u->set_role( $role );
 			update_user_meta( $id, 'soko_phone', sanitize_text_field( isset( $b['phone'] ) ? $b['phone'] : '' ) );
 			update_user_meta( $id, 'soko_disabled', ! empty( $b['disabled'] ) ? 1 : 0 );
+			if ( isset( $b['password'] ) && '' !== $b['password'] ) {
+				if ( strlen( (string) $b['password'] ) < 8 ) {
+					return new WP_Error( 'soko', 'Use a password of at least 8 characters.', array( 'status' => 400 ) );
+				}
+				wp_set_password( (string) $b['password'], $id );
+				soko_log( 'Set a new password for ' . $b['name'], 'user', $id );
+			}
 			if ( ! empty( $b['reset'] ) ) {
 				retrieve_password( $u->user_login );
 			}
@@ -2176,22 +2183,38 @@ final class Soko_API {
 		);
 		soko_log( 'Invited ' . $b['name'] . ' as ' . soko_roles()[ $role ][0], 'user', $uid );
 		if ( ! $email ) {
-			$lnk = self::signin_link( array( 'id' => $uid ) );
-			return array( 'id' => $uid, 'login' => $login, 'link' => $lnk['url'], 'expires' => $lnk['expires'], 'message' => 'Account created. Share the sign-in link with them.' );
+			return array( 'id' => $uid, 'login' => $login, 'password' => empty( $b['password'] ) ? $pass : '', 'message' => 'Account created.' );
 		}
 		return array( 'id' => $uid, 'login' => $login, 'password' => empty( $b['password'] ) ? $pass : '', 'sent' => $sent, 'message' => 'Account created.' );
 	}
 
-	/** A sign-in link (works for 90 days, until a new one is made) the owner shares on WhatsApp: no password needs to be sent. */
-	public static function signin_link( $req ) {
-		$u = get_userdata( (int) $req['id'] );
-		if ( ! $u || ( user_can( $u, 'manage_options' ) && (int) $u->ID !== get_current_user_id() ) ) {
-			return new WP_Error( 'soko', 'A sign-in link cannot be made for this account.', array( 'status' => 400 ) );
+	/** Remove test records (owner only): their documents, payments and stock movements, then the customers and leads. */
+	public static function cleanup( $req ) {
+		global $wpdb;
+		$b    = $req->get_json_params();
+		$cust = array_map( 'intval', (array) ( isset( $b['customers'] ) ? $b['customers'] : array() ) );
+		$lead = array_map( 'intval', (array) ( isset( $b['leads'] ) ? $b['leads'] : array() ) );
+		$n    = array( 'docs' => 0, 'customers' => 0, 'leads' => 0 );
+		foreach ( $cust as $cid ) {
+			foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT id, number FROM ' . soko_t( 'docs' ) . ' WHERE customer_id = %d', $cid ), ARRAY_A ) as $d ) { // phpcs:ignore
+				foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT id, product_id, qty FROM ' . soko_t( 'moves' ) . ' WHERE ref = %s', $d['number'] ), ARRAY_A ) as $m ) { // phpcs:ignore
+					$wpdb->query( $wpdb->prepare( 'UPDATE ' . soko_t( 'products' ) . ' SET stock = stock - %f WHERE id = %d', (float) $m['qty'], (int) $m['product_id'] ) ); // phpcs:ignore
+					$wpdb->delete( soko_t( 'moves' ), array( 'id' => (int) $m['id'] ) );
+				}
+				$wpdb->delete( soko_t( 'payments' ), array( 'doc_id' => (int) $d['id'] ) );
+				$wpdb->delete( soko_t( 'lines' ), array( 'doc_id' => (int) $d['id'] ) );
+				$wpdb->delete( soko_t( 'jobs' ), array( 'doc_id' => (int) $d['id'] ) );
+				$wpdb->delete( soko_t( 'docs' ), array( 'id' => (int) $d['id'] ) );
+				++$n['docs'];
+			}
+			$n['customers'] += (int) $wpdb->delete( soko_t( 'customers' ), array( 'id' => $cid ) );
 		}
-		$tok = wp_generate_password( 32, false );
-		update_user_meta( $u->ID, 'soko_signin', array( 'h' => wp_hash( $tok ), 'x' => time() + 90 * DAY_IN_SECONDS ) );
-		soko_log( 'Made a sign-in link for ' . $u->display_name, 'user', $u->ID );
-		return array( 'url' => home_url( '/desk/?signin=' . $u->ID . '.' . $tok ), 'expires' => wp_date( 'j M Y', time() + 90 * DAY_IN_SECONDS ), 'login' => $u->user_login );
+		foreach ( $lead as $lid ) {
+			$n['leads'] += (int) $wpdb->delete( soko_t( 'leads' ), array( 'id' => $lid ) );
+		}
+		Soko_Accounts::flush();
+		soko_log( 'Removed test records', 'system', wp_json_encode( $n ) );
+		return $n;
 	}
 
 	/** The signed-in person chooses their own password. */

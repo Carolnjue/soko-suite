@@ -70,24 +70,6 @@ final class Soko_Desk {
 			wp_safe_redirect( home_url( '/desk/login/' ) );
 			exit;
 		}
-		// One-time sign-in link shared by the owner: signs the person in, then asks them to choose a password.
-		if ( ! empty( $_GET['signin'] ) ) { // phpcs:ignore
-			$parts = explode( '.', sanitize_text_field( wp_unslash( $_GET['signin'] ) ), 2 ); // phpcs:ignore
-			$uid   = (int) $parts[0];
-			$tok   = isset( $parts[1] ) ? $parts[1] : '';
-			$saved = $uid ? get_user_meta( $uid, 'soko_signin', true ) : '';
-			if ( is_array( $saved ) && $tok && hash_equals( (string) $saved['h'], wp_hash( $tok ) ) && time() < (int) $saved['x'] && ! get_user_meta( $uid, 'soko_disabled', true ) ) {
-				wp_clear_auth_cookie();
-				wp_set_current_user( $uid );
-				wp_set_auth_cookie( $uid, true, is_ssl() );
-				soko_log( 'Signed in with a sign-in link', 'user', $uid );
-				wp_safe_redirect( home_url( '/desk/' ) );
-				exit;
-			}
-			if ( ! is_user_logged_in() ) {
-				$GLOBALS['soko_signin_error'] = 'This sign-in link has expired. Ask the owner for a new one, or sign in below.';
-			}
-		}
 		if ( ! is_user_logged_in() || ! soko_is_staff() ) {
 			self::login();
 			return;
@@ -163,7 +145,7 @@ JS;
 	}
 
 	private static function login() {
-		$error = isset( $GLOBALS['soko_signin_error'] ) ? $GLOBALS['soko_signin_error'] : '';
+		$error = '';
 		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['soko_login'] ) ) { // phpcs:ignore
 			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['soko_login'] ) ), 'soko_login' ) ) { // phpcs:ignore
 				$error = 'The page expired. Please try again.';

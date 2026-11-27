@@ -229,7 +229,7 @@
       var b = $('[data-me]'), p = $('.menu-pop', b);
       if (p) { p.remove(); return; }
       b.insertAdjacentHTML('beforeend', '<div class="menu-pop"><a href="' + esc(D.site) + '" target="_blank" rel="noopener">View website</a>' + (K.me.admin ? '<a href="' + esc(D.site) + 'wp-admin/">WordPress admin</a>' : '') + '<button data-pw>Change my password</button><a href="' + esc(D.logout) + '">Sign out</a></div>');
-      $('[data-pw]', b).onclick = function () { location.hash = 'setpw'; location.reload(); };
+      $('[data-pw]', b).onclick = function () { location.href = D.site + 'wp-login.php?action=lostpassword'; };
     };
     document.addEventListener('click', function (e) { if (!e.target.closest('[data-me]')) { var p = $('.menu-pop'); if (p) p.remove(); } if (!e.target.closest('.gsearch')) { var g = $('[data-gr]'); if (g) g.hidden = true; } });
     var gs = $('[data-gs]'), gr = $('[data-gr]'), gT;
@@ -330,19 +330,3 @@
   new MutationObserver(function () { document.querySelectorAll('.kpi.link:not([tabindex]),.box.link:not([tabindex])').forEach(function (x) { x.tabIndex = 0; x.setAttribute('role', 'link'); }); }).observe(document.documentElement, { childList: true, subtree: true });
 })();
 
-/* after signing in with a one-time link: choose a password */
-(function () {
-  if (location.hash !== '#setpw') return;
-  var go = function () {
-    if (!window.K || !K.modal || !K.api) return setTimeout(go, 200);
-    history.replaceState(null, '', location.pathname + '#dashboard');
-    var m = K.modal('Welcome. Choose your password', '<p class="sub">You are signed in. Choose a password for next time, or skip and do it later from your name in the top corner.</p>' + K.field('New password', 'password', '', 'password', { hint: 'At least 8 characters' }) + K.field('Type it again', 'password2', '', 'password'), '<button class="btn" data-mx>Later</button><button class="btn pri" data-go>Save password</button>');
-    m.querySelector('[data-go]').onclick = function () {
-      var f = K.read(m);
-      if ((f.password || '').length < 8) { K.toast('Use at least 8 characters.', true); return; }
-      if (f.password !== f.password2) { K.toast('The two passwords do not match.', true); return; }
-      K.api('me/password', { body: { password: f.password } }).then(function (r) { K.closeModal(); K.toast(r.message); }).catch(K.fail);
-    };
-  };
-  setTimeout(go, 600);
-})();

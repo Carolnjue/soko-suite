@@ -103,6 +103,7 @@ final class Soko_API {
 		$r( '/purchases', 'GET', array( __CLASS__, 'purchases' ), self::perm( 'soko_purchases', array( 'soko_stock' ) ) );
 		$r( '/purchases', 'POST', array( __CLASS__, 'save_purchase' ), self::perm( 'soko_purchases' ) );
 		$r( '/purchases/(?P<id>\d+)', 'POST', array( __CLASS__, 'save_purchase' ), self::perm( 'soko_purchases' ) );
+		$r( '/purchases/(?P<id>\d+)/pay', 'POST', array( __CLASS__, 'pay_purchase' ), self::perm( 'soko_purchases' ) );
 		$r( '/purchases/(?P<id>\d+)/receive', 'POST', array( __CLASS__, 'receive_purchase' ), self::perm( 'soko_purchases', array( 'soko_stock' ) ) );
 
 		$r( '/reports/(?P<type>[a-z]+)', 'GET', array( __CLASS__, 'report' ), self::perm( 'soko_reports' ) );
@@ -317,7 +318,7 @@ final class Soko_API {
 				'name'     => sanitize_text_field( $b['name'] ),
 				'phone'    => soko_phone( $b['phone'] ),
 				'email'    => sanitize_email( isset( $b['email'] ) ? $b['email'] : '' ),
-				'source'   => sanitize_text_field( isset( $b['source'] ) ? $b['source'] : 'Website' ),
+				'source'   => sanitize_text_field( isset( $b['source'] ) && $b['source'] ? $b['source'] : 'Website quote form' ),
 				'stage'    => 'New',
 				'interest' => sanitize_text_field( isset( $b['interest'] ) ? $b['interest'] : '' ),
 				'county'   => sanitize_text_field( isset( $b['county'] ) ? $b['county'] : '' ),
@@ -388,6 +389,7 @@ final class Soko_API {
 			'site'     => home_url( '/' ),
 			'callbacks' => soko_can( 'soko_settings' ) ? array( 'stk' => Soko_Mpesa::callback_url( 'stk' ), 'confirm' => Soko_Mpesa::callback_url( 'confirm' ), 'validate' => Soko_Mpesa::callback_url( 'validate' ) ) : null,
 			'mpesa_ready' => Soko_Mpesa::ready(),
+			'pay_number'  => ( $pi = Soko_Mpesa::instructions( '' ) ) && ! empty( $pi['number'] ) ? $pi['kind'] . ' ' . $pi['number'] : '',
 		);
 	}
 
@@ -403,7 +405,7 @@ final class Soko_API {
 				$out[] = array( 'kind' => 'customer', 'id' => (int) $r['id'], 'title' => $r['name'], 'sub' => soko_phone_display( $r['phone'] ) );
 			}
 			foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT id, name, phone, stage FROM ' . soko_t( 'leads' ) . " WHERE ( name LIKE %s OR phone LIKE %s OR interest LIKE %s ) AND stage NOT IN ('Won','Lost') LIMIT 4", $like, $pl, $like ), ARRAY_A ) as $r ) { // phpcs:ignore
-				$out[] = array( 'kind' => 'lead', 'id' => (int) $r['id'], 'title' => $r['name'], 'sub' => 'Lead · ' . $r['stage'] );
+				$out[] = array( 'kind' => 'lead', 'id' => (int) $r['id'], 'title' => $r['name'], 'sub' => $r['stage'] );
 			}
 		}
 		if ( soko_can( 'soko_sales' ) ) {
@@ -1024,6 +1026,25 @@ final class Soko_API {
 		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'purchases' ) . ' WHERE id = %d', $id ), ARRAY_A ); // phpcs:ignore
 	}
 
+	public static function pay_purchase( $req ) {
+		global $wpdb;
+		$b  = $req->get_json_params();
+		$t  = soko_t( 'purchases' );
+		$po = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE id = %d", $req['id'] ), ARRAY_A ); // phpcs:ignore
+		$a  = isset( $b['amount'] ) ? (float) $b['amount'] : 0;
+		if ( ! $po ) {
+			return new WP_Error( 'soko', 'Purchase order not found.', array( 'status' => 404 ) );
+		}
+		$bal = (float) $po['total'] - (float) $po['paid'];
+		if ( $a <= 0 || $a > $bal + 0.5 ) {
+			return new WP_Error( 'soko', sprintf( 'Enter an amount between 1 and %s.', soko_money( $bal ) ), array( 'status' => 400 ) );
+		}
+		$wpdb->update( $t, array( 'paid' => (float) $po['paid'] + $a ), array( 'id' => (int) $po['id'] ) );
+		soko_log( 'Paid supplier ' . soko_money( $a ) . ' on ' . $po['number'], 'purchase', $po['number'] );
+		$left = $bal - $a;
+		return array( 'message' => 'Payment saved. ' . ( $left > 0.5 ? soko_money( $left ) . ' still to pay.' : $po['number'] . ' is fully paid.' ) );
+	}
+
 	public static function receive_purchase( $req ) {
 		global $wpdb;
 		$b  = $req->get_json_params();
@@ -1138,7 +1159,7 @@ final class Soko_API {
 				'email'    => $u->user_email,
 				'login'    => $u->user_login,
 				'role'     => $role,
-				'label'    => 'administrator' === $role ? 'Web team (support)' : soko_roles()[ $role ][0],
+				'label'    => 'administrator' === $role ? 'Owner (full access)' : soko_roles()[ $role ][0],
 				'last'     => $last ? date_i18n( 'j M, H:i', $last ) : 'Never',
 				'phone'    => get_user_meta( $u->ID, 'soko_phone', true ),
 				'disabled' => (bool) get_user_meta( $u->ID, 'soko_disabled', true ),

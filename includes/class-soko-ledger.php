@@ -415,7 +415,14 @@ final class Soko_Ledger {
 
 	public static function set_status( $id, $status ) {
 		global $wpdb;
-		$wpdb->update( soko_t( 'docs' ), array( 'status' => sanitize_key( $status ), 'updated' => soko_now() ), array( 'id' => $id ) );
+		$upd = array( 'status' => sanitize_key( $status ), 'updated' => soko_now() );
+		if ( 'void' === $status ) {
+			$cur = $wpdb->get_var( $wpdb->prepare( 'SELECT etims_status FROM ' . soko_t( 'docs' ) . ' WHERE id = %d', $id ) ); // phpcs:ignore
+			if ( 'signed' !== $cur ) {
+				$upd['etims_status'] = ''; // a cancelled invoice is not sent to eTIMS
+			}
+		}
+		$wpdb->update( soko_t( 'docs' ), $upd, array( 'id' => $id ) );
 		$d = self::doc( $id );
 		soko_log( 'Marked ' . $d['number'] . ' ' . $status, $d['type'], $d['number'] );
 		return $d;

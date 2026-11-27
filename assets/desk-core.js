@@ -7,6 +7,7 @@
   var $$ = K.$$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var esc = K.esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   K.cur = function () { return (K.me && K.me.settings && K.me.settings.currency) || 'KES'; };
+  K.moneyx = function (n, bare) { n = Math.round((+n || 0) * 100) / 100; var f = Math.abs(n - Math.round(n)) > 0.004; var s = n.toLocaleString('en-KE', { minimumFractionDigits: f ? 2 : 0, maximumFractionDigits: f ? 2 : 0 }); return bare ? s : K.cur() + ' ' + s; };
   K.money = function (n, bare) { var s = Math.round(+n || 0).toLocaleString('en-KE'); return bare ? s : K.cur() + ' ' + s; };
   K.num = function (n) { return (+n || 0).toLocaleString('en-KE', { maximumFractionDigits: 2 }); };
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -61,6 +62,7 @@
     var ph = String(phone || '').replace(/\D/g, '').replace(/^254/, '').replace(/^0/, '');
     return !!d && ph.indexOf(d) > -1;
   };
+  K.method = function (m) { var map = { mpesa: 'M-Pesa', bank: 'Bank transfer', cash: 'Cash', card: 'Card', cheque: 'Cheque' }; m = String(m || ''); return map[m.toLowerCase()] || (m.charAt(0).toUpperCase() + m.slice(1)); };
   K.waNum = function (p) { var d = String(p || '').replace(/\D/g, ''); if (/^0\d{9}$/.test(d)) d = '254' + d.slice(1); else if (/^[17]\d{8}$/.test(d)) d = '254' + d; return d; };
   K.url = function (path) { return D.api + path + (path.indexOf('?') > -1 ? '&' : '?') + '_wpnonce=' + D.nonce; };
   K.open = function (path) { window.open(K.url(path), '_blank', 'noopener'); };
@@ -88,8 +90,16 @@
     if (m.classList.contains('on') && m.firstChild) { K._mstack.push(m.removeChild(m.firstChild)); } // a picker or confirm opened over a form keeps the form underneath
     m.innerHTML = '<div class="mbox' + (wide ? ' wide' : '') + '" role="dialog" aria-modal="true"><div class="dh"><h2>' + title + '</h2><button class="btn ghost" data-mx aria-label="Close">' + K.ic(K.ICONS.x) + '</button></div><div class="db">' + body + '</div>' + (foot ? '<div class="df">' + foot + '</div>' : '') + '</div>';
     m.classList.add('on');
+    var box = m.firstChild;
+    box.addEventListener('input', function (e) { if (e.target.matches('input,textarea,select') && e.target.type !== 'search') box.dataset.dirty = '1'; });
     var f = m.querySelector('input:not([type=hidden]),select,textarea'); if (f) setTimeout(function () { f.focus(); }, 30);
-    return m.firstChild;
+    return box;
+  };
+  /* Escape or a click outside: ask before throwing away typed work */
+  K.softCloseModal = function () {
+    var box = $('.modal').firstChild;
+    if (box && box.dataset && box.dataset.dirty) { K.confirm('Close without saving? What you typed will be lost.', 'Close without saving', true).then(function (y) { if (y) K.closeModal(); }); return; }
+    K.closeModal();
   };
   K.closeModal = function () {
     var m = $('.modal');
@@ -105,10 +115,10 @@
   };
   document.addEventListener('click', function (e) {
     if (e.target.closest('[data-x]') || e.target.matches('.scrim')) K.closeDrawer();
-    if (e.target.closest('[data-mx]') || e.target.matches('.modal')) K.closeModal();
+    if (e.target.closest('[data-mx]')) K.closeModal(); else if (e.target.matches('.modal')) K.softCloseModal();
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { if ($('.modal').classList.contains('on')) K.closeModal(); else K.closeDrawer(); var g = $('.gres'); if (g) g.hidden = true; }
+    if (e.key === 'Escape') { if ($('.modal').classList.contains('on')) K.softCloseModal(); else K.closeDrawer(); var g = $('.gres'); if (g) g.hidden = true; }
   });
 
   /* ---------------- forms ---------------- */

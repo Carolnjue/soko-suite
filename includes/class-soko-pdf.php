@@ -174,8 +174,8 @@ final class Soko_PDF {
 				$h = $pdf->GetY() - $y0;
 				$pdf->SetXY( 113, $y0 );
 				$pdf->Cell( 16, $h, rtrim( rtrim( number_format( $l['qty'], 2 ), '0' ), '.' ), 0, 0, 'R', $fill );
-				$pdf->Cell( 32, $h, soko_money( $l['price'], false ), 0, 0, 'R', $fill );
-				$pdf->Cell( 34, $h, soko_money( $l['qty'] * $l['price'], false ) . '  ', 0, 1, 'R', $fill );
+				$pdf->Cell( 32, $h, soko_money_exact( $l['price'], false ), 0, 0, 'R', $fill );
+				$pdf->Cell( 34, $h, soko_money_exact( $l['qty'] * $l['price'], false ) . '  ', 0, 1, 'R', $fill );
 				$fill = ! $fill;
 			}
 			$pdf->Ln( 3 );
@@ -296,9 +296,49 @@ final class Soko_PDF {
 				self::color( $pdf, self::INK );
 			}
 			$n      = count( $sec['head'] );
-			$widths = isset( $sec['widths'] ) ? $sec['widths'] : array_merge( array( 180 - ( $n - 1 ) * 30 ), array_fill( 0, $n - 1, 30 ) );
-			$align  = isset( $sec['align'] ) ? $sec['align'] : array_merge( array( 'L' ), array_fill( 0, $n - 1, 'R' ) );
-			$pdf->SetFont( 'Helvetica', 'B', 8.5 );
+			if ( isset( $sec['widths'] ) ) {
+				$widths = $sec['widths'];
+			} elseif ( $n <= 5 ) {
+				$widths = array_merge( array( 180 - ( $n - 1 ) * 30 ), array_fill( 0, $n - 1, 30 ) );
+			} else {
+				// Many columns: share the 180 mm by the longest text in each column.
+				$len = array();
+				foreach ( $sec['head'] as $i => $h ) {
+					$len[ $i ] = max( 6, mb_strlen( (string) $h ) );
+				}
+				foreach ( $sec['rows'] as $r ) {
+					unset( $r['_b'] );
+					foreach ( array_values( $r ) as $i => $v ) {
+						$t = is_numeric( $v ) ? number_format( (float) $v ) : (string) $v;
+						$len[ $i ] = max( isset( $len[ $i ] ) ? $len[ $i ] : 6, min( 30, mb_strlen( $t ) ) );
+					}
+				}
+				$sum    = array_sum( $len );
+				$widths = array();
+				foreach ( $sec['head'] as $i => $h ) {
+					$widths[ $i ] = round( 180 * $len[ $i ] / $sum, 1 );
+				}
+			}
+			$small = $n > 6;
+			if ( isset( $sec['align'] ) ) {
+				$align = $sec['align'];
+			} else {
+				// Numbers right, words left.
+				$align = array();
+				foreach ( $sec['head'] as $i => $h ) {
+					$num = true;
+					foreach ( $sec['rows'] as $r ) {
+						unset( $r['_b'] );
+						$v = array_values( $r );
+						if ( isset( $v[ $i ] ) && '' !== $v[ $i ] && null !== $v[ $i ] && ! is_numeric( $v[ $i ] ) ) {
+							$num = false;
+							break;
+						}
+					}
+					$align[ $i ] = 0 === $i ? 'L' : ( $num ? 'R' : 'L' );
+				}
+			}
+			$pdf->SetFont( 'Helvetica', 'B', $n > 6 ? 7.5 : 8.5 );
 			self::color( $pdf, self::SOFT );
 			self::color( $pdf, array( 210, 218, 232 ), 'draw' );
 			foreach ( $sec['head'] as $i => $h ) {
@@ -309,12 +349,12 @@ final class Soko_PDF {
 			foreach ( $sec['rows'] as $r ) {
 				$bold = ! empty( $r['_b'] );
 				unset( $r['_b'] );
-				$pdf->SetFont( 'Helvetica', $bold ? 'B' : '', 9 );
+				$pdf->SetFont( 'Helvetica', $bold ? 'B' : '', $small ? 7.5 : 9 );
 				foreach ( array_values( $r ) as $i => $v ) {
 					if ( $i > 0 && is_numeric( $v ) && ! preg_match( '/^0\d/', (string) $v ) ) {
 						$v = $v < 0 ? '(' . number_format( abs( $v ) ) . ')' : number_format( (float) $v );
 					}
-					$pdf->Cell( $widths[ $i ], 6.5, self::t( mb_strimwidth( (string) $v, 0, (int) ( $widths[ $i ] * 0.55 ), '…' ) ), $bold ? 'T' : 0, 0, $align[ $i ] );
+					$pdf->Cell( $widths[ $i ], 6.5, self::t( mb_strimwidth( (string) $v, 0, (int) ( $widths[ $i ] * ( $small ? 0.66 : 0.55 ) ), '…' ) ), $bold ? 'T' : 0, 0, $align[ $i ] );
 				}
 				$pdf->Ln();
 			}

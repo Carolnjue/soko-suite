@@ -69,6 +69,9 @@ final class Soko_Reports {
 
 	public static function run( $type, $from, $to ) {
 		global $wpdb;
+		if ( $from && $to && $from > $to ) {
+			list( $from, $to ) = array( $to, $from ); // dates entered the wrong way round
+		}
 		$period = date_i18n( 'j M Y', strtotime( $from ) ) . ' to ' . date_i18n( 'j M Y', strtotime( $to ) );
 		$title  = isset( self::catalog()[ $type ] ) ? self::catalog()[ $type ] : 'Report';
 		$out    = array( 'type' => $type, 'title' => $title, 'period' => $period, 'kpis' => array(), 'sections' => array(), 'chart' => null );
@@ -221,8 +224,9 @@ final class Soko_Reports {
 
 			case 'jobs':
 				$J    = soko_t( 'jobs' );
-				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT j.*, c.name FROM $J j LEFT JOIN $C c ON c.id = j.customer_id WHERE (j.date BETWEEN %s AND %s) OR j.date IS NULL ORDER BY j.date", $from, $to ), ARRAY_A ); // phpcs:ignore
-				$out['kpis'] = array( array( 'Jobs', count( $rows ) ), array( 'Commissioned', count( array_filter( $rows, function ( $r ) { return 'Commissioned' === $r['stage']; } ) ) ) );
+				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT j.*, c.name FROM $J j LEFT JOIN $C c ON c.id = j.customer_id WHERE j.date BETWEEN %s AND %s ORDER BY j.date", $from, $to ), ARRAY_A ); // phpcs:ignore
+				$undated = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $J WHERE date IS NULL OR date = ''" ); // phpcs:ignore
+				$out['kpis'] = array( array( 'Jobs', count( $rows ) ), array( 'Commissioned', count( array_filter( $rows, function ( $r ) { return 'Commissioned' === $r['stage']; } ) ) ), array( 'Not yet dated', $undated ) );
 				$out['sections'][] = array( 'title' => 'Installations', 'head' => array( 'Date', 'Customer', 'Work', 'Stage', 'Team' ), 'rows' => array_map( function ( $r ) { return array( $r['date'], $r['name'], $r['title'], $r['stage'], $r['techs'] ); }, $rows ), 'align' => array( 'L', 'L', 'L', 'L', 'L' ), 'widths' => array( 24, 45, 55, 26, 30 ) );
 				break;
 		}

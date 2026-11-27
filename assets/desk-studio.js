@@ -197,7 +197,7 @@
   }
 
   K.V.studio = function (v) {
-    v.innerHTML = K.head('Site Studio', 'Edit the website without code. Click any part of the preview to edit it, or pick a section on the left. Changes show in the preview straight away and go live when you publish.', '<div class="chips"><button class="chip on" data-dev="desktop">Desktop</button><button class="chip" data-dev="mobile">Phone</button></div><a class="btn" target="_blank" rel="noopener" data-live href="' + esc(D.site) + '">' + ic(I.ext) + 'Open live site</a>') +
+    v.innerHTML = K.head('Site Studio', 'Edit the website without code. Click any part of the preview to edit it, or pick a section from the list. Changes show in the preview straight away and go live when you publish.', '<div class="chips"><button class="chip on" data-dev="desktop">Desktop</button><button class="chip" data-dev="mobile">Phone</button></div><a class="btn" target="_blank" rel="noopener" data-live href="' + esc(D.site) + '">' + ic(I.ext) + 'Open live site</a>') +
       '<div class="studio"><aside class="stpanel" data-panel><div class="boot" style="height:40vh"><div class="spin"></div></div></aside><div class="pframe" data-frame><div class="pbar"><i></i><i></i><i></i><span class="url" data-url>' + esc(D.site) + '</span></div><iframe data-pf title="Website preview"></iframe></div></div>';
     $$('[data-dev]', v).forEach(function (b) { b.onclick = function () { S.device = b.dataset.dev; $$('[data-dev]', v).forEach(function (x) { x.classList.toggle('on', x === b); }); $('[data-frame]', v).classList.toggle('mobile', S.device === 'mobile'); }; });
     K.api('site').then(function (s) {

@@ -95,6 +95,13 @@ final class Soko_Install {
 					}
 				}
 			}
+			if ( version_compare( (string) get_option( 'soko_db_version' ), '11', '<' ) ) {
+				// One name per lead source.
+				global $wpdb;
+				$lt = soko_t( 'leads' );
+				$wpdb->query( "UPDATE $lt SET source = 'Website quote form' WHERE source IN ('Quote form', 'Website', 'Quote')" ); // phpcs:ignore
+				$wpdb->query( "UPDATE $lt SET source = 'Solar calculator' WHERE source IN ('Power Planner', 'Power planner', 'Planner')" ); // phpcs:ignore
+			}
 			self::activate();
 		}
 		if ( get_option( 'soko_flush' ) ) {

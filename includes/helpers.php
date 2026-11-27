@@ -14,6 +14,13 @@ function soko_t( $name ) {
 }
 
 /** KES money string. */
+/** Money for line items: keeps cents when a price has them, so the sums add up. */
+function soko_money_exact( $n, $symbol = true ) {
+	$n = round( (float) $n, 2 );
+	$s = number_format( $n, abs( $n - round( $n ) ) > 0.004 ? 2 : 0, '.', ',' );
+	return $symbol ? soko_setting( 'currency', 'KES' ) . ' ' . $s : $s;
+}
+
 function soko_money( $n, $symbol = true ) {
 	$s = number_format( (float) $n, 0, '.', ',' );
 	return $symbol ? soko_setting( 'currency', 'KES' ) . ' ' . $s : $s;

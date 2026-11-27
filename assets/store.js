@@ -66,7 +66,7 @@
     var s = subtotal(), vat = S.vat ? Math.round((s + fee) * S.vat / (100 + S.vat)) : 0;
     return '<div><span>Items</span><span>' + money(s) + '</span></div><div><span>Delivery</span><span>' + (fee ? money(fee) : 'Free') + '</span></div>' + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + fee) + '</span></div>';
   }
-  function emptyCart() { return '<h3>Your cart is empty</h3><p class="muted" style="margin:8px 0 18px">Start with the Power Planner or browse the shop.</p><div class="row"><a class="btn b-sun" href="' + S.home + 'planner/">Plan my system</a><a class="btn b-line" href="' + S.home + 'shop/">Go to the shop</a></div>'; }
+  function emptyCart() { return '<h3>Your cart is empty</h3><p class="muted" style="margin:8px 0 18px">Start with the solar calculator or browse the shop.</p><div class="row"><a class="btn b-sun" href="' + S.home + 'planner/">Plan my system</a><a class="btn b-line" href="' + S.home + 'shop/">Go to the shop</a></div>'; }
   function cartDrawer() {
     var x = '<div class="dhead"><b>Your cart</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
     if (!cart.length) return openDrawer(x + '<div class="dbody">' + emptyCart() + '</div>');
@@ -159,7 +159,7 @@
     $$('[data-planner-apps]').forEach(function (el) { el.innerHTML = APPS.map(appBtn).join(''); });
     var r = size();
     $$('[data-planner-result]').forEach(function (el) {
-      if (!r) { el.innerHTML = '<h3>Your recommended system</h3><p class="empty">Tap at least one appliance to see your system and price.</p>'; return; }
+      if (!r) { el.innerHTML = '<h3>Your recommended system</h3><p class="empty">Choose at least one appliance to see your system and price.</p>'; return; }
       el.innerHTML = '<h3>Your recommended system</h3><div class="meter"><div><b>' + r.kwh.toFixed(1) + ' kWh</b><small>used per day</small></div><div><b>' + (r.inv ? Math.round(r.inv.watts / 100) / 10 + ' kW' : '—') + '</b><small>inverter</small></div><div><b>' + (r.batt ? Math.round(r.batt.kwh * r.bq) + ' kWh' : '—') + '</b><small>battery</small></div></div>' +
         '<ul class="bom">' + r.items.map(function (x) { return '<li><span>' + (x[1] > 1 ? x[1] + ' × ' : '') + esc(x[0].name) + '</span><span>' + money(x[0].price * x[1]) + '</span></li>'; }).join('') + '<li><span>Installation and commissioning</span><span>' + money(r.inst) + '</span></li></ul>' +
         '<div class="total"><span>Estimated total</span><b>' + money(r.goods + r.inst) + '</b></div>' +
@@ -415,13 +415,13 @@
       var r3 = size(); if (!r3) return;
       if (pl.dataset.plan === 'cart') { r3.items.forEach(function (x) { add(x[0].id, x[1], 1, true); }); toast('Your system was added to the cart with installation.', ['View cart', S.home + 'cart/']); cartDrawer(); }
       else {
-        var text = 'Power Planner result: ' + r3.kwh.toFixed(1) + ' kWh a day, peak about ' + Math.round(r3.peak) + ' W. Appliances: ' + Object.keys(picks).map(function (i) { return picks[i] + ' × ' + APPS[i][0]; }).join(', ') + '. Suggested: ' + r3.items.map(function (x) { return x[1] + ' × ' + x[0].name; }).join(', ') + '.';
+        var text = 'Solar calculator result: ' + r3.kwh.toFixed(1) + ' kWh a day, peak about ' + Math.round(r3.peak) + ' W. Appliances: ' + Object.keys(picks).map(function (i) { return picks[i] + ' × ' + APPS[i][0]; }).join(', ') + '. Suggested: ' + r3.items.map(function (x) { return x[1] + ' × ' + x[0].name; }).join(', ') + '.';
         openDrawer('<div class="dhead"><b>Book a free site survey</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="dbody"><p class="muted" style="margin-bottom:16px">We will call to agree a time. Your planner result is attached.</p><form data-survey novalidate><div class="f"><label for="sName">Full name</label><input id="sName" name="name" required></div><div class="f"><label for="sPhone">Phone</label><input id="sPhone" name="phone" inputmode="tel" required></div><div class="f"><label for="sCounty">Where is the site?</label><input id="sCounty" name="county" placeholder="Estate and county"></div><input type="text" name="website" class="hp" tabindex="-1" autocomplete="off"><button class="btn b-sun wide">Request the survey</button><p class="formmsg"></p></form></div>');
         var sf = $('[data-survey]');
         sf.onsubmit = function (ev) {
           ev.preventDefault(); if (!check(sf)) return;
           var b = formData(sf);
-          api('store/lead', { method: 'POST', body: { name: b.name, phone: b.phone, county: b.county, website: b.website, source: 'Power Planner', interest: 'Site survey: ' + (r3.inv ? r3.inv.name : 'solar system'), value: r3.goods + r3.inst, message: text, data: { picks: picks, hours: hours } } })
+          api('store/lead', { method: 'POST', body: { name: b.name, phone: b.phone, county: b.county, website: b.website, source: 'Solar calculator', interest: 'Site survey: ' + (r3.inv ? r3.inv.name : 'solar system'), value: r3.goods + r3.inst, message: text, data: { picks: picks, hours: hours } } })
             .then(function () { sf.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Request received</h3><p class="muted">An engineer will call you to book the survey.</p></div>'; })
             .catch(function (err) { msg(sf, err.message); });
         };

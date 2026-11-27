@@ -21,7 +21,7 @@ final class Soko_Blog {
 			'image'   => soko_abs( $img ),
 			'topic'   => get_post_meta( $p->ID, '_soko_topic', true ),
 			'url'     => home_url( '/blog/' . $p->post_name . '/' ),
-			'mins'    => max( 1, (int) round( str_word_count( wp_strip_all_tags( $p->post_content ) ) / 220 ) ),
+			'mins'    => max( 1, (int) ceil( str_word_count( wp_strip_all_tags( $p->post_content ) ) / 200 ) ),
 		);
 		if ( $full ) {
 			$out['content'] = $p->post_content;
@@ -102,6 +102,10 @@ final class Soko_Blog {
 
 	/** Three starter guides, created once so the blog never opens empty. */
 	public static function seed() {
+		$hello = get_page_by_path( 'hello-world', OBJECT, 'post' );
+		if ( $hello && false !== strpos( $hello->post_content, 'Welcome to WordPress' ) ) {
+			wp_delete_post( $hello->ID, true );
+		}
 		if ( get_option( 'soko_blog_seeded' ) || get_posts( array( 'post_type' => 'post', 'post_status' => 'publish', 'numberposts' => 1, 'meta_key' => '_soko_image' ) ) ) {
 			return;
 		}
@@ -112,7 +116,7 @@ final class Soko_Blog {
 				'topic'   => 'Buying guide',
 				'image'   => 'soko:seed/team-roof.jpg',
 				'excerpt' => 'Work out what you want to run, for how long, and what that means for panels, inverter and battery.',
-				'content' => "Start with what you want to keep running, not with panel sizes. A home that only needs lights, a TV, Wi-Fi and phone charging needs a very different system from one that runs a borehole pump or an iron.\n\n<h2>1. List your appliances</h2>\nWrite down each appliance, its wattage (on the label or the manual) and how many hours a day you use it. Multiply watts by hours to get watt-hours a day, then add them up.\n\n<h2>2. Size the battery for the evening and night</h2>\nMost of your power is used after sunset. Size the battery so it covers your evening and night use with some margin. Lithium batteries can be used to about 80% of their capacity every day; gel batteries should stay nearer 50%.\n\n<h2>3. Size the panels to refill the battery</h2>\nMost of Kenya gets around five useful sun hours a day. Divide your daily use by five, then add about a quarter for losses in cables, the inverter and dusty panels.\n\n<h2>4. Pick an inverter for your peak load</h2>\nAdd up everything that could run at the same time. Motors such as fridges and pumps draw several times their rated power for a moment when they start, so allow headroom.\n\nOur Power Planner does these sums for you. An engineer then confirms the size on a site survey before you pay for installation.",
+				'content' => "Start with what you want to keep running, not with panel sizes. A home that only needs lights, a TV, Wi-Fi and phone charging needs a very different system from one that runs a borehole pump or an iron.\n\n<h2>1. List your appliances</h2>\nWrite down each appliance, its wattage (on the label or the manual) and how many hours a day you use it. Multiply watts by hours to get watt-hours a day, then add them up.\n\n<h2>2. Size the battery for the evening and night</h2>\nMost of your power is used after sunset. Size the battery so it covers your evening and night use with some margin. Lithium batteries can be used to about 80% of their capacity every day; gel batteries should stay nearer 50%.\n\n<h2>3. Size the panels to refill the battery</h2>\nMost of Kenya gets around five useful sun hours a day. Divide your daily use by five, then add about a quarter for losses in cables, the inverter and dusty panels.\n\n<h2>4. Pick an inverter for your peak load</h2>\nAdd up everything that could run at the same time. Motors such as fridges and pumps draw several times their rated power for a moment when they start, so allow headroom.\n\nOur solar calculator does these sums for you. An engineer then confirms the size on a site survey before you pay for installation.",
 			),
 			array(
 				'title'   => 'Lithium or gel batteries: which should you buy?',

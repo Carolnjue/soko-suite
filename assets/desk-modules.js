@@ -301,7 +301,7 @@
     var stages = K.me.settings.lead_stages || ['New', 'Contacted', 'Survey booked', 'Quoted', 'Won', 'Lost'];
     Promise.all([K.api('leads'), K.api('customers')]).then(function (res) {
       var leads = res[0], custs = res[1];
-      v.innerHTML = K.head('Customers and leads', 'Every Power Planner result, quote request and enquiry lands here as a lead. Drag a card to move it along.', '<button class="btn" data-nc>' + ic(I.plus) + 'New customer</button><button class="btn sun" data-nl>' + ic(I.plus) + 'New lead</button>') +
+      v.innerHTML = K.head('Customers and leads', 'Every solar calculator result, quote request and enquiry lands here as a lead. Drag a card to move it along.', '<button class="btn" data-nc>' + ic(I.plus) + 'New customer</button><button class="btn sun" data-nl>' + ic(I.plus) + 'New lead</button>') +
         K.tabs('crm', [['pipe', 'Pipeline', leads.filter(function (l) { return l.stage !== 'Won' && l.stage !== 'Lost'; }).length], ['cust', 'Customers', custs.length]], crmState.tab) + '<div data-body></div>';
       var body = $('[data-body]', v);
       $$('[data-tabs] button', v).forEach(function (b) { b.onclick = function () { crmState.tab = b.dataset.t; K.V.crm(v); }; });
@@ -340,7 +340,7 @@
   };
   K.editLead = function (l, stages) {
     l = l || { stage: 'New', source: 'Phone call' };
-    var data = l.data && l.data.picks ? '<p class="tiny">Includes a Power Planner result.</p>' : '';
+    var data = l.data && l.data.picks ? '<p class="tiny">Includes a solar calculator result.</p>' : '';
     var m = K.modal(l.id ? esc(l.name) : 'New lead', '<div class="grid2">' + K.field('Name', 'name', l.name, 'text') + K.field('Phone', 'phone', K.phone(l.phone), 'tel') + '</div><div class="grid2">' + K.field('Email', 'email', l.email, 'email') + K.field('County or area', 'county', l.county, 'text') + '</div>' +
       K.field('Interested in', 'interest', l.interest, 'text', { ph: 'e.g. 5 kW hybrid for a 4-bedroom house' }) + '<div class="grid3">' + K.field('Stage', 'stage', l.stage, 'select', { options: opts(stages) }) + K.field('Estimated value', 'value', l.value || '', 'number') + K.field('Source', 'source', l.source, 'select', { options: opts(['Website quote form', 'Power Planner', 'Phone call', 'WhatsApp', 'Walk-in', 'Referral', 'Social media', 'Website', 'Quote form', 'Other']) }) + '</div>' +
       K.field('Next follow-up', 'next_action', l.next_action || '', 'date') + K.field('Notes', 'notes', l.notes, 'textarea') + data,
@@ -516,7 +516,7 @@
         '<div class="flabel" style="margin-top:12px">Specifications</div><div class="specrows" data-specs></div><button class="btn sm" type="button" data-addspec>' + ic(I.plus) + 'Add specification</button>' +
         '<div style="height:12px"></div>' + K.field('Description', 'description', p.description, 'textarea') +
         '<div class="grid3">' + K.field('Warranty', 'warranty', p.warranty, 'text') + K.field('Badge', 'tag', p.tag, 'text', { ph: 'e.g. Best seller' }) + K.field('Unit', 'unit', p.unit, 'text') + '</div>' +
-        '<div class="grid2">' + K.field('Power (W) for the Power Planner', 'watts', p.watts || '', 'number', { hint: 'Panels and inverters' }) + K.field('Storage (kWh) for the Power Planner', 'kwh', p.kwh || '', 'number', { hint: 'Batteries and power stations' }) + '</div>' +
+        '<div class="grid2">' + K.field('Power (W) for the solar calculator', 'watts', p.watts || '', 'number', { hint: 'Panels and inverters' }) + K.field('Storage (kWh) for the solar calculator', 'kwh', p.kwh || '', 'number', { hint: 'Batteries and power stations' }) + '</div>' +
         K.field('Show on the website', 'visible', p.visible, 'toggle') + K.field('Feature on the home page', 'featured', p.featured, 'toggle') + K.field('Charge VAT', 'vatable', p.vatable, 'toggle') +
         (moves.length ? '<div class="box" style="margin-top:14px"><h3>Stock movements</h3>' + K.table([{ k: 'created', label: 'Date', f: function (x) { return K.ds(x.created); } }, { k: 'reason', label: 'Reason' }, { k: 'ref', label: 'Ref' }, { k: 'user', label: 'By' }, { k: 'qty', label: 'Qty', n: 1, f: function (x) { return (x.qty > 0 ? '+' : '') + K.num(x.qty); } }], moves.slice(0, 20), { stack: false }) + '</div>' : '');
       var m = K.modal(id ? esc(p.name) : 'New product', body, (id ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(p.url) + '">' + ic(I.ext) + 'View on site</a><button class="btn danger" data-del>Delete</button>' : '') + '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-s>Save</button>', true);

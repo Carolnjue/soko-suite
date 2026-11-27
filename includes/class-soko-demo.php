@@ -82,13 +82,13 @@ final class Soko_Demo {
 		}
 
 		$leads = array(
-			array( 'Mercy Achieng', 'New', 'Power Planner', 185000, '7.2 kWh a day, 5 kW inverter suggested', '0722555411' ),
+			array( 'Mercy Achieng', 'New', 'Solar calculator', 185000, '7.2 kWh a day, 5 kW inverter suggested', '0722555411' ),
 			array( 'Kilimani Dental Clinic', 'Contacted', 'Quote form', 420000, 'Backup for X-ray and vaccine fridge', '0722555102' ),
 			array( 'Samuel Njoroge', 'New', 'WhatsApp', 98000, '200 L water heater', '0733555876' ),
 			array( 'Greenleaf Academy', 'Survey booked', 'Referral', 960000, '16 kW hybrid for three blocks', '0711555320' ),
 			array( 'Faith Mutua', 'Quoted', 'Website', 430000, '5 kW hybrid home kit', '0791555640' ),
 			array( 'Ahmed Hassan', 'Quoted', 'Walk-in', 147000, '300 L water heater', '0710555377' ),
-			array( 'Grace Wanjiru', 'Won', 'Power Planner', 206000, '3 kW home kit', '0712555019' ),
+			array( 'Grace Wanjiru', 'Won', 'Solar calculator', 206000, '3 kW home kit', '0712555019' ),
 		);
 		foreach ( $leads as $l ) {
 			$wpdb->insert( soko_t( 'leads' ), array( 'name' => $l[0], 'stage' => $l[1], 'source' => $l[2], 'value' => $l[3], 'interest' => $l[4], 'phone' => soko_phone( $l[5] ), 'demo' => 1, 'created' => soko_now(), 'updated' => soko_now() ) );

@@ -65,7 +65,7 @@ final class Soko_Sections {
 				),
 			),
 			'categories'    => array( 'label' => 'Shop by category', 'desc' => 'Tiles for every product category.', 'fields' => $head ),
-			'planner'       => array( 'label' => 'Power Planner', 'desc' => 'Visitors tap appliances and get a sized system with a price.', 'fields' => $head ),
+			'planner'       => array( 'label' => 'Solar calculator', 'desc' => 'Visitors tap appliances and get a sized system with a price.', 'fields' => $head ),
 			'products'      => array(
 				'label'  => 'Product grid',
 				'desc'   => 'Featured, on offer or a category.',
@@ -205,7 +205,7 @@ final class Soko_Sections {
 			array( 'icon' => 'panel', 'title' => 'Installation', 'text' => 'EPRA-licensed technicians install, test and hand over, usually in one to two days.' ),
 			array( 'icon' => 'shield', 'title' => 'Aftercare', 'text' => 'Monitoring, cleaning and maintenance keep your system at full output.' ),
 		);
-		$cta = array( 'title' => 'Not sure what you need? We will come and look.', 'text' => 'Book a site survey and an engineer will size the right system for your home, business or farm.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Try the Power Planner', 'cta2_link' => '/planner/', 'color' => 'sun' );
+		$cta = array( 'title' => 'Not sure which system you need?', 'text' => 'Book a free consultation. An engineer visits, assesses your site and gives you a fixed quote with installation.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Try the Power Planner', 'cta2_link' => '/planner/', 'color' => 'sun' );
 		return array(
 			'brand'    => array( 'primary' => '#1b4f9e', 'accent' => '#f7941d', 'deep' => '#1d2156', 'head_font' => 'Poppins', 'body_font' => 'Inter', 'logo' => 'soko:img/dss-logo.png', 'radius' => 18 ),
 			'header'   => array(
@@ -252,10 +252,10 @@ final class Soko_Sections {
 					'desc'     => 'Buy solar kits, panels, lithium batteries, inverters, water heaters and pumps online and pay by M-Pesa. Installed by EPRA-licensed engineers.',
 					'sections' => array(
 						$sec( 'hero_carousel', array( 'autoplay' => 1, 'slides' => array(
-							array( 'tab' => 'Homes', 'kicker' => 'Home solar kits', 'title' => 'Keep the lights, TV and fridge on through every blackout', 'text' => 'Complete kits with panels, inverter and lithium battery, priced in full with installation. Pay by M-Pesa and book your installation date.', 'cta_label' => 'Shop home kits', 'cta_link' => '/shop/kits/', 'cta2_label' => 'Size my system', 'cta2_link' => '/planner/', 'image' => 'soko:stock/home-family.jpg', 'fact' => '3–10 kW', 'fact_text' => 'complete home kits' ),
-							array( 'tab' => 'Businesses', 'kicker' => 'Commercial and institutional', 'title' => 'Lower power bills for hotels, schools and offices', 'text' => 'Hybrid and grid-tied systems designed and installed by EPRA-licensed engineers, from a 10 kW bakery to a 70 kW hotel.', 'cta_label' => 'Request a quote', 'cta_link' => '/contact/', 'cta2_label' => 'See our projects', 'cta2_link' => '/projects/', 'image' => 'soko:stock/business-team.jpg', 'fact' => '70 kW', 'fact_text' => 'largest hotel install' ),
-							array( 'tab' => 'Installation', 'kicker' => 'Design, supply and install', 'title' => 'One team from site survey to switch-on', 'text' => 'Our technicians mount, wire and commission every system, then hand over with a warranty and aftercare visits.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Our services', 'cta2_link' => '/services/', 'image' => 'soko:stock/installer-roof.jpg', 'fact' => 'EPRA', 'fact_text' => 'licensed technicians' ),
-							array( 'tab' => 'Smart systems', 'kicker' => 'Power backup, CCTV and IT', 'title' => 'Smart power and security for your premises', 'text' => 'Backup power, CCTV, solar street lighting and IT consultancy, installed and supported by the same people.', 'cta_label' => 'Shop CCTV and lighting', 'cta_link' => '/shop/cctv/', 'cta2_label' => 'Talk to an engineer', 'cta2_link' => '/contact/', 'image' => 'soko:stock/smart-panel.jpg' ),
+							array( 'tab' => 'Homes', 'kicker' => 'Home solar kits', 'title' => 'Stay powered through every blackout', 'text' => 'Complete kits with panels, inverter and lithium battery, priced with installation. Pay by M-Pesa and we schedule your installation.', 'cta_label' => 'Shop home kits', 'cta_link' => '/shop/kits/', 'cta2_label' => 'Calculate my system', 'cta2_link' => '/planner/', 'image' => 'soko:stock/home-family.jpg', 'fact' => '3–10 kW', 'fact_text' => 'complete home kits' ),
+							array( 'tab' => 'Businesses', 'kicker' => 'Commercial and institutional', 'title' => 'Cut your power bill, keep your business running', 'text' => 'Hybrid and grid-tied systems for hotels, schools, farms and offices, from a 10 kW bakery to a 70 kW hotel.', 'cta_label' => 'Request a quote', 'cta_link' => '/contact/', 'cta2_label' => 'See our projects', 'cta2_link' => '/projects/', 'image' => 'soko:stock/business-team.jpg', 'fact' => '70 kW', 'fact_text' => 'largest hotel install' ),
+							array( 'tab' => 'Installation', 'kicker' => 'Design, supply and install', 'title' => 'One team, from site survey to switch-on', 'text' => 'We design, supply, install and commission every system, then stay with you through warranty and aftercare.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Our services', 'cta2_link' => '/services/', 'image' => 'soko:stock/installer-roof.jpg', 'fact' => 'EPRA', 'fact_text' => 'licensed technicians' ),
+							array( 'tab' => 'Smart systems', 'kicker' => 'Power backup, CCTV and IT', 'title' => 'Backup power, security and IT support', 'text' => 'Solar CCTV, street and flood lighting, power backup and IT consultancy for homes, offices and institutions.', 'cta_label' => 'Shop CCTV and lighting', 'cta_link' => '/shop/cctv/', 'cta2_label' => 'Talk to an engineer', 'cta2_link' => '/contact/', 'image' => 'soko:stock/smart-panel.jpg' ),
 						) ) ),
 						$sec( 'trust_strip', array( 'items' => array(
 							array( 'icon' => 'shield', 'title' => 'EPRA-licensed', 'text' => 'technicians and engineers' ),
@@ -263,10 +263,10 @@ final class Soko_Sections {
 							array( 'icon' => 'kit', 'title' => 'Countrywide delivery', 'text' => 'and installation' ),
 							array( 'icon' => 'tools', 'title' => 'Aftercare', 'text' => 'maintenance visits' ),
 						) ) ),
-						$sec( 'categories', array( 'title' => 'Shop by need', 'text' => 'Every category, one tap away.' ) ),
-						$sec( 'products', array( 'title' => 'Best sellers', 'text' => 'Tap any product for full specs, what it runs, warranty and installation.', 'source' => 'featured', 'limit' => 8 ) ),
-						$sec( 'planner', array( 'title' => 'What do you want to power?', 'text' => 'Tap your appliances. We size the panels, inverter and battery and show you the price, instantly.' ) ),
-						$sec( 'services', array( 'title' => 'What we do', 'text' => 'An all-in-one, customised solution from a single team.', 'items' => $services ) ),
+						$sec( 'categories', array( 'title' => 'Shop by category', 'text' => 'Panels, inverters, batteries, water heating, lighting and more, with prices shown.' ) ),
+						$sec( 'products', array( 'title' => 'Popular products', 'text' => 'Every product shows its specifications, what it can power, warranty and installation cost.', 'source' => 'featured', 'limit' => 8 ) ),
+						$sec( 'planner', array( 'title' => 'Calculate the system you need', 'text' => 'Choose the appliances you want to run and how long you use them. We size the panels, inverter and battery and show the price.' ) ),
+						$sec( 'services', array( 'title' => 'Solar solutions and IT consultancy', 'text' => 'Designed, supplied, installed and maintained by one team of EPRA-licensed technicians and engineers.', 'items' => $services ) ),
 						$sec( 'projects', array( 'title' => 'Recent projects', 'text' => 'From a 10 kW bakery in Voi to a 70 kW hotel in Kisumu.', 'limit' => 4 ) ),
 						$sec( 'steps', array( 'title' => 'How we work', 'text' => 'Clear steps, one point of contact, no surprises on price.', 'items' => $steps ) ),
 						$sec( 'logos', array( 'title' => 'Trusted by', 'left' => array( array( 'name' => 'Radbone Clark' ), array( 'name' => 'Printpak' ), array( 'name' => 'Lindberg Holidays' ), array( 'name' => 'The Hydeout Hotel' ), array( 'name' => 'Karen Oasis Hotel' ), array( 'name' => 'Bunyore Girls High School' ) ), 'title2' => 'Brands we install', 'right' => array( array( 'name' => 'JA Solar' ), array( 'name' => 'Victron Energy' ), array( 'name' => 'Lithium Valley' ), array( 'name' => 'Chloride Exide' ) ) ) ),
@@ -278,7 +278,7 @@ final class Soko_Sections {
 					'seo'      => 'Solar installation, water heating, borehole solarisation and IT services | Dynamic Smart Systems',
 					'desc'     => 'Solar PV design and installation, solar water heating, borehole solarisation, solar lighting, power backup and IT consultancy across Kenya.',
 					'sections' => array(
-						$sec( 'page_hero', array( 'title' => 'Everything solar, from one team', 'text' => 'We design, supply, install and maintain. One point of contact from the first survey to the final switch-on.', 'style' => 'split', 'image' => $img . 'team-roof.jpg', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/' ) ),
+						$sec( 'page_hero', array( 'title' => 'Everything solar, from one team', 'text' => 'We design, supply, install and maintain. One point of contact from the first survey to the final switch-on.', 'style' => 'photo', 'image' => $img . 'team-roof.jpg', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/' ) ),
 						$sec( 'services', array( 'title' => 'Our services', 'text' => '', 'items' => $services ) ),
 						$sec( 'text_image', array( 'title' => 'Borehole and farm solarisation', 'text' => '<p>Diesel pumps are expensive to run and break down when you need water most. We size a solar pump or a pumping inverter for your borehole depth and daily water need, so your tank fills every sunny day.</p><p>We also solarise farm machinery and cold rooms.</p>', 'image' => $img . 'proj-baraka.jpg', 'side' => 'right', 'cta_label' => 'See pumps', 'cta_link' => '/shop/pumps/' ) ),
 						$sec( 'text_image', array( 'title' => 'Solar water heating', 'text' => '<p>Pressurised flat-plate heaters with stainless steel tanks, from 150 to 350 litres. We install, pressure-test and hand over, with an electric backup for cloudy days.</p>', 'image' => $img . 'team-heater.jpg', 'side' => 'left', 'cta_label' => 'See water heaters', 'cta_link' => '/shop/heaters/' ) ),
@@ -291,7 +291,7 @@ final class Soko_Sections {
 					'seo'      => 'Solar projects: hotels, schools, farms and homes | Dynamic Smart Systems',
 					'desc'     => 'Solar installations delivered by Dynamic Smart Systems across Kenya.',
 					'sections' => array(
-						$sec( 'page_hero', array( 'title' => 'Projects we have delivered', 'text' => 'Hotels, schools, farms, bakeries and homes across Kenya, designed and installed by our own engineers.', 'style' => 'sky', 'scene' => 'business' ) ),
+						$sec( 'page_hero', array( 'title' => 'Projects we have delivered', 'text' => 'Hotels, schools, farms, bakeries and homes across Kenya, designed and installed by our own engineers.', 'style' => 'sky' ) ),
 						$sec( 'projects', array( 'title' => '', 'text' => '', 'limit' => 0, 'filters' => 1 ) ),
 						$sec( 'cta_band', array_merge( $cta, array( 'title' => 'Planning a project like these?', 'color' => 'blue' ) ) ),
 					),
@@ -301,7 +301,7 @@ final class Soko_Sections {
 					'seo'      => 'About Dynamic Smart Systems | Solar solutions and IT consultancy, Nairobi',
 					'desc'     => 'Dynamic Smart Systems designs, supplies, installs and maintains solar systems across East Africa.',
 					'sections' => array(
-						$sec( 'page_hero', array( 'title' => 'Think solar, think Dynamic', 'text' => 'Solar solutions and IT consultancy from Nairobi, for homes, businesses, farms and institutions across East Africa.', 'style' => 'photo', 'image' => $img . 'team-crew.jpg' ) ),
+						$sec( 'page_hero', array( 'title' => 'Think solar, think Dynamic', 'text' => 'Solar solutions and IT consultancy from Nairobi, for homes, businesses, farms and institutions across East Africa.', 'style' => 'split', 'image' => $img . 'team-crew.jpg' ) ),
 						$sec( 'text_image', array( 'title' => 'One team from first survey to final switch-on', 'text' => '<p>We deliver state-of-the-art solar and IT solutions, built for reliability and efficiency. We design, implement and maintain systems that keep homes and businesses running.</p><p>Our technicians and engineers are licensed by EPRA, and we partner with global brands to deliver world-class systems at a fair cost.</p>', 'image' => $img . 'team-roof.jpg', 'image2' => $img . 'team-street.jpg', 'side' => 'right', 'cta_label' => 'See our projects', 'cta_link' => '/projects/' ) ),
 						$sec( 'columns', array( 'title' => 'What drives us', 'text' => '', 'items' => array(
 							array( 'title' => 'Our mission', 'text' => 'To offer an all-in-one, customised solution: solar PV on and off grid, solar water heating, solar lighting, borehole solarisation and power backup.' ),
@@ -322,7 +322,7 @@ final class Soko_Sections {
 					'seo'      => 'Contact Dynamic Smart Systems | Get a solar quote',
 					'desc'     => 'Request a solar quote or book a site survey. Call or WhatsApp 0712 936 685.',
 					'sections' => array(
-						$sec( 'page_hero', array( 'title' => 'Get a quote or book a site survey', 'text' => 'Tell us what you want to power. An engineer replies the same working day.', 'style' => 'blue' ) ),
+						$sec( 'page_hero', array( 'title' => 'Get a quote or book a site survey', 'text' => 'Tell us what you need powered or installed, and an engineer will get back to you with advice and a quote.', 'style' => 'blue' ) ),
 						$sec( 'contact', array( 'title' => '', 'text' => '' ) ),
 						$sec( 'faq', array( 'title' => 'Common questions', 'text' => '', 'items' => array(
 							array( 'q' => 'Do you install outside Nairobi?', 'a' => 'Yes. We have installed in Kisumu, Vihiga, Voi, Machakos and beyond. Delivery and installation costs depend on distance.' ),

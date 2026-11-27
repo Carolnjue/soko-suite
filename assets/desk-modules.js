@@ -19,6 +19,7 @@
   K.V.home = function (v) {
     K.api('dashboard').then(function (d) {
       var ch = d.sales_change, att = [];
+      (d.neworders || []).forEach(function (o) { att.push(['var(--brand)', 'New website order ' + esc(o.number) + ' · ' + esc(o.name || '') + (+o.paid > 0 ? ' · part paid' : ' · call to confirm'), money(o.total), '#sales/' + o.id]); });
       (d.overdue || []).forEach(function (o) { att.push(['var(--bad)', esc(o.number) + ' overdue · ' + esc(o.name), money(o.bal), '#sales/' + o.id]); });
       (d.unmatched || []).forEach(function (u) { att.push(['var(--warn)', 'Unmatched M-Pesa ' + esc(u.code) + ' from ' + esc(u.payer), money(u.amount), '#payments']); });
       if (d.to_pack) att.push(['var(--warn)', d.to_pack + ' paid website order' + (d.to_pack > 1 ? 's' : '') + ' to pack', 'Open', '#sales/web']);
@@ -87,7 +88,11 @@
 
   /* -------- document drawer -------- */
   K.openDoc = function (id) {
+    var dbx = document.querySelector('.drawer.on .db'), keep = (K._openDocId === id && dbx) ? dbx.scrollTop : 0;
+    if (K._openDocId !== id || !dbx) K.drawer('Opening…', '<div class="boot" style="height:40vh"><div class="spin"></div></div>', '', true);
+    K._openDocId = id;
     K.api('docs/' + id).then(function (d) {
+      setTimeout(function () { var nb = document.querySelector('.drawer .db'); if (nb && keep) nb.scrollTop = keep; }, 0);
       var c = d.customer || {}, isInv = d.type === 'invoice', isQ = d.type === 'quote', isR = d.type === 'receipt';
       var waText = encodeURIComponent('Hello ' + (c.name || '') + ', here is your ' + (isQ ? 'quotation' : isInv ? 'invoice' : 'receipt') + ' ' + d.number + ' from ' + K.me.settings.business + ' for ' + money(d.total) + '.' + (isInv && d.balance > 0 ? ' Balance ' + money(d.balance) + '. Pay by M-Pesa using account number ' + d.number + ' or here: ' + d.pay_url : ' View it here: ' + d.public_pdf));
       var wa = 'https://wa.me/' + String(c.phone || '').replace(/\D/g, '') + '?text=' + waText;
@@ -110,20 +115,20 @@
       } else if (isInv && d.state === 'paid' && !(d.meta && d.meta.stock_done)) {
         fulfil = '<div class="notice info">Paid. <button class="btn sm" data-a="deliver">Mark delivered and take out of stock</button></div>';
       }
-      var etims = isInv ? '<div class="box"><h3>KRA eTIMS</h3>' + (d.etims_status === 'signed' ? '<p>' + K.badge('signed') + ' Control unit invoice <b class="mono">' + esc(d.etims_ref) + '</b></p>' : '<p class="sub">Sign this invoice on eTIMS and record the control unit number here.</p><div class="toolbar"><input placeholder="eTIMS invoice number" data-et style="max-width:260px"><button class="btn" data-a="etims">Save</button></div>') + '</div>' : '';
+      var etims = isInv ? '<div class="box"><h3>KRA eTIMS</h3>' + (d.etims_status === 'signed' ? '<p>' + K.badge('signed') + ' Control unit invoice <b class="mono">' + esc(d.etims_ref) + '</b></p>' : '<p class="sub">Sign this invoice on KRA eTIMS, then type its eTIMS number here.</p><div class="toolbar"><input placeholder="eTIMS invoice number" data-et style="max-width:260px"><button class="btn" data-a="etims">Save</button></div>') + '</div>' : '';
       var pays = (d.payments || []).length ? '<div class="box"><h3>Payments</h3>' + K.table([{ k: 'received', label: 'Date', f: function (p) { return K.ds(p.received); } }, { k: 'code', label: 'Code', f: function (p) { return '<span class="mono">' + esc(p.code) + '</span>'; } }, { k: 'method', label: 'Method', f: function (p) { return p.method === 'mpesa' ? 'M-Pesa' : esc(p.method); } }, { k: 'receipt', label: 'Receipt' }, { k: 'amount', label: 'Amount', n: 1, f: function (p) { return money(p.amount); } }], d.payments, { stack: false }) + '</div>' : '';
       var links = [];
       if (d.parent) links.push('From <a href="#" data-open="' + d.parent.id + '">' + esc(d.parent.number) + '</a>');
       (d.children || []).forEach(function (ch) { links.push((ch.type === 'receipt' ? 'Receipt ' : ch.type === 'invoice' ? 'Invoice ' : '') + '<a href="#" data-open="' + ch.id + '">' + esc(ch.number) + '</a>'); });
       var stks = (d.stk || []).length ? '<p class="tiny">Last M-Pesa prompt: ' + esc(d.stk[0].status) + ' · ' + esc(d.stk[0].message) + '</p>' : '';
-      var body = '<div class="docv"><div class="dvh"><div><b>' + esc(d.number) + '</b><div>' + K.badge(d.state) + (d.source === 'web' ? ' <span class="st">Website</span>' : '') + '</div></div><div style="text-align:right"><div class="tiny">' + (isQ ? 'Valid to ' + K.d(d.due) : isInv ? 'Due ' + K.d(d.due) : K.d(d.date)) + '</div><b>' + money(isInv ? d.balance : d.total) + '</b><div class="tiny">' + (isInv ? (d.balance < d.total ? 'still to pay · ' + money(d.total - d.balance) + ' paid of ' + money(d.total) : 'to pay') : 'total') + '</div></div></div>' +
+      var body = '<div class="docv"><div class="dvh"><div><b>' + esc(d.number) + '</b><div>' + K.badge(d.state) + (d.source === 'web' ? ' <span class="st">Website</span>' : '') + '</div></div><div style="text-align:right"><div class="tiny">' + (isQ ? 'Valid to ' + K.d(d.due) : isInv ? 'Due ' + K.d(d.due) : K.d(d.date)) + '</div><b>' + money(isInv && d.balance > 0 ? d.balance : d.total) + '</b><div class="tiny">' + (isInv ? (d.balance <= 0 ? 'paid in full' : d.balance < d.total ? 'still to pay · ' + money(d.total - d.balance) + ' paid of ' + money(d.total) : 'to pay') : 'total') + '</div></div></div>' +
         '<div style="padding:14px 16px"><dl class="kv"><dt>Customer</dt><dd><b>' + esc(c.name || '—') + '</b></dd><dt>Phone</dt><dd>' + esc(K.phone(c.phone)) + '</dd>' + (c.email ? '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' : '') + (c.kra ? '<dt>KRA PIN</dt><dd>' + esc(c.kra) + '</dd>' : '') + '<dt>Date</dt><dd>' + K.d(d.date) + '</dd>' + (links.length ? '<dt>Linked</dt><dd>' + links.join(' · ') + '</dd>' : '') + '</dl></div>' +
         '<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Price</th><th class="n">Amount</th></tr></thead><tbody>' + d.lines.map(function (l) { return '<tr><td>' + esc(l.description) + '</td><td class="n">' + K.num(l.qty) + '</td><td class="n">' + money(l.price, 1) + '</td><td class="n">' + money(l.qty * l.price, 1) + '</td></tr>'; }).join('') + '</tbody></table>' +
         '<div class="tot">' + (d.vat ? '<div><span>Excl. VAT</span><span>' + money(d.subtotal) + '</span></div><div><span>VAT</span><span>' + money(d.vat) + '</span></div>' : '') + '<div class="g"><span>Total</span><span>' + money(d.total) + '</span></div>' + (isInv && d.paid ? '<div><span>Paid</span><span>' + money(d.paid) + '</span></div><div><b>Balance</b><b>' + money(d.balance) + '</b></div>' : '') + '</div>' + (d.notes ? '<p style="padding:0 16px 14px;white-space:pre-line" class="tiny">' + esc(d.notes) + '</p>' : '') + '</div>' +
         '<div class="actgrid">' + acts.join('') + '</div>' + stks + fulfil + pays + etims;
       var dr = K.drawer(esc(isQ ? 'Quotation' : isInv ? 'Invoice' : 'Receipt') + ' ' + esc(d.number), body, '', true);
       var act = function (a, extra) {
-        return K.api('docs/' + d.id + '/action', { body: Object.assign({ action: a }, extra || {}) }).then(function (r) { if (r.message) K.toast(r.message); if (r.job_id) { K.openJob = r.job_id; if (K.closeDrawer) K.closeDrawer(); document.querySelectorAll('.drawer,.overlay,.scrim').forEach(function (x) { x.remove(); }); location.hash = '#jobs'; } return r; });
+        return K.api('docs/' + d.id + '/action', { body: Object.assign({ action: a }, extra || {}) }).then(function (r) { K.dirty = true; if (r.message) K.toast(r.message); if (r.job_id) { K.openJob = r.job_id; K.closeDrawer(); if (location.hash === '#jobs') K.route(); else location.hash = '#jobs'; } return r; });
       };
       $$('[data-open]', dr).forEach(function (a) { a.onclick = function (e) { e.preventDefault(); K.openDoc(+a.dataset.open); }; });
       $$('[data-ff]', dr).forEach(function (b) { b.onclick = function () { (b.dataset.ff === 'delivered' ? act('deliver') : act('fulfil', { fulfil: b.dataset.ff })).then(function () { K.openDoc(d.id); K.refreshBadges(); }); }; });

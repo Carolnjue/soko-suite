@@ -297,6 +297,7 @@ final class Soko_Reports {
 		$recent = $wpdb->get_results( "SELECT p.code, p.amount, p.payer, p.received, p.status, d.number FROM $P p LEFT JOIN $D d ON d.id = p.doc_id ORDER BY p.received DESC LIMIT 6", ARRAY_A ); // phpcs:ignore
 		$newleads = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . soko_t( 'leads' ) . " WHERE stage = 'New'" ); // phpcs:ignore
 		$topack   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $D WHERE type='invoice' AND fulfil = 'to_pack'" ); // phpcs:ignore
+		$neworders = $wpdb->get_results( $wpdb->prepare( "SELECT d.id, d.number, d.total, d.paid, c.name FROM $D d LEFT JOIN " . soko_t( 'customers' ) . " c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.source = 'web' AND d.status <> 'void' AND d.paid < d.total AND d.date >= %s ORDER BY d.id DESC LIMIT 5", gmdate( 'Y-m-d', strtotime( soko_today() . ' -14 days' ) ) ), ARRAY_A ); // phpcs:ignore
 		return array(
 			'month'        => date_i18n( 'F Y' ),
 			'sales'        => $sales,
@@ -305,6 +306,7 @@ final class Soko_Reports {
 			'collected_n'  => (int) $coll['n'],
 			'owed'         => $owed,
 			'overdue'      => $over,
+			'neworders'    => $neworders,
 			'margin'       => $this_m['margin'],
 			'margin_prev'  => $last_m['margin'],
 			'net'          => $this_m['net'],

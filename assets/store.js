@@ -172,7 +172,7 @@
       el.innerHTML = '<h3>Your recommended system</h3><div class="meter"><div><b>' + r.kwh.toFixed(1) + ' kWh</b><small>used per day</small></div><div><b>' + (r.inv ? Math.round(r.inv.watts / 100) / 10 + ' kW' : '—') + '</b><small>inverter</small></div><div><b>' + (r.batt ? Math.round(r.batt.kwh * r.bq) + ' kWh' : '—') + '</b><small>battery</small></div></div>' +
         '<ul class="bom">' + r.items.map(function (x) { return '<li><span>' + (x[1] > 1 ? x[1] + ' × ' : '') + esc(x[0].name) + '</span><span>' + money(x[0].price * x[1]) + '</span></li>'; }).join('') + '<li><span>Installation and commissioning</span><span>' + money(r.inst) + '</span></li></ul>' +
         '<div class="total"><span>Estimated total</span><b>' + money(r.goods + r.inst) + '</b></div>' +
-        '<div class="row"><button class="btn b-sun" data-plan="cart">Add system to cart</button><button class="btn b-line" data-plan="survey" style="color:var(--blue)">Book a free survey</button></div><p class="fine">Peak load about ' + Math.round(r.peak).toLocaleString() + ' W. An engineer confirms the final size after a site survey.</p>';
+        '<div class="row"><button class="btn b-sun" data-plan="cart">Add system to cart</button><button class="btn b-line" data-plan="survey">Book a free survey</button></div><p class="fine">Peak load about ' + Math.round(r.peak).toLocaleString() + ' W. An engineer confirms the final size after a site survey.</p>';
     });
     savePlan();
   }
@@ -352,7 +352,7 @@
       api('store/status?doc=' + encodeURIComponent(td.doc) + '&t=' + encodeURIComponent(td.t)).then(function (s) {
         var rc = $('[data-receipts]');
         if (rc && s.receipts.length) rc.innerHTML = '<h3 style="margin-top:20px">Receipts</h3>' + s.receipts.map(function (r) { return '<div class="line" style="grid-template-columns:minmax(0,1fr) auto auto"><span>' + esc(r.number) + ' · ' + esc(r.date) + '</span><b>' + money(r.total) + '</b><a class="btn b-line" style="min-height:38px" target="_blank" rel="noopener" href="' + esc(r.pdf) + '">PDF</a></div>'; }).join('');
-        if (s.balance <= 0) { pp.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Fully paid</h3><p class="muted">Thank you. We will be in touch about delivery' + '.</p></div>'; return; }
+        if (s.balance <= 0) { pp.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Fully paid</h3><p class="muted">Thank you. We will be in touch to arrange delivery' + (s.fulfil === 'dispatched' || s.fulfil === 'delivered' ? '' : ' and installation where you chose it') + '.</p></div>'; return; }
         if (!S.stk) {
           pp.innerHTML = '<h3>Balance ' + money(s.balance) + '</h3>' + (S.pay && S.pay.number ? '<p class="muted">Pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div><p class="muted" style="margin-top:12px">Your receipt appears here once the payment is confirmed.</p>' : '<p class="muted">Our team will call you to confirm your order and how you would like to pay.</p>') + '<a class="btn b-sun wide" href="tel:' + esc(S.phone || '') + '">Call us</a>';
           return;
@@ -563,7 +563,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
     });
   });
   /* larger single blocks */
-  $$('main .sv-grid > *, main .cta .wrap > *, main .contact > *, main .pdp-grid > *, main .ti > *, main .rich, main .cartpage > *, main .co > *').forEach(function (el, i) { if (!el.classList.contains('ri')) { el.classList.add('ri', 'ri-b'); el.style.setProperty('--d', (i % 2) * 120 + 'ms'); watch(el); } });
+  $$('main .sv-grid > *, main .cta .wrap > *, main .contact > *, main .ti > *, main .rich, main .cartpage > *, main .co > *').forEach(function (el, i) { if (!el.classList.contains('ri')) { el.classList.add('ri', 'ri-b'); el.style.setProperty('--d', (i % 2) * 120 + 'ms'); watch(el); } });
   $$('.tl').forEach(watch);
   /* numbers count up when they come into view */
   function countUp(el) {

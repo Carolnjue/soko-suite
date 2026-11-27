@@ -860,3 +860,16 @@ html[data-theme=dark] .savings::before{display:none}html[data-theme=dark] .savin
 }
 @media(max-width:360px){.ann-m a.am-wa{font-size:0;gap:0;padding:0 7px}}
 html[data-theme=dark] .ann-m a:not(.am-wa){background:#1a1d22;border-color:#2a2f36;color:#e8eaed}
+/* WhatsApp button: out of the way where customers are paying or tracking; smaller on phones */
+.soko-cart .wa,.soko-checkout .wa,.soko-track .wa{display:none}
+@media(max-width:600px){.wa{width:50px;height:50px;right:12px}.wa svg{width:24px;height:24px}}
+/* Product page content is visible immediately, no entrance animation above the fold */
+.pdp-grid>.ri{opacity:1!important;transform:none!important}
+/* QA run 1 fixes */
+.ann-m a.am-wa{background:#128c4a;border-color:#128c4a}
+@media(max-width:600px){.hcopy .row .btn{white-space:normal;line-height:1.2;text-align:center;padding-inline:10px;min-height:46px}.mzgrid{height:170px;min-height:0}.mzstats div{padding:10px 12px}.mzstats b{font-size:20px}.phero.mosaic{padding-block:20px 24px}}
+@media(hover:none){.qty span,.qty button{width:40px;height:40px}}
+html[data-theme=dark] .b-blue{background:#3d63dd;color:#fff}html[data-theme=dark] .b-blue:hover{background:#5277e8}
+html[data-theme=dark] .cols h3,html[data-theme=dark] .cols>div h3{color:#ffffff}
+html[data-theme=dark] .result b,html[data-theme=dark] .result strong,html[data-theme=dark] .meter b{color:#ffffff}
+html[data-theme=dark] .b-line{color:#e8eaed;border-color:#5a6170}

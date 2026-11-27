@@ -167,6 +167,9 @@ final class Soko_API {
 		if ( empty( $c['name'] ) || strlen( soko_phone( isset( $c['phone'] ) ? $c['phone'] : '' ) ) !== 12 ) {
 			return new WP_Error( 'soko', 'Please enter your name and a valid phone number.', array( 'status' => 400 ) );
 		}
+		if ( ! empty( $c['email'] ) && ! is_email( $c['email'] ) ) {
+			return new WP_Error( 'soko', 'Please check your email address, for example name@gmail.com.', array( 'status' => 400 ) );
+		}
 		$lines = array();
 		foreach ( (array) ( isset( $b['items'] ) ? $b['items'] : array() ) as $it ) {
 			$p = Soko_Ledger::product( (int) $it['id'] );

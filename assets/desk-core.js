@@ -68,7 +68,7 @@
     d.classList.add('on'); $('.scrim').classList.add('on');
     return d;
   };
-  K.closeDrawer = function () { $('.drawer').classList.remove('on'); $('.scrim').classList.remove('on'); };
+  K.closeDrawer = function () { var d = $('.drawer'), sc = $('.scrim'); if (d) d.classList.remove('on'); if (sc) sc.classList.remove('on'); K._openDocId = 0; if (K.dirty) { K.dirty = false; if (K.route) K.route(); } };
   K.modal = function (title, body, foot, wide) {
     var m = $('.modal');
     m.innerHTML = '<div class="mbox' + (wide ? ' wide' : '') + '" role="dialog" aria-modal="true"><div class="dh"><h2>' + title + '</h2><button class="btn ghost" data-mx aria-label="Close">' + K.ic(K.ICONS.x) + '</button></div><div class="db">' + body + '</div>' + (foot ? '<div class="df">' + foot + '</div>' : '') + '</div>';
@@ -228,7 +228,7 @@
     if (!K.can(m)) m = K.me.modules.length ? K.me.modules[0].id : '';
     $$('[data-nav]').forEach(function (a) { a.classList.toggle('on', a.dataset.nav === m); });
     $('[data-side]').classList.remove('on');
-    K.closeDrawer();
+    K.dirty = false; K.closeDrawer();
     var v = $('#view');
     if (!m || !K.V[m]) { v.innerHTML = '<div class="empty"><b>No access</b>Ask the owner to give your account access to a module.</div>'; return; }
     K.mod = m;

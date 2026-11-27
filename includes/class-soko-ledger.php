@@ -195,7 +195,7 @@ final class Soko_Ledger {
 			if ( $id ) {
 				$upd = array();
 				foreach ( array( 'email', 'kra', 'county', 'address' ) as $k ) {
-					if ( ! empty( $d[ $k ] ) ) {
+					if ( ! empty( $d[ $k ] ) && ( 'email' !== $k || is_email( $d[ $k ] ) ) ) {
 						$upd[ $k ] = sanitize_text_field( $d[ $k ] );
 					}
 				}

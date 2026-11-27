@@ -583,7 +583,7 @@ final class Soko_Sections {
 		}
 		if ( 'actions' === $style ) {
 			$st  = Soko_Settings::all();
-			$wa  = 'https://wa.me/' . preg_replace( '/\D/', '', $st['whatsapp'] );
+			$wa  = 'https://wa.me/' . soko_phone( $st['whatsapp'] );
 			$ico = function ( $d ) {
 				return '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' . $d . '"/></svg>';
 			};
@@ -824,7 +824,7 @@ final class Soko_Sections {
 		$ico = function ( $d ) {
 			return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' . $d . '"/></svg>';
 		};
-		$wa  = 'https://wa.me/' . preg_replace( '/\D/', '', $s['whatsapp'] );
+		$wa  = 'https://wa.me/' . soko_phone( $s['whatsapp'] );
 		$map = ! empty( $p['map'] ) && false !== strpos( $p['map'], 'google.com/maps' ) ? '<iframe class="map" src="' . esc_url( $p['map'] ) . '" loading="lazy" title="Map"></iframe>' : '';
 		return '<section class="band" id="quote"><div class="wrap contact">' . self::head( $p ) . '<div class="cinfo">'
 			. '<div class="nexts"><h3>What happens next</h3><ol><li><b>We call you back</b><span>An engineer calls within working hours to understand what you want to power.</span></li><li><b>Free site survey</b><span>We check your roof, wiring and usage, in person or by video call.</span></li><li><b>Fixed quote</b><span>You get an itemised quote with installation, valid for 14 days.</span></li></ol></div>'

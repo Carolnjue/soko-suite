@@ -20,6 +20,22 @@ function soko_money( $n, $symbol = true ) {
 }
 
 /** Normalise a Kenyan phone number to 2547XXXXXXXX / 2541XXXXXXXX. */
+/** LIKE pattern that finds a phone however it was typed (0712 345…, +254 712…, 712…). */
+function soko_phone_like( $q ) {
+	global $wpdb;
+	$raw = trim( (string) $q );
+	if ( ! preg_match( '/^[\d\s+()-]{4,}$/', $raw ) ) {
+		return '%' . $wpdb->esc_like( $raw ) . '%';
+	}
+	$d = preg_replace( '/\D+/', '', $raw );
+	if ( 0 === strpos( $d, '254' ) ) {
+		$d = substr( $d, 3 );
+	} elseif ( 0 === strpos( $d, '0' ) ) {
+		$d = substr( $d, 1 );
+	}
+	return '%' . $wpdb->esc_like( $d ) . '%';
+}
+
 function soko_phone( $p ) {
 	$d = preg_replace( '/\D+/', '', (string) $p );
 	if ( 0 === strpos( $d, '0' ) && 10 === strlen( $d ) ) {

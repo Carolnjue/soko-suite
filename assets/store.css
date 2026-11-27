@@ -885,3 +885,5 @@ html[data-theme=dark] .fband a i,html[data-theme=dark] .fband a i.g,html[data-th
 .opt{font-weight:400;color:var(--soft);font-size:.9em}
 .ferr{display:block;color:var(--bad,#c2362b);font-size:13px;margin-top:4px;font-weight:500}
 .cb .ferr{grid-column:1/-1}
+/* run 3: comfortable tap rows for checkboxes on touch screens */
+@media (hover:none){label:has(>input[type=checkbox]),label:has(>input[type=radio]){min-height:44px;display:flex;align-items:center;gap:10px}}

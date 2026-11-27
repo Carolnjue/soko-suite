@@ -43,12 +43,13 @@
       if (r.status === 401 || r.status === 403 && /nonce|sign in/i.test(r.statusText)) { }
       return r.text().then(function (t) {
         var j; try { j = JSON.parse(t); } catch (e) { j = { message: 'Something went wrong. Please try again.' }; }
-        if (!r.ok) { var err = new Error(j && j.message ? j.message : 'Something went wrong.'); err.status = r.status; throw err; }
+        if (!r.ok) { var err = new Error(j && j.message ? j.message : 'Something went wrong.'); err.status = r.status; err.code = j && j.code; throw err; }
         return j;
       });
     });
   };
   K.fail = function (e) { K.toast(e && e.message ? e.message : 'Something went wrong.', true); if (e && e.status === 401) setTimeout(function () { location.href = D.site + 'desk/login/'; }, 1500); };
+  K.waNum = function (p) { var d = String(p || '').replace(/\D/g, ''); if (/^0\d{9}$/.test(d)) d = '254' + d.slice(1); else if (/^[17]\d{8}$/.test(d)) d = '254' + d; return d; };
   K.url = function (path) { return D.api + path + (path.indexOf('?') > -1 ? '&' : '?') + '_wpnonce=' + D.nonce; };
   K.open = function (path) { window.open(K.url(path), '_blank', 'noopener'); };
 
@@ -126,6 +127,7 @@
   /* table with click-to-sort headers */
   K.table = function (cols, rows, opt) {
     opt = opt || {};
+    cols = cols.filter(Boolean);
     if (!rows.length) return '<div class="empty"><b>' + esc(opt.empty || 'Nothing here yet') + '</b>' + esc(opt.emptySub || '') + '</div>';
     var key = opt.sortKey, dir = opt.sortDir || 1;
     if (key) rows = rows.slice().sort(function (a, b) { var x = a[key], y = b[key]; if (!isNaN(+x) && !isNaN(+y) && x !== '' && y !== '') return (x - y) * dir; return String(x || '').localeCompare(String(y || '')) * dir; });

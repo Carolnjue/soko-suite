@@ -38,6 +38,15 @@
         '<div class="cols three"><div class="box link" data-go="#reports" data-set=\'{"rep":{"type":"sales","p":"month"}}\'><h3>Sales by category</h3><p class="sub">This month</p>' + ((d.cats || []).length ? K.bars(d.cats.map(function (c) { return [c.label, c.value]; })) : '<div class="empty">No sales yet this month</div>') + '</div>' +
         '<div class="box link" data-go="#schedule"><h3>Today</h3><p class="sub">' + K.d(K.today()) + '</p><ul class="list">' + ((d.today || []).length ? d.today.map(function (e) { return '<li class="click" data-go="#schedule"><b class="mono">' + K.t(e.start) + '</b><span>' + esc(e.title) + '<small>' + esc([e.who, e.location].filter(Boolean).join(' · ')) + '</small></span><span class="st">' + esc(e.kind) + '</span></li>'; }).join('') : '<li><span></span><span class="mut">Nothing scheduled</span><span></span></li>') + '</ul></div>' +
         '<div class="box link" data-go="#payments"><h3>Latest payments</h3><p class="sub">M-Pesa, bank and cash</p><ul class="list">' + ((d.recent || []).length ? d.recent.map(function (p) { return '<li class="click" data-go="#payments"><span class="pip" style="background:' + (p.status === 'matched' ? 'var(--ok)' : 'var(--warn)') + '"></span><span>' + esc(p.payer || p.code) + '<small>' + esc(p.code) + ' · ' + (p.number ? esc(p.number) : 'unmatched') + '</small></span><b class="mono">' + money(p.amount) + '</b></li>'; }).join('') : '<li><span></span><span class="mut">No payments yet</span><span></span></li>') + '</ul></div></div>';
+      if (!K.can('reports')) {
+        $$('[data-go="#reports"]', v).forEach(function (el) {
+          if (el.classList.contains('kpi') && /margin/i.test(el.textContent)) {
+            if (K.can('crm')) { el.dataset.go = '#crm'; el.removeAttribute('data-set'); el.innerHTML = '<small>New enquiries</small><b>' + (d.leads_new || 0) + '</b><i class="mut">Waiting for a reply</i>'; }
+            else el.remove();
+          } else if (el.classList.contains('kpi') && K.can('sales')) { el.dataset.go = '#sales'; el.setAttribute('data-set', '{"sales": {"tab": "invoice", "state": "", "q": ""}}'); }
+          else { el.classList.remove('link'); el.removeAttribute('data-go'); el.removeAttribute('data-set'); }
+        });
+      }
       K.barChart($('[data-cash]', v), d.weeks, ['in', 'out'], ['var(--brand)', 'var(--sun)']);
       $$('[data-go]', v).forEach(function (el) { el.onclick = function () { location.hash = el.dataset.go; }; });
       var nq = $('[data-nq]', v), ni = $('[data-ni]', v);
@@ -95,7 +104,7 @@
       setTimeout(function () { var nb = document.querySelector('.drawer .db'); if (nb && keep) nb.scrollTop = keep; }, 0);
       var c = d.customer || {}, isInv = d.type === 'invoice', isQ = d.type === 'quote', isR = d.type === 'receipt';
       var waText = encodeURIComponent('Hello ' + (c.name || '') + ', here is your ' + (isQ ? 'quotation' : isInv ? 'invoice' : 'receipt') + ' ' + d.number + ' from ' + K.me.settings.business + ' for ' + money(d.total) + '.' + (isInv && d.balance > 0 ? ' Balance ' + money(d.balance) + '. Pay by M-Pesa using account number ' + d.number + ' or here: ' + d.pay_url : ' View it here: ' + d.public_pdf));
-      var wa = 'https://wa.me/' + String(c.phone || '').replace(/\D/g, '') + '?text=' + waText;
+      var wa = 'https://wa.me/' + K.waNum(c.phone) + '?text=' + waText;
       var acts = [];
       acts.push('<button class="btn" data-a="pdf">' + ic(I.eye) + 'View PDF</button>');
       acts.push('<button class="btn" data-a="dl">' + ic(I.dl) + 'Download PDF</button>');
@@ -173,7 +182,11 @@
       '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-go>Save payment</button>');
     $('[data-go]', m).onclick = function () {
       var f = K.read(m); if (doc) f.doc_id = doc.id;
-      K.api('payments', { body: f }).then(function (r) { K.closeModal(); K.toast(r.message); if (doc) K.openDoc(doc.id); K.refreshBadges(); if (K.mod === 'payments') K.route(); }).catch(K.fail);
+      var save = function () { return K.api('payments', { body: f }).then(function (r) { K.closeModal(); K.toast(r.message); if (doc) K.openDoc(doc.id); K.refreshBadges(); if (K.mod === 'payments') K.route(); }); };
+      save().catch(function (e) {
+        if (e && e.code === 'soko_over') { K.confirm(esc(e.message) + ' Record the full amount anyway?', 'Record anyway').then(function (y) { if (y) { f.allow_over = 1; save().catch(K.fail); } }); return; }
+        K.fail(e);
+      });
     };
   };
 
@@ -291,7 +304,7 @@
           { k: 'amount', label: 'Amount', n: 1, f: function (p) { return money(p.amount); } },
           { k: 'status', label: 'Matched to', f: function (p) { return p.status === 'matched' ? K.badge('matched', esc(p.invoice)) + (p.receipt ? '<div class="tiny">' + esc(p.receipt) + '</div>' : '') : '<div style="display:flex;gap:6px;align-items:center">' + K.badge('unmatched') + '<select data-m="' + p.id + '" style="width:auto;min-height:32px;font-size:13px"><option value="">Match to…</option>' + open.map(function (o) { return '<option value="' + o.id + '">' + esc(o.number) + ' · ' + esc(o.customer_name) + ' · ' + money(o.balance) + '</option>'; }).join('') + '</select></div>'; } }
         ], list, { empty: 'No payments yet', emptySub: 'M-Pesa confirmations, prompts and recorded payments appear here.' });
-        $$('[data-m]', v).forEach(function (s) { s.onchange = function () { if (!s.value) return; K.api('payments/' + s.dataset.m + '/match', { body: { doc_id: +s.value } }).then(function (r) { K.toast(r.message); K.refreshBadges(); K.route(); }).catch(K.fail); }; });
+        $$('[data-m]', v).forEach(function (s) { s.onchange = function () { if (!s.value) return; var lab = s.options[s.selectedIndex].text; K.confirm('Match this payment to <b>' + esc(lab) + '</b>? A receipt will be issued to the customer.', 'Match and issue receipt').then(function (y) { if (!y) { s.value = ''; return; } K.api('payments/' + s.dataset.m + '/match', { body: { doc_id: +s.value } }).then(function (r) { K.toast(r.message); K.refreshBadges(); K.route(); }).catch(K.fail); }); }; });
       };
       draw();
       $('[data-q]', v).oninput = function (e) { payState.q = e.target.value; draw(); };
@@ -351,7 +364,7 @@
     var m = K.modal(l.id ? esc(l.name) : 'New lead', '<div class="grid2">' + K.field('Name', 'name', l.name, 'text') + K.field('Phone', 'phone', K.phone(l.phone), 'tel') + '</div><div class="grid2">' + K.field('Email', 'email', l.email, 'email') + K.field('County or area', 'county', l.county, 'text') + '</div>' +
       K.field('Interested in', 'interest', l.interest, 'text', { ph: 'e.g. 5 kW hybrid for a 4-bedroom house' }) + '<div class="grid3">' + K.field('Stage', 'stage', l.stage, 'select', { options: opts(stages) }) + K.field('Estimated value', 'value', l.value || '', 'number') + K.field('Source', 'source', l.source, 'select', { options: opts(['Website quote form', 'Solar calculator', 'Phone call', 'WhatsApp', 'Walk-in', 'Referral', 'Social media', 'Website', 'Quote form', 'Other']) }) + '</div>' +
       K.field('Next follow-up', 'next_action', l.next_action || '', 'date') + K.field('Notes', 'notes', l.notes, 'textarea') + data,
-      (l.id ? '<button class="btn danger" data-del>Delete</button>' : '') + (l.phone ? '<a class="btn" href="https://wa.me/' + String(l.phone).replace(/\D/g, '') + '" target="_blank" rel="noopener">' + ic(I.wa) + 'WhatsApp</a>' : '') + (l.id && K.can('sales') ? '<button class="btn" data-q>Create quotation</button>' : '') + '<button class="btn pri" data-s>Save</button>');
+      (l.id ? '<button class="btn danger" data-del>Delete</button>' : '') + (l.phone ? '<a class="btn" href="https://wa.me/' + K.waNum(l.phone) + '" target="_blank" rel="noopener">' + ic(I.wa) + 'WhatsApp</a>' : '') + (l.id && K.can('sales') ? '<button class="btn" data-q>Create quotation</button>' : '') + '<button class="btn pri" data-s>Save</button>');
     $('[data-s]', m).onclick = function () { K.api('leads' + (l.id ? '/' + l.id : ''), { body: K.read(m) }).then(function () { K.closeModal(); K.toast('Saved'); K.route(); K.refreshBadges(); }).catch(K.fail); };
     var del = $('[data-del]', m); if (del) del.onclick = function () { K.confirm('Delete this lead?', 'Delete', true).then(function (y) { if (y) K.api('leads/' + l.id, { method: 'DELETE' }).then(function () { K.toast('Deleted'); K.route(); }); }); };
     var qb = $('[data-q]', m);
@@ -371,7 +384,7 @@
       var c = res[0].filter(function (x) { return +x.id === id; })[0]; if (!c) return;
       var docs = res[1];
       var dr = K.drawer(esc(c.name), '<div class="kpis"><div class="kpi"><small>Bought</small><b>' + money(c.ltv) + '</b></div><div class="kpi"><small>Owes</small><b class="' + (c.owes > 0 ? 'down' : '') + '">' + money(c.owes) + '</b></div></div><dl class="kv"><dt>Phone</dt><dd>' + esc(K.phone(c.phone)) + '</dd><dt>Email</dt><dd>' + esc(c.email || '—') + '</dd><dt>KRA PIN</dt><dd>' + esc(c.kra || '—') + '</dd><dt>Location</dt><dd>' + esc([c.address, c.county].filter(Boolean).join(', ') || '—') + '</dd>' + (c.notes ? '<dt>Notes</dt><dd>' + esc(c.notes) + '</dd>' : '') + '</dl>' +
-        '<div class="actgrid"><button class="btn" data-e>' + ic(I.edit) + 'Edit</button>' + (K.can('sales') ? '<button class="btn" data-nq>New quotation</button><button class="btn sun" data-ni>New invoice</button>' : '') + (c.phone ? '<a class="btn" target="_blank" rel="noopener" href="https://wa.me/' + String(c.phone).replace(/\D/g, '') + '">' + ic(I.wa) + 'WhatsApp</a><a class="btn" href="tel:+' + esc(String(c.phone).replace(/^\+/, '')) + '">' + ic(I.phone) + 'Call</a>' : '') + '</div>' +
+        '<div class="actgrid"><button class="btn" data-e>' + ic(I.edit) + 'Edit</button>' + (K.can('sales') ? '<button class="btn" data-nq>New quotation</button><button class="btn sun" data-ni>New invoice</button>' : '') + (c.phone ? '<a class="btn" target="_blank" rel="noopener" href="https://wa.me/' + K.waNum(c.phone) + '">' + ic(I.wa) + 'WhatsApp</a><a class="btn" href="tel:+' + esc(String(c.phone).replace(/^\+/, '')) + '">' + ic(I.phone) + 'Call</a>' : '') + '</div>' +
         '<div class="box"><h3>History</h3>' + K.table([{ k: 'number', label: 'Document', f: function (d) { return '<b class="mono">' + esc(d.number) + '</b>'; } }, { k: 'date', label: 'Date', f: function (d) { return K.ds(d.date); } }, { k: 'total', label: 'Total', n: 1, f: function (d) { return money(d.total); } }, { k: 'state', label: 'Status', f: function (d) { return K.badge(d.state); } }], docs, { click: 1, stack: false, empty: 'No documents yet' }) + '</div>', '', true);
       $('[data-e]', dr).onclick = function () { K.editCustomer(c); };
       var nq = $('[data-nq]', dr), ni = $('[data-ni]', dr);
@@ -417,7 +430,7 @@
         '<div class="grid2">' + K.field('Team', 'techs', j.techs, 'text', { list: 'teamlist', ph: 'Who is going' }) + K.field('Location', 'location', j.location, 'text') + '</div><datalist id="teamlist">' + team.map(function (t) { return '<option value="' + esc(t.name) + '">'; }).join('') + '</datalist>' +
         '<div class="flabel">Checklist</div><div data-cl>' + checklist.map(function (c) { return '<label class="tog"><span>' + esc(c) + '</span><input type="checkbox" class="sw" data-ck="' + esc(c) + '"' + (done.indexOf(c) > -1 ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
         K.field('Notes', 'notes', j.notes, 'textarea') + (j.doc_number ? '<p class="tiny">Linked invoice: <a href="#sales/' + j.doc_id + '">' + esc(j.doc_number) + '</a></p>' : ''),
-        (j.id ? '<button class="btn danger" data-del>Delete</button>' : '') + (j.phone ? '<a class="btn" target="_blank" rel="noopener" href="https://wa.me/' + String(j.phone).replace(/\D/g, '') + '">' + ic(I.wa) + 'WhatsApp customer</a>' : '') + '<button class="btn" data-sch>Save and add to schedule</button><button class="btn pri" data-s>Save</button>', true);
+        (j.id ? '<button class="btn danger" data-del>Delete</button>' : '') + (j.phone ? '<a class="btn" target="_blank" rel="noopener" href="https://wa.me/' + K.waNum(j.phone) + '">' + ic(I.wa) + 'WhatsApp customer</a>' : '') + '<button class="btn" data-sch>Save and add to schedule</button><button class="btn pri" data-s>Save</button>', true);
       var save = function (thenSchedule) {
         var f = K.read(m); f.checklist = $$('[data-ck]', m).filter(function (x) { return x.checked; }).map(function (x) { return x.dataset.ck; });
         if (!f.customer_id && !f.title) { K.toast('Choose a customer or describe the work.', true); return; }
@@ -489,7 +502,7 @@
       var val = goods.reduce(function (a, p) { return a + p.stock * (p.cost || 0); }, 0);
       var low = goods.filter(function (p) { return p.stock <= p.reorder; });
       v.innerHTML = K.head('Products and stock', 'Your catalogue drives the website shop. Stock drops when an invoice is paid or delivered, and rises when a purchase order is received.', (K.can('purchases') ? '<a class="btn" href="#purchases">Purchase orders</a>' : '') + '<button class="btn sun" data-np>' + ic(I.plus) + 'Add product</button>') +
-        '<div class="kpis"><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "stock", "p": "month"}}\'><small>Stock value at cost</small><b>' + money(val) + '</b></div><div class="kpi link" data-go="#stock" data-set=\'{"stock": {"tab": "items", "low": 0, "q": "", "cat": ""}}\'><small>Products</small><b>' + ps.length + '</b><i class="mut">' + ps.filter(function (p) { return +p.visible; }).length + ' on the website</i></div><div class="kpi link" data-go="#stock" data-set=\'{"stock": {"tab": "items", "low": 1, "q": "", "cat": ""}}\'><small>At or below reorder level</small><b>' + low.length + '</b><i class="' + (low.length ? 'down' : 'up') + '">' + (low.length ? 'order soon' : 'all good') + '</i></div></div>' +
+        '<div class="kpis">' + (K.can('reports') ? '<div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "stock", "p": "month"}}\'><small>Stock value at cost</small><b>' + money(val) + '</b></div>' : '<div class="kpi"><small>Units in stock</small><b>' + K.num(goods.reduce(function (a, p) { return a + (+p.stock || 0); }, 0)) + '</b></div>') + '<div class="kpi link" data-go="#stock" data-set=\'{"stock": {"tab": "items", "low": 0, "q": "", "cat": ""}}\'><small>Products</small><b>' + ps.length + '</b><i class="mut">' + ps.filter(function (p) { return +p.visible; }).length + ' on the website</i></div><div class="kpi link" data-go="#stock" data-set=\'{"stock": {"tab": "items", "low": 1, "q": "", "cat": ""}}\'><small>At or below reorder level</small><b>' + low.length + '</b><i class="' + (low.length ? 'down' : 'up') + '">' + (low.length ? 'order soon' : 'all good') + '</i></div></div>' +
         K.tabs('stock', [['items', 'Products'], ['cats', 'Categories']], stockState.tab) + '<div data-b></div>';
       $('[data-np]', v).onclick = function () { K.editProduct(0); };
       $$('[data-tabs] button', v).forEach(function (b) { b.onclick = function () { stockState.tab = b.dataset.t; K.V.stock(v); }; });
@@ -501,7 +514,7 @@
           K.table([
             { k: 'name', label: 'Product', f: function (p) { return '<div style="display:flex;gap:10px;align-items:center"><span class="thumbc">' + (p.images && p.images[0] ? '<img src="' + esc(p.images[0]) + '" alt="">' : K.icon(p.icon, 28)) + '</span><span><b>' + esc(p.name) + '</b><div class="tiny">' + esc(p.sku) + (p.brand ? ' · ' + esc(p.brand) : '') + '</div></span></div>'; } },
             { k: 'cat_name', label: 'Category' },
-            { k: 'cost', label: 'Cost', n: 1, f: function (p) { return p.cost != null ? money(p.cost, 1) : ''; } },
+            (K.can('reports') || K.can('purchases') ? { k: 'cost', label: 'Cost', n: 1, f: function (p) { return p.cost != null ? money(p.cost, 1) : ''; } } : null),
             { k: 'price', label: 'Price', n: 1, f: function (p) { return money(p.price, 1); } },
             { k: 'stock', label: 'In stock', n: 1, f: function (p) { return p.kind !== 'product' ? '<span class="tiny">Service</span>' : (p.stock <= p.reorder ? K.badge('low', K.num(p.stock)) : K.num(p.stock)); } },
             { k: 'reorder', label: 'Reorder at', n: 1, f: function (p) { return p.kind === 'product' ? K.num(p.reorder) : ''; } },
@@ -525,7 +538,7 @@
       var images = (p.images || []).slice();
       var body = '<div class="grid2">' + K.field('Name', 'name', p.name, 'text') + K.field('Product code', 'sku', p.sku, 'text') + '</div>' +
         '<div class="grid3">' + K.field('Category', 'cat', p.cat, 'select', { options: K.cats.map(function (c) { return [c.id, c.name]; }) }) + K.field('Brand', 'brand', p.brand, 'text') + K.field('Type', 'kind', p.kind, 'select', { options: [['product', 'Product (counted in stock)'], ['service', 'Service']] }) + '</div>' +
-        '<div class="grid3">' + K.field('Selling price (incl. VAT)', 'price', p.price, 'number') + K.field('Was price (shows a saving)', 'was', p.was || '', 'number') + K.field('Cost price', 'cost', p.cost, 'number', { hint: 'Used for profit reports. Staff without stock access cannot see it.' }) + '</div>' +
+        '<div class="grid3">' + K.field('Selling price (incl. VAT)', 'price', p.price, 'number') + K.field('Was price (shows a saving)', 'was', p.was || '', 'number') + (K.can('reports') || K.can('purchases') ? K.field('Cost price', 'cost', p.cost, 'number', { hint: 'Used for profit reports. Only owners, accounts and purchasing staff can see it.' }) : '<div></div>') + '</div>' +
         '<div class="grid3">' + (id ? '<div class="f"><label>In stock</label><div style="display:flex;gap:6px"><input value="' + K.num(p.stock) + '" disabled><button class="btn" data-adj type="button">Adjust</button></div></div>' : K.field('Opening stock', 'stock', 0, 'number')) + K.field('Reorder when at or below', 'reorder', p.reorder, 'number') + K.field('Installation fee', 'install_fee', p.install_fee || '', 'number', { hint: 'Offered at checkout. Leave blank to estimate.' }) + '</div>' +
         K.field('What it powers (one line shown on the shop)', 'runs', p.runs, 'text', { ph: 'e.g. Lights, TV, fridge and Wi-Fi, day and night' }) +
         '<div class="flabel">Photos</div><div class="imgs" data-imgs></div><p class="tiny">The first photo is the main one. Products without photos show a clean illustration.</p>' +

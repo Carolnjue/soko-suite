@@ -803,7 +803,7 @@ html[data-theme=dark] .savings::before{display:none}html[data-theme=dark] .savin
 .price b.tick{animation:tick .45s cubic-bezier(.3,1.6,.5,1)}
 @keyframes tick{40%{transform:translateY(-4px);color:var(--sun)}}
 .price.big b{display:inline-block}
-.cartpage .line img,.cartpage .thumb{width:84px;height:84px;border-radius:14px;object-fit:cover}
+.cartpage .line{grid-template-columns:84px minmax(0,1fr) auto}.cartpage .line img,.cartpage .thumb{width:84px;height:84px;border-radius:14px;object-fit:cover}@media(max-width:600px){.cartpage .line{grid-template-columns:64px minmax(0,1fr);row-gap:8px}.cartpage .line img,.cartpage .thumb{width:64px;height:64px}.cartpage .line>:last-child{grid-column:2}}
 .nexts{background:var(--alt);border:1px solid var(--line);border-radius:18px;padding:20px 20px 8px;margin-bottom:8px}
 .nexts h3{font-size:18px;color:var(--head);margin-bottom:12px}
 .nexts ol{list-style:none;padding:0;margin:0;counter-reset:n}

@@ -230,6 +230,16 @@ final class Soko_Store {
 	private static function shop( $cat ) {
 		$cats = soko_categories();
 		$c    = $cat ? soko_category( $cat ) : null;
+		if ( $cat && ! in_array( $cat, wp_list_pluck( $cats, 'id' ), true ) ) {
+			foreach ( $cats as $x ) {
+				if ( sanitize_title( $x['name'] ) === $cat || sanitize_title( 'solar ' . $x['id'] ) === $cat || rtrim( sanitize_title( $x['name'] ), 's' ) === rtrim( $cat, 's' ) ) {
+					wp_safe_redirect( home_url( '/shop/' . $x['id'] . '/' ), 301 );
+					exit;
+				}
+			}
+			wp_safe_redirect( home_url( '/shop/' ), 302 );
+			exit;
+		}
 		$q    = isset( $_GET['q'] ) ? sanitize_text_field( wp_unslash( $_GET['q'] ) ) : ''; // phpcs:ignore
 		$all  = Soko_Ledger::products( array( 'visible' => 1 ) );
 		$list = Soko_Ledger::products( array( 'visible' => 1, 'cat' => $cat, 'q' => $q ) );

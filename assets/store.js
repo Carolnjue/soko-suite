@@ -392,6 +392,7 @@
       if (!note) { note = document.createElement('small'); note.className = 'pnote'; pb.parentNode.appendChild(note); }
       note.textContent = (inst() ? 'Includes installation' : 'Supply only') + (qn > 1 ? ' · ' + qn + ' units' : '');
       pb.classList.remove('tick'); void pb.offsetWidth; pb.classList.add('tick');
+      var sb = document.querySelector('.sbuy b'); if (sb) sb.textContent = money(total);
     };
     $$('[name=inst]', pdp).forEach(function (r) { r.addEventListener('change', syncPrice); });
     if (q) q.addEventListener('input', syncPrice);

@@ -459,6 +459,12 @@ final class Soko_Ledger {
 	 * Record an incoming payment (M-Pesa confirmation, STK result, bank, cash).
 	 * Matches it, applies it, issues a receipt. Idempotent on code.
 	 */
+	public static function payment_exists( $code ) {
+		global $wpdb;
+		$t = soko_t( 'payments' );
+		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $t WHERE code = %s", strtoupper( sanitize_text_field( $code ) ) ) );
+	}
+
 	public static function record_payment( $p ) {
 		global $wpdb;
 		$t    = soko_t( 'payments' );

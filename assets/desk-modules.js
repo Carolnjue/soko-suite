@@ -267,8 +267,8 @@
       var mon = K.today().slice(0, 7), month = rows.filter(function (p) { return String(p.received).slice(0, 7) === mon; });
       var un = rows.filter(function (p) { return p.status !== 'matched'; });
       var mp = K.me.settings.mpesa || {};
-      v.innerHTML = K.head('Payments', 'M-Pesa payments arrive here the moment Safaricom confirms them and match to the right invoice by account number. Bank and cash payments are recorded here too.', '<button class="btn sun" data-rec>' + ic(I.plus) + 'Record a payment</button>') +
-        (K.me.mpesa_ready ? '' : '<div class="notice">M-Pesa is not connected yet. Add the Daraja keys in <a href="#settings/payments">Settings → Payments</a> to switch on automatic prompts and matching. Until then, record M-Pesa payments here with the transaction code.</div>') +
+      v.innerHTML = K.head('Payments', 'M-Pesa payments arrive here the moment Safaricom confirms them and match to the right invoice by account number. Bank and cash payments are recorded here too.', '<label class="btn" title="CSV from the M-Pesa business portal">' + ic(I.up || I.plus) + 'Import M-Pesa statement<input type="file" accept=".csv,text/csv" hidden data-stmt></label><button class="btn sun" data-rec>' + ic(I.plus) + 'Record a payment</button>') +
+        (K.me.mpesa_ready ? '' : '<div class="notice">Daraja is not connected yet. Payments still match automatically if you forward M-Pesa SMS or import the statement (see <a href="#settings/payments">Settings → Payments</a>). You can also record a payment here with its M-Pesa code.</div>') +
         '<div class="kpis"><div class="kpi"><small>Received this month</small><b>' + money(month.reduce(function (a, p) { return a + p.amount; }, 0)) + '</b><i class="mut">' + month.length + ' payments</i></div>' +
         '<div class="kpi"><small>Matched automatically</small><b>' + (rows.length ? Math.round(rows.filter(function (p) { return p.status === 'matched'; }).length / rows.length * 100) : 0) + '%</b><i class="mut">by invoice number</i></div>' +
         '<div class="kpi"><small>Waiting to match</small><b>' + un.length + '</b><i class="' + (un.length ? 'down' : 'up') + '">' + (un.length ? money(un.reduce(function (a, p) { return a + p.amount; }, 0)) : 'all matched') + '</i></div>' +
@@ -290,6 +290,7 @@
       draw();
       $('[data-q]', v).oninput = function (e) { payState.q = e.target.value; draw(); };
       $$('[data-f]', v).forEach(function (b) { b.onclick = function () { payState.f = b.dataset.f; $$('[data-f]', v).forEach(function (x) { x.classList.toggle('on', x === b); }); draw(); }; });
+      var st = $('[data-stmt]', v); if (st) st.onchange = function () { var f = st.files[0]; if (!f) return; var fd = new FormData(); fd.append('file', f); K.toast('Reading statement…'); fetch(DESK.api + 'payments/statement', { method: 'POST', body: fd, headers: { 'X-WP-Nonce': DESK.nonce }, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) { K.toast(r.message, !r.ok); if (r.ok) K.V.payments(v); K.refreshBadges(); }).catch(K.fail); };
       $('[data-rec]', v).onclick = function () { K.recordPayment(null); };
     }).catch(K.fail);
   };
@@ -728,8 +729,12 @@
         '<div class="grid2">' + K.field('Till number (Buy Goods only)', 'till', mp.till) + K.field('Send M-Pesa prompts at checkout', 'stk', mp.stk, 'toggle') + '</div>' +
         '<div class="grid3">' + K.field('Consumer key', 'key', mp.key) + K.field('Consumer secret', 'secret', mp.secret) + K.field('Passkey', 'passkey', mp.passkey) + '</div>' +
         '<div class="notice info">Payment notification addresses (registered with Safaricom by the button below):<div class="codebox" style="margin-top:8px">' + esc(cb.confirm || '') + '</div><div class="codebox" style="margin-top:6px">' + esc(cb.stk || '') + '</div></div>' +
-        '<div class="acts"><button class="btn pri" data-s>Save</button><button class="btn" data-reg>Register payment notifications with Safaricom</button></div>';
+        '<div class="acts"><button class="btn pri" data-s>Save</button><button class="btn" data-reg>Register payment notifications with Safaricom</button></div>' +
+        '<h3 style="margin-top:26px">Free automatic matching without Daraja</h3><p class="sub">Use these until Daraja is approved, or alongside it. Both are free.</p>' +
+        '<div class="box"><b>1. Forward M-Pesa SMS from the business phone</b><ol class="sub" style="margin:8px 0 10px;padding-left:18px"><li>On the Android phone that receives the Paybill or Till SMS, install a free SMS forwarding app (for example "SMS Forwarder").</li><li>Add a rule: messages from <b>MPESA</b> → forward to the web address below (method POST).</li><li>Send yourself a small test payment. It appears in Payments within seconds.</li></ol><div class="codebox" data-smsurl>Loading…</div><p class="tiny" data-smslast></p><button class="btn sm" data-copysms>Copy address</button></div>' +
+        '<div class="box"><b>2. Import the M-Pesa statement</b><p class="sub" style="margin-top:6px">In the M-Pesa business portal (org.ke.m-pesa.com), download the statement as CSV, then use <b>Import M-Pesa statement</b> on the Payments page. Every payment is matched in one go; repeats are skipped.</p></div>';
       $('[data-s]', b).onclick = function () { var f = K.read(b); save({ mpesa: f }).then(function () { K.api('me').then(function (me) { K.me = me; }); }); };
+      K.api('payments/sms-info').then(function (r) { $('[data-smsurl]', b).textContent = r.url; $('[data-smslast]', b).textContent = r.last ? 'Last SMS received ' + r.last : 'No forwarded SMS yet.'; $('[data-copysms]', b).onclick = function () { try { navigator.clipboard.writeText(r.url); K.toast('Copied'); } catch (e) { K.toast(r.url); } }; }).catch(function () {});
       $('[data-reg]', b).onclick = function () { K.api('mpesa/register', { body: {} }).then(function (r) { K.toast(r.message, !r.ok); }).catch(K.fail); };
     }
     if (tab === 'documents') {

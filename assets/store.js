@@ -251,10 +251,10 @@
       e.preventDefault();
       if (!check(f)) return;
       var b = formData(f), btn = $('button[type=submit]', f);
-      b.source = 'Website quote form';
+      b.source = f.dataset.source || 'Website quote form';
       btn.disabled = true; btn.textContent = 'Sending…';
       api('store/lead', { method: 'POST', body: b }).then(function () {
-        f.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Thank you, ' + esc(b.name.split(' ')[0]) + '</h3><p class="muted">An engineer will call you on ' + esc(b.phone) + ' within the working day.</p></div>';
+        f.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Thank you, ' + esc(b.name.split(' ')[0]) + '</h3><p class="muted">We have your request. An engineer will call you on ' + esc(b.phone) + '.</p></div>';
       }).catch(function (err) { btn.disabled = false; btn.textContent = 'Send request'; msg(f, err.message); });
     });
   });
@@ -446,3 +446,78 @@ document.querySelectorAll('form.search').forEach(function (f) {
   var i = f.querySelector('input');
   f.addEventListener('submit', function (e) { if (!i.value.trim()) { e.preventDefault(); i.focus(); } });
 });
+
+/* light / dark mode */
+document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var d = document.documentElement, dark = d.getAttribute('data-theme') !== 'dark';
+    if (dark) d.setAttribute('data-theme', 'dark'); else d.removeAttribute('data-theme');
+    try { localStorage.setItem('soko_theme', dark ? 'dark' : 'light'); } catch (e) {}
+  });
+});
+
+/* ===== interactive sections ===== */
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); }, $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var kes = function (n) { return 'KES ' + Math.round(n).toLocaleString('en-KE'); };
+
+  /* product tabs */
+  $$('[data-ptabs]').forEach(function (t) {
+    var grid = t.parentNode.querySelector('[data-tabgrid]'); if (!grid) return;
+    var lim = +grid.dataset.limit || 8;
+    var show = function (cats) {
+      var list = cats ? cats.split(',') : null, n = 0;
+      $$('.card', grid).forEach(function (c) {
+        var ok = !list || list.indexOf(c.dataset.cat) > -1;
+        ok = ok && n < lim; if (ok) n++;
+        c.hidden = !ok; if (ok) { c.style.animation = 'none'; void c.offsetWidth; c.style.animation = ''; c.style.animationDelay = (n * 0.04) + 's'; }
+      });
+    };
+    t.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      $$('button', t).forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+      show(b.dataset.c);
+    });
+  });
+
+  /* savings calculator */
+  $$('[data-savings]').forEach(function (s) {
+    var c = JSON.parse(s.dataset.savings), r = $('[data-sv-range]', s), mode = 'home', raf;
+    var count = function (el, to, fmt) {
+      var from = el._v || 0, t0 = performance.now();
+      var step = function (t) { var k = Math.min(1, (t - t0) / 450), v = from + (to - from) * (1 - Math.pow(1 - k, 3)); el.textContent = fmt(v); if (k < 1) requestAnimationFrame(step); };
+      el._v = to; requestAnimationFrame(step);
+    };
+    var calc = function () {
+      var bill = +r.value, pct = (bill - r.min) / (r.max - r.min) * 100;
+      r.style.setProperty('--p', pct + '%');
+      var kwhDay = bill / c.tariff / 30, share = mode === 'home' ? 0.75 : 0.7;
+      var kw = Math.max(1, Math.round(kwhDay * share / 4.5 * 2) / 2);
+      var batt = mode === 'home' ? Math.max(2.5, Math.round(kwhDay * 0.45 / 2.5) * 2.5) : Math.round(kwhDay * 0.15 / 5) * 5;
+      var cost = kw * c.kwCost + batt * c.kwhCost, save = bill * share, years = cost / (save * 12);
+      $('[data-sv-bill]', s).textContent = kes(bill);
+      count($('[data-sv-size]', s), kw, function (v) { return (Math.round(v * 2) / 2) + ' kW'; });
+      $('[data-sv-batt]', s).textContent = batt ? batt + ' kWh battery' : 'no battery needed';
+      count($('[data-sv-save]', s), save, kes);
+      count($('[data-sv-pay]', s), years, function (v) { return v < 1.5 ? 'about a year' : (Math.round(v * 2) / 2) + ' years'; });
+      $('[data-sv-now]', s).textContent = kes(bill);
+      $('[data-sv-after]', s).textContent = kes(bill - save);
+      $('[data-sv-barafter]', s).style.setProperty('--w', Math.max(12, (1 - share) * 100) + '%');
+      var kit = $('[data-sv-kit]', s); if (kit) kit.href = kit.href.replace(/\/shop\/[^/]+\/$/, mode === 'home' ? '/shop/kits/' : '/shop/hybrid/');
+    };
+    r.addEventListener('input', function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(calc); });
+    $$('[data-m]', s).forEach(function (b) { b.addEventListener('click', function () { mode = b.dataset.m; $$('[data-m]', s).forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b ? 'true' : 'false'); }); if (mode === 'biz' && +r.value < 20000) r.value = 40000; calc(); }); });
+    calc();
+  });
+
+  /* scroll reveal + timeline */
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var targets = $$('main .band .wrap > *, main .strip .wrap > div, .tl');
+  if (!('IntersectionObserver' in window) || reduce) { $$('.tl').forEach(function (t) { t.classList.add('in'); }); return; }
+  var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  targets.forEach(function (el, i) {
+    if (el.getBoundingClientRect().top < innerHeight * 0.92) { el.classList.add('in'); if (el.classList.contains('tl')) return; return; }
+    if (!el.classList.contains('tl')) { el.classList.add('rv'); el.style.transitionDelay = (i % 4) * 0.05 + 's'; }
+    io.observe(el);
+  });
+})();

@@ -62,6 +62,9 @@ final class Soko_API {
 
 		/* ---- M-Pesa callbacks (token in the path) ---- */
 		$r( '/mpesa/(?P<token>[A-Za-z0-9]+)/(?P<what>stk|confirm|validate)', 'POST', array( __CLASS__, 'mpesa_callback' ), $open );
+		$r( '/sms/(?P<token>[A-Za-z0-9]+)', 'POST,GET', array( 'Soko_Mpesa_Free', 'on_sms' ), $open );
+		$r( '/payments/sms-info', 'GET', function () { return array( 'url' => Soko_Mpesa_Free::sms_url(), 'last' => get_option( 'soko_sms_last', '' ) ); }, self::perm( 'soko_settings' ) );
+		$r( '/payments/statement', 'POST', function ( $req ) { $f = $req->get_file_params(); if ( empty( $f['file']['tmp_name'] ) ) { return array( 'ok' => false, 'message' => 'Choose the statement file.' ); } return Soko_Mpesa_Free::import_csv( $f['file']['tmp_name'] ); }, self::perm( 'soko_payments' ) );
 
 		/* ---- desk ---- */
 		$r( '/me', 'GET', array( __CLASS__, 'me' ), $staff );

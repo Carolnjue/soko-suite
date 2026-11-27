@@ -38,6 +38,7 @@ require_once SOKO_DIR . 'includes/class-soko-desk.php';
 require_once SOKO_DIR . 'includes/class-soko-cron.php';
 require_once SOKO_DIR . 'includes/class-soko-demo.php';
 require_once SOKO_DIR . 'includes/class-soko-blog.php';
+require_once SOKO_DIR . 'includes/class-soko-mpesa-free.php';
 
 register_activation_hook( __FILE__, array( 'Soko_Install', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'Soko_Install', 'deactivate' ) );

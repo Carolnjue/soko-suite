@@ -72,6 +72,7 @@ final class Soko_Sections {
 				'fields' => array_merge( $head, array(
 					array( 'k' => 'source', 'label' => 'Show', 'type' => 'select', 'options' => array( 'featured' => 'Featured products', 'offer' => 'Products on offer', 'category' => 'One category', 'new' => 'Newest products' ) ),
 					array( 'k' => 'category', 'label' => 'Category', 'type' => 'category' ),
+					array( 'k' => 'tabs', 'label' => 'Show category tabs', 'type' => 'toggle' ),
 					array( 'k' => 'limit', 'label' => 'How many', 'type' => 'number' ),
 				) ),
 			),
@@ -164,6 +165,18 @@ final class Soko_Sections {
 					array( 'k' => 'cta2_label', 'label' => 'Second button', 'type' => 'text' ),
 					array( 'k' => 'cta2_link', 'label' => 'Second button link', 'type' => 'link' ),
 					array( 'k' => 'color', 'label' => 'Colour', 'type' => 'select', 'options' => array( 'sun' => 'Sun orange', 'blue' => 'Brand blue' ) ),
+					array( 'k' => 'image', 'label' => 'Photo', 'type' => 'image' ),
+					array( 'k' => 'callback', 'label' => 'Show a call-me-back form', 'type' => 'toggle' ),
+				) ),
+			),
+			'savings'       => array(
+				'label'  => 'Savings calculator',
+				'desc'   => 'Visitors slide their monthly power bill and see the system size, cost and payback.',
+				'fields' => array_merge( $head, array(
+					array( 'k' => 'tariff', 'label' => 'Average power price, KES per kWh', 'type' => 'number' ),
+					array( 'k' => 'kw_cost', 'label' => 'Installed cost per kW of panels and inverter, KES', 'type' => 'number' ),
+					array( 'k' => 'kwh_cost', 'label' => 'Installed cost per kWh of lithium battery, KES', 'type' => 'number' ),
+					array( 'k' => 'image', 'label' => 'Photo', 'type' => 'image' ),
 				) ),
 			),
 			'contact'       => array(
@@ -205,7 +218,7 @@ final class Soko_Sections {
 			array( 'icon' => 'panel', 'title' => 'Installation', 'text' => 'EPRA-licensed technicians install, test and hand over, usually in one to two days.' ),
 			array( 'icon' => 'shield', 'title' => 'Aftercare', 'text' => 'Monitoring, cleaning and maintenance keep your system at full output.' ),
 		);
-		$cta = array( 'title' => 'Not sure which system you need?', 'text' => 'Book a free consultation. An engineer visits, assesses your site and gives you a fixed quote with installation.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Try the Power Planner', 'cta2_link' => '/planner/', 'color' => 'sun' );
+		$cta = array( 'title' => 'Not sure which system you need?', 'text' => 'Book a free consultation. An engineer visits, assesses your site and gives you a fixed quote with installation.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Calculate my system', 'cta2_link' => '/planner/', 'color' => 'sun' );
 		return array(
 			'brand'    => array( 'primary' => '#1b4f9e', 'accent' => '#f7941d', 'deep' => '#1d2156', 'head_font' => 'Poppins', 'body_font' => 'Inter', 'logo' => 'soko:img/dss-logo.png', 'radius' => 18 ),
 			'header'   => array(
@@ -264,13 +277,13 @@ final class Soko_Sections {
 							array( 'icon' => 'tools', 'title' => 'Aftercare', 'text' => 'maintenance visits' ),
 						) ) ),
 						$sec( 'categories', array( 'title' => 'Shop by category', 'text' => 'Panels, inverters, batteries, water heating, lighting and more, with prices shown.' ) ),
-						$sec( 'products', array( 'title' => 'Popular products', 'text' => 'Every product shows its specifications, what it can power, warranty and installation cost.', 'source' => 'featured', 'limit' => 8 ) ),
-						$sec( 'planner', array( 'title' => 'Calculate the system you need', 'text' => 'Choose the appliances you want to run and how long you use them. We size the panels, inverter and battery and show the price.' ) ),
+						$sec( 'products', array( 'title' => 'Popular products', 'text' => 'Every product shows its specifications, what it can power, warranty and installation cost.', 'source' => 'featured', 'limit' => 8, 'tabs' => 1 ) ),
+						$sec( 'savings', array( 'title' => 'What could solar save you?', 'text' => 'Slide to your monthly electricity bill and see the system you need, what it costs and how soon it pays for itself.', 'image' => $img . 'proj-lukundo.jpg' ) ),
 						$sec( 'services', array( 'title' => 'Solar solutions and IT consultancy', 'text' => 'Designed, supplied, installed and maintained by one team of EPRA-licensed technicians and engineers.', 'items' => $services ) ),
 						$sec( 'projects', array( 'title' => 'Recent projects', 'text' => 'From a 10 kW bakery in Voi to a 70 kW hotel in Kisumu.', 'limit' => 4 ) ),
 						$sec( 'steps', array( 'title' => 'How we work', 'text' => 'Clear steps, one point of contact, no surprises on price.', 'items' => $steps ) ),
 						$sec( 'logos', array( 'title' => 'Trusted by', 'left' => array( array( 'name' => 'Radbone Clark' ), array( 'name' => 'Printpak' ), array( 'name' => 'Lindberg Holidays' ), array( 'name' => 'The Hydeout Hotel' ), array( 'name' => 'Karen Oasis Hotel' ), array( 'name' => 'Bunyore Girls High School' ) ), 'title2' => 'Brands we install', 'right' => array( array( 'name' => 'JA Solar' ), array( 'name' => 'Victron Energy' ), array( 'name' => 'Lithium Valley' ), array( 'name' => 'Chloride Exide' ) ) ) ),
-						$sec( 'cta_band', $cta ),
+						$sec( 'cta_band', array_merge( $cta, array( 'image' => $img . 'team-street.jpg', 'callback' => 1 ) ) ),
 					),
 				),
 				'services' => array(
@@ -591,13 +604,29 @@ final class Soko_Sections {
 		} elseif ( 'new' === $src ) {
 			usort( $all, function ( $a, $b ) { return $b['id'] - $a['id']; } );
 		}
-		$all = array_slice( array_values( $all ), 0, $limit );
+		$all = empty( $p['tabs'] ) ? array_slice( array_values( $all ), 0, $limit ) : array_values( $all );
 		if ( ! $all ) {
 			return '';
 		}
-		$h = '<section class="band"><div class="wrap">' . self::head( $p, '<a class="btn b-line" href="' . esc_url( home_url( '/shop/' . ( 'category' === $src && ! empty( $p['category'] ) ? $p['category'] . '/' : '' ) ) ) . '">Shop all</a>' ) . '<div class="grid">';
-		foreach ( $all as $x ) {
-			$h .= Soko_Store::card( $x );
+		$tabs = '';
+		if ( ! empty( $p['tabs'] ) ) {
+			$site  = self::current();
+			$every = Soko_Ledger::products( array( 'visible' => 1 ) );
+			usort( $every, function ( $a, $b ) { return $b['featured'] - $a['featured']; } );
+			$all   = $every;
+			$tabs  = '<div class="ptabs" role="tablist" data-ptabs><button class="on" data-c="" role="tab">All</button>';
+			foreach ( (array) $site['header']['menu'] as $m ) {
+				if ( ! empty( $m['cats'] ) ) {
+					$tabs .= '<button data-c="' . esc_attr( $m['cats'] ) . '" role="tab">' . self::e( $m['label'] ) . '</button>';
+				}
+			}
+			$tabs .= '</div>';
+		}
+		$h = '<section class="band"><div class="wrap">' . self::head( $p, '<a class="btn b-line" href="' . esc_url( home_url( '/shop/' . ( 'category' === $src && ! empty( $p['category'] ) ? $p['category'] . '/' : '' ) ) ) . '">Shop all</a>' ) . $tabs . '<div class="grid" data-limit="' . (int) $limit . '"' . ( $tabs ? ' data-tabgrid' : '' ) . '>';
+		foreach ( $all as $k => $x ) {
+			$c  = Soko_Store::card( $x );
+			$c  = preg_replace( '/^<article class="card"/', '<article class="card" data-cat="' . esc_attr( $x['cat'] ) . '"' . ( $k >= $limit ? ' hidden' : '' ), $c );
+			$h .= $c;
 		}
 		return $h . '</div></div></section>';
 	}
@@ -636,25 +665,44 @@ final class Soko_Sections {
 	}
 
 	private static function r_steps( $p ) {
-		$h = '<section class="band"><div class="wrap">' . self::head( $p ) . '<ol class="steps">';
-		foreach ( (array) ( isset( $p['items'] ) ? $p['items'] : array() ) as $i ) {
-			$h .= '<li><span class="dot">' . soko_icon( isset( $i['icon'] ) ? $i['icon'] : 'bulb', 30 ) . '</span><h3>' . self::e( $i['title'] ) . '</h3><p>' . self::e( $i['text'] ) . '</p></li>';
+		$items = (array) ( isset( $p['items'] ) ? $p['items'] : array() );
+		$h     = '<section class="band steps-band"><div class="wrap">' . self::head( $p ) . '<ol class="steps tl" style="--n:' . max( 1, count( $items ) ) . '"><span class="tl-line"><i></i></span>';
+		foreach ( $items as $k => $i ) {
+			$h .= '<li style="--i:' . (int) $k . '"><span class="dot">' . soko_icon( isset( $i['icon'] ) ? $i['icon'] : 'bulb', 30 ) . '<em>' . ( $k + 1 ) . '</em></span><h3>' . self::e( $i['title'] ) . '</h3><p>' . self::e( $i['text'] ) . '</p></li>';
 		}
 		return $h . '</ol></div></section>';
 	}
 
 	private static function r_logos( $p ) {
-		$col = function ( $title, $items ) {
+		$row = function ( $title, $items, $rev ) {
 			if ( ! $items ) {
 				return '';
 			}
-			$h = '<div><h3>' . self::e( $title ) . '</h3><div class="marks">';
+			$one = '';
 			foreach ( $items as $i ) {
-				$h .= ! empty( $i['logo'] ) ? '<span class="logo"><img src="' . esc_url( $i['logo'] ) . '" alt="' . esc_attr( $i['name'] ) . '"></span>' : '<span>' . self::e( $i['name'] ) . '</span>';
+				$one .= ! empty( $i['logo'] ) ? '<span class="lg"><img src="' . esc_url( $i['logo'] ) . '" alt="' . esc_attr( $i['name'] ) . '"></span>' : '<span class="lg">' . self::e( $i['name'] ) . '</span>';
 			}
-			return $h . '</div></div>';
+			return '<div class="mq-row"><h3>' . self::e( $title ) . '</h3><div class="mq' . ( $rev ? ' rev' : '' ) . '"><div class="mq-track">' . $one . $one . '</div></div></div>';
 		};
-		return '<section class="band"><div class="wrap trust">' . $col( isset( $p['title'] ) ? $p['title'] : '', isset( $p['left'] ) ? (array) $p['left'] : array() ) . $col( isset( $p['title2'] ) ? $p['title2'] : '', isset( $p['right'] ) ? (array) $p['right'] : array() ) . '</div></section>';
+		return '<section class="band logos-band"><div class="wrap">' . $row( isset( $p['title'] ) ? $p['title'] : '', isset( $p['left'] ) ? (array) $p['left'] : array(), false ) . $row( isset( $p['title2'] ) ? $p['title2'] : '', isset( $p['right'] ) ? (array) $p['right'] : array(), true ) . '</div></section>';
+	}
+
+	private static function r_savings( $p ) {
+		$cfg = array(
+			'tariff'  => ! empty( $p['tariff'] ) ? (float) $p['tariff'] : 30,
+			'kwCost'  => ! empty( $p['kw_cost'] ) ? (float) $p['kw_cost'] : 75000,
+			'kwhCost' => ! empty( $p['kwh_cost'] ) ? (float) $p['kwh_cost'] : 28000,
+		);
+		$img = ! empty( $p['image'] ) ? '<img src="' . esc_url( $p['image'] ) . '" alt="" loading="lazy">' : '';
+		return '<section class="band savings" data-savings="' . esc_attr( wp_json_encode( $cfg ) ) . '"><div class="wrap sv-grid"><div class="sv-in">' . self::head( $p )
+			. '<div class="sv-mode" role="radiogroup" aria-label="Where will you use solar?"><button class="on" data-m="home" role="radio" aria-checked="true">Home</button><button data-m="biz" role="radio" aria-checked="false">Business or institution</button></div>'
+			. '<label class="sv-lab" for="svBill">Your monthly electricity bill</label><div class="sv-bill"><b data-sv-bill>KES 8,000</b><span>a month</span></div>'
+			. '<input type="range" id="svBill" min="2000" max="150000" step="500" value="8000" data-sv-range>'
+			. '<div class="sv-ticks"><span>KES 2,000</span><span>KES 150,000</span></div>'
+			. '<p class="fine">Estimates from typical Kenyan sun hours and tariffs. An engineer confirms the exact size and price on a free site survey.</p></div>'
+			. '<div class="sv-out"><div class="sv-pic">' . $img . '</div><div class="sv-card"><div class="sv-kpis"><div><small>Suggested system</small><b data-sv-size>3 kW</b><em data-sv-batt>5 kWh battery</em></div><div><small>You could save</small><b data-sv-save>KES 5,000</b><em>a month</em></div><div><small>Pays for itself in</small><b data-sv-pay>4 years</b><em>then the savings are yours</em></div></div>'
+			. '<div class="sv-bars"><div><span>Bill today</span><i style="--w:100%"><b data-sv-now>KES 8,000</b></i></div><div><span>With solar</span><i class="g" data-sv-barafter style="--w:40%"><b data-sv-after>KES 3,000</b></i></div></div>'
+			. '<div class="row"><a class="btn b-sun" href="' . esc_url( home_url( '/shop/kits/' ) ) . '" data-sv-kit>See matching kits</a><a class="btn b-line" href="' . esc_url( home_url( '/planner/' ) ) . '">Size it appliance by appliance</a></div></div></div></div></section>';
 	}
 
 	private static function r_text_image( $p ) {
@@ -722,8 +770,9 @@ final class Soko_Sections {
 	}
 
 	private static function r_cta_band( $p ) {
-		$blue = isset( $p['color'] ) && 'blue' === $p['color'];
-		return '<section class="cta band' . ( $blue ? ' blue' : '' ) . '"><div class="wrap"><div><h2>' . self::e( $p['title'] ) . '</h2><p>' . self::e( $p['text'] ) . '</p></div><div class="row">' . self::btn( $p['cta_label'], $p['cta_link'], $blue ? 'b-sun' : 'b-ink' ) . self::btn( isset( $p['cta2_label'] ) ? $p['cta2_label'] : '', isset( $p['cta2_link'] ) ? $p['cta2_link'] : '', 'b-line' ) . '</div></div></section>';
+		$img  = ! empty( $p['image'] ) ? $p['image'] : '';
+		$form = ! empty( $p['callback'] ) ? '<form class="cb" data-lead-form data-source="Call-me-back request" novalidate><input class="hp" name="website" tabindex="-1" autocomplete="off"><input name="name" placeholder="Your name" autocomplete="name" required aria-label="Your name"><input name="phone" placeholder="Phone, e.g. 0712 345 678" inputmode="tel" autocomplete="tel" required aria-label="Phone"><input type="hidden" name="interest" value="Call me back"><button class="btn b-sun" type="submit">Call me back</button></form>' : '';
+		return '<section class="cta band' . ( $img ? ' has-img' : '' ) . '"><div class="wrap"><div class="cta-copy"><h2>' . self::e( $p['title'] ) . '</h2><p>' . self::e( $p['text'] ) . '</p>' . $form . '<div class="row">' . self::btn( $p['cta_label'], $p['cta_link'], $form ? 'b-line' : 'b-sun' ) . self::btn( isset( $p['cta2_label'] ) ? $p['cta2_label'] : '', isset( $p['cta2_link'] ) ? $p['cta2_link'] : '', 'b-line' ) . '</div></div>' . ( $img ? '<div class="cta-pic"><img src="' . esc_url( $img ) . '" alt="" loading="lazy"><span class="cta-badge"><b>EPRA</b>licensed engineers</span></div>' : '' ) . '</div></section>';
 	}
 
 	private static function r_contact( $p ) {

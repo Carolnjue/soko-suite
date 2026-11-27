@@ -730,3 +730,51 @@ html[data-theme=dark] .opts label:has(input:checked),html[data-theme=dark] .app.
 html[data-theme=dark] a{--blue:#8fb0ff}
 html[data-theme=dark] .savings::before{display:none}html[data-theme=dark] .savings{background:#16191d}
 @media(max-width:920px){.hpic{position:relative;padding:0!important;align-self:stretch;height:auto!important}.hpic>img{position:absolute;inset:0;height:100%!important;width:100%;object-fit:cover}}
+/* ===== Motion and hierarchy ===== */
+.sec-head .kick{margin-bottom:10px}
+.hd .kick::before{transform-origin:left;transform:scaleX(0);transition:transform .7s cubic-bezier(.2,.7,.2,1) .05s}
+.hd.in .kick::before{transform:none}
+.hd .kick{opacity:0;transform:translateX(-10px);transition:opacity .5s,transform .5s}
+.hd.in .kick{opacity:1;transform:none}
+.w{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.06em;margin-bottom:-.06em}
+.w>span{display:inline-block;transform:translateY(105%);transition:transform .8s cubic-bezier(.2,.75,.15,1);transition-delay:calc(var(--i)*55ms + 80ms)}
+.hd.in .w>span{transform:none}
+.hd p{opacity:0;transform:translateY(12px);transition:opacity .7s .35s,transform .7s .35s}
+.hd.in p{opacity:1;transform:none}
+.sec-head>.btn,.sec-head>a{opacity:0;transform:translateY(10px);transition:opacity .6s .45s,transform .6s .45s,background .2s,color .2s,border-color .2s}
+.hd.in>.btn,.hd.in>a{opacity:1;transform:none}
+.ri{opacity:0;transform:translateY(34px) scale(.97);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1),border-color .2s,box-shadow .25s;transition-delay:var(--d,0ms)}
+.ri.in{opacity:1;transform:none}
+.ri.in:hover{transition-delay:0ms}
+.ri-b{transform:translateY(40px)}
+.ri .media,.ri .cimg,.ri .simg,.pj.ri img,.bgrid>.ri .bimg{clip-path:inset(0 0 100% 0 round 18px);transition:clip-path 1s cubic-bezier(.65,0,.25,1);transition-delay:calc(var(--d,0ms) + 120ms)}
+.ri.in .media,.ri.in .cimg,.ri.in .simg,.pj.ri.in img,.bgrid>.ri.in .bimg{clip-path:inset(0 0 0 0 round 18px)}
+.ri .media img,.ri .cimg img,.ri .simg img{transform:scale(1.18);transition:transform 1.4s cubic-bezier(.2,.7,.2,1)}
+.ri.in .media img,.ri.in .cimg img,.ri.in .simg img{transform:none}
+.card:hover .media img,.cat:hover .cimg img,.svc a:hover .simg img{transform:scale(1.07)!important;transition-duration:.6s}
+.strip .ri svg,.steps .ri svg,.cats .ri .cimg svg{transition:transform .5s cubic-bezier(.3,1.6,.5,1),background .2s,color .2s;transition-delay:calc(var(--d,0ms) + 300ms)}
+.strip .ri:not(.in) svg,.steps .ri:not(.in) svg{transform:scale(.4) rotate(-20deg)}
+/* hover depth */
+.svc a:hover{transform:translateY(-6px)!important;box-shadow:0 30px 50px -30px rgba(29,33,86,.6)}
+.svc a .sbody>svg{transition:transform .35s cubic-bezier(.3,1.6,.5,1),background .2s,color .2s}
+.svc a:hover .sbody>svg{transform:rotate(-8deg) scale(1.08);background:var(--sun);color:#1b1100}
+.cat:hover .cimg svg{background:var(--sun);color:#1b1100;transform:translateY(-3px) scale(1.06)}
+.cat .cimg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(10,16,40,.35));opacity:0;transition:opacity .3s}
+.cat:hover .cimg::after{opacity:1}
+.card:hover{transform:translateY(-5px)!important}
+.addbtn{background:var(--sun);color:#1b1100}
+.addbtn:hover{background:var(--deep,#1d2156);color:#fff;transform:scale(1.08) rotate(-6deg)}
+.addbtn.added{animation:pop .5s}
+@keyframes pop{40%{transform:scale(1.25)}}
+.pj figcaption{transform:translateY(14px);transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.pj:hover figcaption{transform:none}
+.pj figcaption p{opacity:.85}
+.pj .size{transition:transform .3s}.pj:hover .size{transform:translateY(-3px)}
+.strip .wrap>div{transition:transform .25s}.strip .wrap>div:hover{transform:translateY(-3px)}
+.strip .wrap>div:hover svg{background:var(--sun);color:#1b1100;transform:rotate(-8deg)}
+.steps li i,.steps li b:first-child{transition:transform .3s}
+.btn{position:relative;overflow:hidden}
+.b-sun::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);transition:left .7s}
+.b-sun:hover::after{left:130%}
+.fband a svg,.fband a i{transition:transform .3s cubic-bezier(.3,1.6,.5,1)}.fband a:hover svg,.fband a:hover i{transform:scale(1.12) rotate(-6deg)}
+@media(prefers-reduced-motion:reduce){.ri,.hd .kick,.hd p,.w>span,.sec-head>.btn{opacity:1!important;transform:none!important;clip-path:none!important}.ri .media,.ri .cimg,.ri .simg{clip-path:none!important}}

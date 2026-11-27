@@ -434,11 +434,15 @@ final class Soko_Sections {
 		if ( empty( $p['title'] ) && empty( $p['text'] ) ) {
 			return '';
 		}
-		return '<div class="sec-head"><div>' . ( ! empty( $p['title'] ) ? '<h2>' . self::e( $p['title'] ) . '</h2>' : '' ) . ( ! empty( $p['text'] ) ? '<p>' . self::e( $p['text'] ) . '</p>' : '' ) . '</div>' . $right . '</div>';
+		$kicks = array( 'categories' => 'Shop by need', 'products' => 'Best sellers', 'savings' => 'Savings calculator', 'services' => 'What we do', 'projects' => 'Our work', 'steps' => 'How it works', 'contact' => 'Talk to us', 'faq' => 'Good to know', 'testimonials' => 'Client stories', 'stats' => 'In numbers', 'features' => 'Why choose us', 'team' => 'Our people' );
+		$type  = isset( $p['_type'] ) ? $p['_type'] : '';
+		$kick  = isset( $p['kicker'] ) ? $p['kicker'] : ( isset( $kicks[ $type ] ) ? $kicks[ $type ] : '' );
+		return '<div class="sec-head"><div>' . ( $kick ? '<span class="kick">' . self::e( $kick ) . '</span>' : '' ) . ( ! empty( $p['title'] ) ? '<h2>' . self::e( $p['title'] ) . '</h2>' : '' ) . ( ! empty( $p['text'] ) ? '<p>' . self::e( $p['text'] ) . '</p>' : '' ) . '</div>' . $right . '</div>';
 	}
 
 	public static function render( $s ) {
 		$p = isset( $s['props'] ) ? (array) $s['props'] : array();
+		$p['_type'] = isset( $s['type'] ) ? $s['type'] : '';
 		$m = 'r_' . $s['type'];
 		if ( ! method_exists( __CLASS__, $m ) ) {
 			return '';

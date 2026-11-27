@@ -18,6 +18,7 @@ final class Soko_Settings {
 			'phone2'          => '0790 787 533',
 			'whatsapp'        => '254712936685',
 			'address'         => 'P.O. Box 51225 – 00100, Nairobi',
+			'pickup_address'  => '',
 			'hours'           => 'Monday to Saturday, 8:00 to 18:00',
 			'kra_pin'         => '',
 			'currency'        => 'KES',
@@ -151,6 +152,13 @@ final class Soko_Settings {
 		$k   = $map[ $type ];
 		$s   = self::all();
 		$n   = (int) $s[ 'next_' . $k ];
+		if ( 'po' !== $k ) {
+			// Never reissue a number that already exists.
+			global $wpdb;
+			while ( $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . soko_t( 'docs' ) . ' WHERE number = %s', $s[ 'prefix_' . $k ] . $n ) ) ) { // phpcs:ignore
+				++$n;
+			}
+		}
 		$s[ 'next_' . $k ] = $n + 1;
 		update_option( 'soko_settings', $s, false );
 		return $s[ 'prefix_' . $k ] . $n;

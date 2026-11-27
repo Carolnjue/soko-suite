@@ -139,6 +139,9 @@ final class Soko_PDF {
 				array( 'Against invoice', isset( $meta['invoice'] ) ? $meta['invoice'] : '' ),
 				array( 'Balance remaining', soko_money( isset( $meta['balance'] ) ? $meta['balance'] : 0 ) ),
 			);
+			if ( ! empty( $meta['credit'] ) && (float) $meta['credit'] > 0 ) {
+				$rows[] = array( 'Overpaid, held as your credit', soko_money( $meta['credit'] ) );
+			}
 			foreach ( $rows as $i => $r ) {
 				$pdf->SetFont( 'Helvetica', 0 === $i ? 'B' : '', 0 === $i ? 13 : 10 );
 				$pdf->Cell( 70, 10, self::t( $r[0] ), 'B', 0, 'L', 0 === $i );

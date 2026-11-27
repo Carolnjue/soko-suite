@@ -93,6 +93,7 @@ final class Soko_Store {
 			return;
 		}
 		self::$route = $route;
+		Soko_Ledger::$storefront = true;
 		if ( isset( $_GET['soko_preview'] ) ) { // phpcs:ignore
 			add_filter( 'show_admin_bar', '__return_false' );
 		}
@@ -404,6 +405,9 @@ final class Soko_Store {
 		$s   = Soko_Settings::all();
 		$del = '';
 		foreach ( (array) $s['delivery'] as $i => $d ) {
+			if ( preg_match( '/pick\s?-?up|collect/i', $d['label'] ) ) {
+				$d['note'] = trim( $d['note'] . ' · ' . ( ! empty( $s['pickup_address'] ) ? 'At ' . $s['pickup_address'] : 'We confirm the pickup point when we call' ), ' ·' );
+			}
 			$del .= '<label><input type="radio" name="delivery" value="' . (int) $i . '" data-fee="' . esc_attr( $d['fee'] ) . '"' . ( 0 === $i ? ' checked' : '' ) . '><span><b>' . esc_html( $d['label'] ) . '</b><small>' . esc_html( $d['note'] ) . '</small></span><b>' . ( (float) $d['fee'] ? esc_html( soko_money( $d['fee'] ) ) : 'Free' ) . '</b></label>';
 		}
 		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Secure checkout</span><h1>Checkout</h1><p>' . ( Soko_Mpesa::ready() ? 'Pay securely from your phone. You get a receipt straight away and can track your order online.' : 'Place your order in a minute. We confirm it with you, you pay, and you can track it online.' ) . '</p><ol class="costeps"><li class="on"><i>1</i>Cart</li><li class="on"><i>2</i>Your details</li><li><i>3</i>Payment</li><li><i>4</i>Receipt</li></ol></div></div></section>';
@@ -441,6 +445,12 @@ final class Soko_Store {
 				echo '<li class="' . ( false !== $idx && $i <= $idx ? 'done' : '' ) . '"><i></i>' . esc_html( $steps[ $k ] ) . '</li>';
 			}
 			echo '</ol>';
+			$dl = soko_setting( 'delivery' );
+			$di = isset( $d['meta']['delivery'] ) ? (int) $d['meta']['delivery'] : -1;
+			if ( isset( $dl[ $di ] ) && preg_match( '/pick\s?-?up|collect/i', $dl[ $di ]['label'] ) ) {
+				$pa = soko_setting( 'pickup_address' );
+				echo '<p class="pickup">' . soko_icon( 'kit', 18 ) . '<span><b>Pickup</b> ' . esc_html( $pa ? $pa : 'We will confirm the pickup point when we call you.' ) . '</span></p>'; // phpcs:ignore
+			}
 		}
 		echo '<h3>Items</h3><table class="lines">';
 		foreach ( $d['lines'] as $l ) {

@@ -103,7 +103,7 @@
     } else if (S.tab === 'footer') {
       body = field({ label: 'About text', type: 'textarea' }, S.site, 'footer.about') + field({ label: 'Closing line', type: 'text' }, S.site, 'footer.note') + '<p class="tiny">Contact details in the footer come from Settings → Business.</p>';
     }
-    p.innerHTML = tabs + '<div class="stbody">' + body + linkList() + '</div><div class="stfoot"><span class="tiny" data-dirty' + (S.dirty ? '' : ' hidden') + '>Unpublished changes</span><span class="acts"><button class="btn sm" data-discard>Discard</button><button class="btn sun" data-pub>' + (S.dirty ? 'Publish changes' : 'Published') + '</button></span></div>';
+    p.innerHTML = tabs + '<div class="stbody">' + body + linkList() + '</div><div class="stfoot"><span class="tiny" data-dirty' + (S.dirty ? '' : ' hidden') + '>Unpublished changes</span><span class="acts"><button class="btn sm ghost" data-hist>History</button><button class="btn sm" data-discard>Discard</button><button class="btn sun" data-pub>' + (S.dirty ? 'Publish changes' : 'Published') + '</button></span></div>';
     bindPanel(p);
   }
 
@@ -142,6 +142,7 @@
       if (b.dataset.iu) { e.preventDefault(); arrOp(b.dataset.iu, function (a) { var i = +b.dataset.i; if (i) a.splice(i - 1, 0, a.splice(i, 1)[0]); }); return; }
       if (b.dataset.id) { e.preventDefault(); arrOp(b.dataset.id, function (a) { var i = +b.dataset.i; if (i < a.length - 1) a.splice(i + 1, 0, a.splice(i, 1)[0]); }); return; }
       if (b.dataset.pub != null) return publish();
+      if (b.dataset.hist != null) return history();
       if (b.dataset.discard != null) return K.confirm('Discard unpublished changes?', 'Discard', true).then(function (y) { if (y) load(true); });
     };
     /* drag to reorder sections */
@@ -180,6 +181,12 @@
       if (+f.menu) S.site.header.menu.splice(Math.max(1, S.site.header.menu.length - 1), 0, { label: f.title, link: '/' + slug + '/' });
       S.page = slug; S.sec = null; K.closeModal(); K.toast('Page created. Publish to make it live.'); changed(); drawPanel();
     };
+  }
+  function history() {
+    K.api('site/history').then(function (h) {
+      var m = K.modal('Published versions', h.length ? '<p class="sub">Restore puts that version back live. What is live now is kept here too, so you can switch back.</p><ul class="list">' + h.map(function (x) { return '<li style="display:flex;align-items:center;gap:10px;justify-content:space-between"><span><b>' + esc(K.ds ? K.ds(x.time) : x.time) + '</b><br><small class="tiny">' + (x.user ? 'Before changes by ' + esc(x.user) : 'Earlier version') + '</small></span><button class="btn sm" data-ri="' + x.i + '">Restore</button></li>'; }).join('') + '</ul>' : '<div class="empty"><b>No earlier versions yet</b>Each time you publish, the previous version is kept here.</div>', '<button class="btn" data-mx>Close</button>');
+      $$('[data-ri]', m).forEach(function (b) { b.onclick = function () { K.confirm('Put this version back live on the website?', 'Restore').then(function (y) { if (!y) return; K.api('site/restore', { body: { i: +b.dataset.ri } }).then(function () { K.closeModal(); K.toast('Restored. The website is updated.'); load(true); }).catch(K.fail); }); }; });
+    }).catch(K.fail);
   }
   function publish() {
     var b = $('[data-pub]'); if (b) { b.disabled = true; b.textContent = 'Publishing…'; }

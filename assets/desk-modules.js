@@ -26,6 +26,8 @@
       (d.low || []).forEach(function (p) { att.push(['var(--warn)', 'Low stock: ' + esc(p.name), (+p.stock) + ' left', '#stock/' + p.id]); });
       (d.licences || []).forEach(function (l) { att.push(['var(--brand)', esc(l.name) + ' renews ' + K.ds(l.expires), 'Renew', '#compliance']); });
       if (d.etims && d.etims.pending) att.push(['var(--brand)', d.etims.pending + ' invoice' + (d.etims.pending > 1 ? 's' : '') + ' waiting for eTIMS', 'Sign', '#compliance']);
+      var stt = K.me.settings || {};
+      if (K.can('settings') && !stt.pickup_address && (stt.delivery || []).some(function (o) { return /pick\s?-?up|collect/i.test(o.label || ''); })) att.push(['var(--warn)', 'Add your pickup address so customers who collect know where to go', 'Add', '#settings']);
       if (d.leads_new) att.push(['var(--ok)', d.leads_new + ' new lead' + (d.leads_new > 1 ? 's' : '') + ' to call', 'Call', '#crm']);
       var finding = 'Sales for ' + esc(d.month) + ' are ' + money(d.sales) + (ch != null ? ', ' + Math.abs(ch) + '% ' + (ch >= 0 ? 'ahead of' : 'behind') + ' last month' : '') + '.' + ((d.overdue || []).length ? ' ' + d.overdue.length + ' invoice' + (d.overdue.length > 1 ? 's need' : ' needs') + ' chasing.' : ' Nothing is overdue.');
       v.innerHTML = K.head(greet() + (/admin|^[a-z0-9_.-]+$/i.test(K.me.first || '') && !/ /.test(K.me.first) && /admin/i.test(K.me.first) ? '' : ', ' + esc(K.me.first)), finding, (K.can('reports') ? '<a class="btn" href="#reports">Reports</a>' : '') + (K.can('sales') ? '<button class="btn" data-nq>New quotation</button><button class="btn sun" data-ni>New invoice</button>' : '')) +
@@ -47,7 +49,8 @@
           else { el.classList.remove('link'); el.removeAttribute('data-go'); el.removeAttribute('data-set'); }
         });
       }
-      K.barChart($('[data-cash]', v), d.weeks, ['in', 'out'], ['var(--brand)', 'var(--sun)']);
+      if (K.can('reports')) K.barChart($('[data-cash]', v), d.weeks, ['in', 'out'], ['var(--brand)', 'var(--sun)']);
+      else { K.barChart($('[data-cash]', v), d.weeks, ['in'], ['var(--brand)']); var cb = $('[data-cash]', v).closest('.box'); if (cb) { var lg = cb.querySelector('.legend'); if (lg) lg.innerHTML = '<span><i style="background:var(--brand)"></i>Money in</span>'; var h3 = cb.querySelector('h3'); if (h3) h3.textContent = 'Money in'; } }
       $$('[data-go]', v).forEach(function (el) { el.onclick = function () { location.hash = el.dataset.go; }; });
       var nq = $('[data-nq]', v), ni = $('[data-ni]', v);
       if (nq) nq.onclick = function () { K.editDoc('quote'); };
@@ -73,7 +76,7 @@
       var draw = function () {
         var list = rows.filter(function (r) {
           var st = t === 'web' ? (r.fulfil || 'awaiting_payment') : r.state;
-          return (!salesState.state || st === salesState.state || (salesState.state === 'owed' && ['unpaid', 'partial', 'overdue'].indexOf(st) > -1)) && (!salesState.q || (r.number + ' ' + (r.customer_name || '') + ' ' + (r.customer_phone || '')).toLowerCase().indexOf(salesState.q.toLowerCase()) > -1);
+          return (!salesState.state || st === salesState.state || (salesState.state === 'owed' && ['unpaid', 'partial', 'overdue'].indexOf(st) > -1)) && K.qmatch(salesState.q, r.number + ' ' + (r.customer_name || '') + ' ' + (r.customer_phone || ''), r.customer_phone);
         });
         var live = list.filter(function (r) { return r.state !== 'void' && r.status !== 'void'; }), total = live.reduce(function (a, r) { return a + r.total; }, 0), bal = live.reduce(function (a, r) { return a + (r.type === 'invoice' ? r.balance : 0); }, 0);
         var cols = [{ k: 'number', label: t === 'receipt' ? 'Receipt' : t === 'quote' ? 'Quotation' : 'Invoice', f: function (r) { return '<b class="mono">' + esc(r.number) + '</b>'; } }, { k: 'customer_name', label: 'Customer', f: function (r) { return esc(r.customer_name || '—') + '<div class="tiny">' + esc(K.phone(r.customer_phone)) + '</div>'; } }, { k: 'date', label: 'Date', f: function (r) { return K.ds(r.date); } }];
@@ -131,7 +134,7 @@
       if (d.parent) links.push('From <a href="#" data-open="' + d.parent.id + '">' + esc(d.parent.number) + '</a>');
       (d.children || []).forEach(function (ch) { links.push((ch.type === 'receipt' ? 'Receipt ' : ch.type === 'invoice' ? 'Invoice ' : '') + '<a href="#" data-open="' + ch.id + '">' + esc(ch.number) + '</a>'); });
       var stks = (d.stk || []).length ? '<p class="tiny">Last M-Pesa prompt: ' + esc(d.stk[0].status) + ' · ' + esc(d.stk[0].message) + '</p>' : '';
-      var body = '<div class="docv"><div class="dvh"><div><b>' + esc(d.number) + '</b><div>' + K.badge(d.state) + (d.source === 'web' ? ' <span class="st">Website</span>' : '') + '</div></div><div style="text-align:right"><div class="tiny">' + (isQ ? 'Valid to ' + K.d(d.due) : isInv ? 'Due ' + K.d(d.due) : K.d(d.date)) + '</div><b>' + money(isInv && d.balance > 0 && !isVoid ? d.balance : d.total) + '</b><div class="tiny">' + (isInv ? (isVoid ? 'cancelled · nothing to pay' : d.balance <= 0 ? 'paid in full' : d.balance < d.total ? 'still to pay · ' + money(d.total - d.balance) + ' paid of ' + money(d.total) : 'to pay') : 'total') + '</div></div></div>' +
+      var body = '<div class="docv"><div class="dvh"><div><b>' + esc(d.number) + '</b><div>' + K.badge(d.state) + (d.source === 'web' ? ' <span class="st">Website</span>' : '') + '</div></div><div style="text-align:right"><div class="tiny">' + (isQ ? 'Valid to ' + K.d(d.due) : isInv ? 'Due ' + K.d(d.due) : K.d(d.date)) + '</div><b>' + money(isInv && d.balance > 0 && !isVoid ? d.balance : d.total) + '</b><div class="tiny">' + (isInv ? (isVoid ? 'cancelled · nothing to pay' : d.balance <= 0 ? 'paid in full' + (+d.paid > +d.total + 0.5 ? ' · ' + money(d.paid - d.total) + ' overpaid, held as customer credit' : '') : d.balance < d.total ? 'still to pay · ' + money(d.total - d.balance) + ' paid of ' + money(d.total) : 'to pay') : 'total') + '</div></div></div>' +
         '<div style="padding:14px 16px"><dl class="kv"><dt>Customer</dt><dd><b>' + esc(c.name || '—') + '</b></dd><dt>Phone</dt><dd>' + esc(K.phone(c.phone)) + '</dd>' + (c.email ? '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' : '') + (c.kra ? '<dt>KRA PIN</dt><dd>' + esc(c.kra) + '</dd>' : '') + '<dt>Date</dt><dd>' + K.d(d.date) + '</dd>' + (links.length ? '<dt>Linked</dt><dd>' + links.join(' · ') + '</dd>' : '') + '</dl></div>' +
         '<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Price</th><th class="n">Amount</th></tr></thead><tbody>' + d.lines.map(function (l) { return '<tr><td>' + esc(l.description) + '</td><td class="n">' + K.num(l.qty) + '</td><td class="n">' + money(l.price, 1) + '</td><td class="n">' + money(l.qty * l.price, 1) + '</td></tr>'; }).join('') + '</tbody></table>' +
         '<div class="tot">' + (d.vat ? '<div><span>Excl. VAT</span><span>' + money(d.subtotal) + '</span></div><div><span>VAT</span><span>' + money(d.vat) + '</span></div>' : '') + '<div class="g"><span>Total</span><span>' + money(d.total) + '</span></div>' + (isInv && d.paid ? '<div><span>Paid</span><span>' + money(d.paid) + '</span></div><div><b>Balance</b><b>' + money(d.balance) + '</b></div>' : '') + '</div>' + (d.notes ? '<p style="padding:0 16px 14px;white-space:pre-line" class="tiny">' + esc(d.notes) + '</p>' : '') + '</div>' +
@@ -168,7 +171,7 @@
           if (a === 'void') return K.confirm('Cancel ' + esc(d.number) + '? It stays on record as cancelled.', 'Cancel invoice', true).then(function (y) { if (y) act('void').then(function () { K.openDoc(d.id); K.route(); }).catch(K.fail); });
           if (a === 'decline') return act('status', { status: 'declined' }).then(function () { K.openDoc(d.id); }).catch(K.fail);
           if (a === 'deliver') return act('deliver').then(function () { K.openDoc(d.id); }).catch(K.fail);
-          if (a === 'job') return act('job').then(function () { K.toast('Installation job created.'); }).catch(K.fail);
+          if (a === 'job') return act('job').catch(K.fail);
           if (a === 'etims') return act('etims', { ref: $('[data-et]', dr).value }).then(function () { K.openDoc(d.id); K.refreshBadges(); }).catch(K.fail);
         };
       });
@@ -247,7 +250,7 @@
       };
       var cs = $('[data-cs]', m), cd = $('[data-cd]', m);
       var cdraw = function () {
-        var q = cs.value.toLowerCase(), list = custs.filter(function (c) { return !q || (c.name + ' ' + c.phone).toLowerCase().indexOf(q) > -1; }).slice(0, 8);
+        var q = cs.value.toLowerCase(), list = custs.filter(function (c) { return K.qmatch(q, c.name + ' ' + (c.email || '') + ' ' + c.phone, c.phone); }).slice(0, 8);
         cd.innerHTML = list.map(function (c) { return '<button type="button" data-cc="' + c.id + '"><span>' + esc(c.name) + '<br><small>' + esc(K.phone(c.phone)) + ' · ' + esc(c.county || '') + '</small></span>' + (c.owes > 0 ? '<small>owes ' + money(c.owes) + '</small>' : '') + '</button>'; }).join('') + (q ? '<button type="button" data-cnew><span>New customer: <b>' + esc(cs.value) + '</b></span></button>' : '');
         cd.hidden = !cd.innerHTML;
       };
@@ -270,7 +273,7 @@
           if (cust && (f.email !== (cust.email || '') || f.kra !== (cust.kra || ''))) K.api('customers/' + cust.id, { body: { email: f.email, kra: f.kra } });
           b.disabled = true;
           K.api(doc ? 'docs/' + doc.id : 'docs', { body: payload }).then(function (r) {
-            K.closeModal(); K.toast((doc ? 'Saved ' : 'Created ') + r.number + (payload.send && r.customer && r.customer.email ? ' and emailed to ' + r.customer.email : ''));
+            K.closeModal(); var mt = (doc ? 'Saved ' : 'Created ') + r.number; if (r._mail === 'sent') K.toast(mt + ' and emailed to ' + r.customer.email + '.'); else if (r._mail === 'noemail') K.toast(mt + '. Not emailed: add the customer\'s email address, or share it by WhatsApp.', true); else if (r._mail === 'failed') K.toast(mt + '. The email could not be sent; it stays as a draft. Share it by WhatsApp instead.', true); else K.toast(mt + '.');
             salesState.tab = type; if (K.mod === 'sales') K.route(); K.openDoc(r.id);
           }).catch(function (e) { b.disabled = false; K.fail(e); });
         };
@@ -294,7 +297,7 @@
         '<div class="kpi link" data-go="#settings/payments"><small>' + (mp.type === 'till' ? 'Till number' : 'Paybill') + '</small><b>' + esc((mp.type === 'till' ? mp.till : mp.shortcode) || 'Not set') + '</b><i class="mut">Account number = invoice number</i></div></div>' +
         '<div class="box"><div class="toolbar"><input type="search" placeholder="Search code, name or phone" data-q value="' + esc(payState.q) + '"><div class="chips"><button class="chip' + (!payState.f ? ' on' : '') + '" data-f="">All</button><button class="chip' + (payState.f === 'unmatched' ? ' on' : '') + '" data-f="unmatched">Unmatched</button><button class="chip' + (payState.f === 'matched' ? ' on' : '') + '" data-f="matched">Matched</button></div></div><div data-t></div></div>';
       var draw = function () {
-        var list = rows.filter(function (p) { return (!payState.f || (payState.f === 'matched') === (p.status === 'matched')) && (!payState.q || (p.code + ' ' + p.payer + ' ' + p.phone + ' ' + p.account_ref).toLowerCase().indexOf(payState.q.toLowerCase()) > -1); });
+        var list = rows.filter(function (p) { return (!payState.f || (payState.f === 'matched') === (p.status === 'matched')) && K.qmatch(payState.q, p.code + ' ' + p.payer + ' ' + p.phone + ' ' + p.account_ref, p.phone); });
         $('[data-t]', v).innerHTML = K.table([
           { k: 'received', label: 'Received', f: function (p) { return K.ds(p.received) + ' <span class="tiny">' + K.t(p.received) + '</span>'; } },
           { k: 'code', label: 'Code', f: function (p) { return '<b class="mono">' + esc(p.code) + '</b>'; } },
@@ -321,6 +324,7 @@
     var stages = K.me.settings.lead_stages || ['New', 'Contacted', 'Survey booked', 'Quoted', 'Won', 'Lost'];
     Promise.all([K.api('leads'), K.api('customers')]).then(function (res) {
       var leads = res[0], custs = res[1];
+      if (arg && arg[0] === 'l') { crmState.tab = 'pipe'; var ld = leads.filter(function (l) { return l.id == arg.slice(1); })[0]; if (ld) setTimeout(function () { K.editLead(ld, stages); }, 60); }
       v.innerHTML = K.head('Customers and leads', 'Every solar calculator result, quote request and enquiry lands here as a lead. Drag a card to move it along.', '<button class="btn" data-nc>' + ic(I.plus) + 'New customer</button><button class="btn sun" data-nl>' + ic(I.plus) + 'New lead</button>') +
         K.tabs('crm', [['pipe', 'Pipeline', leads.filter(function (l) { return l.stage !== 'Won' && l.stage !== 'Lost'; }).length], ['cust', 'Customers', custs.length]], crmState.tab) + '<div data-body></div>';
       var body = $('[data-body]', v);
@@ -344,11 +348,11 @@
         });
       } else {
         var draw = function () {
-          var list = custs.filter(function (c) { return !crmState.q || (c.name + ' ' + c.phone + ' ' + c.email + ' ' + c.county).toLowerCase().indexOf(crmState.q.toLowerCase()) > -1; });
+          var list = custs.filter(function (c) { return K.qmatch(crmState.q, c.name + ' ' + c.phone + ' ' + c.email + ' ' + c.county, c.phone); });
           body.innerHTML = '<div class="box"><div class="toolbar"><input type="search" placeholder="Search customers" value="' + esc(crmState.q) + '" data-q></div>' + K.table([
             { k: 'name', label: 'Customer', f: function (c) { return '<b>' + esc(c.name) + '</b><div class="tiny">' + esc(c.type) + '</div>'; } },
             { k: 'phone', label: 'Phone', f: function (c) { return esc(K.phone(c.phone)); } }, { k: 'email', label: 'Email' }, { k: 'county', label: 'County' },
-            { k: 'invoices', label: 'Invoices', n: 1 }, { k: 'ltv', label: 'Bought', n: 1, f: function (c) { return money(c.ltv); } }, { k: 'owes', label: 'Owes', n: 1, f: function (c) { return c.owes > 0 ? '<b class="down">' + money(c.owes) + '</b>' : '—'; } }
+            { k: 'invoices', label: 'Invoices', n: 1 }, { k: 'ltv', label: 'Bought', n: 1, f: function (c) { return money(c.ltv); } }, { k: 'owes', label: 'Owes', n: 1, f: function (c) { return (c.owes > 0 ? '<b class="down">' + money(c.owes) + '</b>' : '—') + (c.credit > 0 ? '<br><small class="up">' + money(c.credit) + ' credit</small>' : ''); } }
           ], list, { click: 1, sortKey: crmState.sortKey, sortDir: crmState.sortDir, empty: 'No customers yet' }) + '</div>';
           $('[data-q]', body).oninput = function (e) { crmState.q = e.target.value; var p = e.target.selectionStart; draw(); var n = $('[data-q]', body); n.focus(); n.setSelectionRange(p, p); };
           $$('[data-row]', body).forEach(function (tr) { tr.onclick = function () { K.openCustomer(+tr.dataset.row); }; });
@@ -377,13 +381,20 @@
   K.editCustomer = function (c) {
     c = c || { type: 'Home' };
     var m = K.modal(c.id ? 'Edit ' + esc(c.name) : 'New customer', '<div class="grid2">' + K.field('Name', 'name', c.name, 'text') + K.field('Type', 'type', c.type, 'select', { options: opts(['Home', 'Business', 'Institution', 'Farm', 'NGO', 'Government']) }) + '</div><div class="grid2">' + K.field('Phone', 'phone', K.phone(c.phone), 'tel') + K.field('Email', 'email', c.email, 'email') + '</div><div class="grid2">' + K.field('KRA PIN', 'kra', c.kra, 'text') + K.field('County', 'county', c.county, 'text') + '</div>' + K.field('Address or location', 'address', c.address, 'text') + K.field('Notes', 'notes', c.notes, 'textarea'), '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-s>Save</button>');
-    $('[data-s]', m).onclick = function () { K.api('customers' + (c.id ? '/' + c.id : ''), { body: K.read(m) }).then(function () { K.closeModal(); K.toast('Saved'); K.route(); }).catch(K.fail); };
+    $('[data-s]', m).onclick = function () {
+      var f = K.read(m);
+      var save = function () { return K.api('customers' + (c.id ? '/' + c.id : ''), { body: f }).then(function () { K.closeModal(); K.toast('Saved'); K.route(); }); };
+      save().catch(function (e) {
+        if (e && e.code === 'soko_dup') { K.confirm(esc(e.message) + ' Save a second customer with the same number anyway?', 'Save anyway').then(function (y) { if (y) { f.allow_dup = 1; save().catch(K.fail); } }); return; }
+        K.fail(e);
+      });
+    };
   };
   K.openCustomer = function (id) {
     Promise.all([K.api('customers'), K.api('docs?customer=' + id)]).then(function (res) {
       var c = res[0].filter(function (x) { return +x.id === id; })[0]; if (!c) return;
       var docs = res[1];
-      var dr = K.drawer(esc(c.name), '<div class="kpis"><div class="kpi"><small>Bought</small><b>' + money(c.ltv) + '</b></div><div class="kpi"><small>Owes</small><b class="' + (c.owes > 0 ? 'down' : '') + '">' + money(c.owes) + '</b></div></div><dl class="kv"><dt>Phone</dt><dd>' + esc(K.phone(c.phone)) + '</dd><dt>Email</dt><dd>' + esc(c.email || '—') + '</dd><dt>KRA PIN</dt><dd>' + esc(c.kra || '—') + '</dd><dt>Location</dt><dd>' + esc([c.address, c.county].filter(Boolean).join(', ') || '—') + '</dd>' + (c.notes ? '<dt>Notes</dt><dd>' + esc(c.notes) + '</dd>' : '') + '</dl>' +
+      var dr = K.drawer(esc(c.name), '<div class="kpis"><div class="kpi"><small>Bought</small><b>' + money(c.ltv) + '</b></div><div class="kpi"><small>Owes</small><b class="' + (c.owes > 0 ? 'down' : '') + '">' + money(c.owes) + '</b>' + (c.credit > 0 ? '<i class="up">' + money(c.credit) + ' in credit</i>' : '') + '</div></div><dl class="kv"><dt>Phone</dt><dd>' + esc(K.phone(c.phone)) + '</dd><dt>Email</dt><dd>' + esc(c.email || '—') + '</dd><dt>KRA PIN</dt><dd>' + esc(c.kra || '—') + '</dd><dt>Location</dt><dd>' + esc([c.address, c.county].filter(Boolean).join(', ') || '—') + '</dd>' + (c.notes ? '<dt>Notes</dt><dd>' + esc(c.notes) + '</dd>' : '') + '</dl>' +
         '<div class="actgrid"><button class="btn" data-e>' + ic(I.edit) + 'Edit</button>' + (K.can('sales') ? '<button class="btn" data-nq>New quotation</button><button class="btn sun" data-ni>New invoice</button>' : '') + (c.phone ? '<a class="btn" target="_blank" rel="noopener" href="https://wa.me/' + K.waNum(c.phone) + '">' + ic(I.wa) + 'WhatsApp</a><a class="btn" href="tel:+' + esc(String(c.phone).replace(/^\+/, '')) + '">' + ic(I.phone) + 'Call</a>' : '') + '</div>' +
         '<div class="box"><h3>History</h3>' + K.table([{ k: 'number', label: 'Document', f: function (d) { return '<b class="mono">' + esc(d.number) + '</b>'; } }, { k: 'date', label: 'Date', f: function (d) { return K.ds(d.date); } }, { k: 'total', label: 'Total', n: 1, f: function (d) { return money(d.total); } }, { k: 'state', label: 'Status', f: function (d) { return K.badge(d.state); } }], docs, { click: 1, stack: false, empty: 'No documents yet' }) + '</div>', '', true);
       $('[data-e]', dr).onclick = function () { K.editCustomer(c); };
@@ -516,7 +527,7 @@
             { k: 'cat_name', label: 'Category' },
             (K.can('reports') || K.can('purchases') ? { k: 'cost', label: 'Cost', n: 1, f: function (p) { return p.cost != null ? money(p.cost, 1) : ''; } } : null),
             { k: 'price', label: 'Price', n: 1, f: function (p) { return money(p.price, 1); } },
-            { k: 'stock', label: 'In stock', n: 1, f: function (p) { return p.kind !== 'product' ? '<span class="tiny">Service</span>' : (p.stock <= p.reorder ? K.badge('low', K.num(p.stock)) : K.num(p.stock)); } },
+            { k: 'stock', label: 'In stock', n: 1, f: function (p) { return p.kind !== 'product' ? '<span class="tiny">Service</span>' : (p.stock <= p.reorder ? K.badge('low', K.num(p.stock)) : K.num(p.stock)) + (p.held > 0 ? '<br><small class="tiny" title="Held for unpaid website orders from the last 48 hours">' + K.num(p.held) + ' held</small>' : ''); } },
             { k: 'reorder', label: 'Reorder at', n: 1, f: function (p) { return p.kind === 'product' ? K.num(p.reorder) : ''; } },
             { k: 'visible', label: 'On website', f: function (p) { return '<input type="checkbox" class="sw" data-vis="' + p.id + '"' + (+p.visible ? ' checked' : '') + ' aria-label="Show on website">'; } }
           ], list, { click: 1, sortKey: stockState.sortKey, sortDir: stockState.sortDir, empty: 'No products match' }) + '</div>';
@@ -577,7 +588,7 @@
   K.catEditor = function (host) {
     var cats = JSON.parse(JSON.stringify(K.cats)), names = Object.keys(D.icons);
     var draw = function () {
-      host.innerHTML = '<div class="box"><p class="sub">Categories group the shop, the mega menu and the reports. Groups become the columns in the menu.</p>' + cats.map(function (c, i) { return '<div class="grid3" style="grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) auto;align-items:end;border-bottom:1px solid var(--line);padding:10px 0"><button class="thumbc" data-ico="' + i + '" title="Change icon" style="border:0">' + K.icon(c.icon, 28) + '</button>' + K.field('Name', 'n' + i, c.name, 'text') + K.field('Menu group', 'g' + i, c.group, 'text') + '<div class="acts" style="margin-bottom:12px"><button class="btn sm ghost" data-up="' + i + '">' + ic(I.up) + '</button><button class="btn sm ghost" data-dn="' + i + '">' + ic(I.down) + '</button><button class="btn sm ghost" data-rm="' + i + '">' + ic(I.trash) + '</button></div></div>'; }).join('') +
+      host.innerHTML = '<div class="box"><p class="sub">Categories group the shop, the mega menu and the reports. Groups become the columns in the menu.</p>' + cats.map(function (c, i) { return '<div class="grid3" style="grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) auto;align-items:end;border-bottom:1px solid var(--line);padding:10px 0"><button class="thumbc" data-ico="' + i + '" title="Change icon" style="border:0">' + K.icon(c.icon, 28) + '</button>' + K.field('Name', 'n' + i, c.name, 'text') + K.field('Menu group', 'g' + i, c.group, 'text') + '<div class="acts" style="margin-bottom:12px"><button class="btn sm ghost" data-up="' + i + '" aria-label="Move up" title="Move up">' + ic(I.up) + '</button><button class="btn sm ghost" data-dn="' + i + '" aria-label="Move down" title="Move down">' + ic(I.down) + '</button><button class="btn sm ghost" data-rm="' + i + '" aria-label="Remove category" title="Remove category">' + ic(I.trash) + '</button></div></div>'; }).join('') +
         '<div class="acts" style="margin-top:12px"><button class="btn" data-add>' + ic(I.plus) + 'Add category</button><button class="btn pri" data-save>Save categories</button></div></div>';
     };
     var pull = function () { cats.forEach(function (c, i) { var n = $('[name=n' + i + ']', host), g = $('[name=g' + i + ']', host); if (n) c.name = n.value; if (g) c.group = g.value; }); };
@@ -587,7 +598,14 @@
       if (t.dataset.add != null) { cats.push({ id: '', name: 'New category', icon: 'panel', group: 'More' }); draw(); }
       if (t.dataset.up) { var i = +t.dataset.up; if (i) { cats.splice(i - 1, 0, cats.splice(i, 1)[0]); draw(); } }
       if (t.dataset.dn) { var j = +t.dataset.dn; if (j < cats.length - 1) { cats.splice(j + 1, 0, cats.splice(j, 1)[0]); draw(); } }
-      if (t.dataset.rm) { cats.splice(+t.dataset.rm, 1); draw(); }
+      if (t.dataset.rm) {
+        var ci = +t.dataset.rm, cc = cats[ci];
+        K.products().then(function (ps) {
+          var n = cc.id ? ps.filter(function (p) { return p.cat === cc.id; }).length : 0;
+          if (n) { K.toast(cc.name + ' has ' + n + ' product' + (n > 1 ? 's' : '') + '. Move them to another category first.', true); return; }
+          K.confirm('Remove the category <b>' + esc(cc.name) + '</b>? It disappears from the shop menu when you save.', 'Remove', true).then(function (y) { if (y) { cats.splice(ci, 1); draw(); } });
+        });
+      }
       if (t.dataset.ico) {
         var k = +t.dataset.ico, m = K.modal('Choose an icon', '<div class="iconpick">' + names.map(function (n) { return '<button data-pick="' + n + '" class="' + (cats[k].icon === n ? 'on' : '') + '">' + K.icon(n, 28) + '</button>'; }).join('') + '</div>');
         m.addEventListener('click', function (ev) { var b = ev.target.closest('[data-pick]'); if (b) { cats[k].icon = b.dataset.pick; K.closeModal(); draw(); } });
@@ -759,7 +777,7 @@
     $$('[data-tabs] button', v).forEach(function (b) { b.onclick = function () { location.hash = 'settings/' + b.dataset.t; }; });
     var b = $('[data-b]', v), save = function (data) { return K.api('settings', { body: data }).then(function (n) { K.me.settings = n; K.toast('Saved'); return n; }).catch(K.fail); };
     if (tab === 'business') {
-      b.innerHTML = '<div class="grid2">' + K.field('Business name', 'business', s.business) + K.field('Tagline', 'tagline', s.tagline) + '</div><div class="grid3">' + K.field('Phone', 'phone', s.phone) + K.field('Second phone', 'phone2', s.phone2) + K.field('WhatsApp number', 'whatsapp', s.whatsapp, 'text', { hint: 'International format, e.g. 254712936685' }) + '</div><div class="grid2">' + K.field('Email', 'email', s.email) + K.field('Send alerts and new orders to', 'notify_email', s.notify_email) + '</div>' + K.field('Address', 'address', s.address) + '<div class="grid2">' + K.field('Opening hours', 'hours', s.hours) + K.field('KRA PIN', 'kra_pin', s.kra_pin) + '</div><button class="btn pri" data-s>Save</button>';
+      b.innerHTML = '<div class="grid2">' + K.field('Business name', 'business', s.business) + K.field('Tagline', 'tagline', s.tagline) + '</div><div class="grid3">' + K.field('Phone', 'phone', s.phone) + K.field('Second phone', 'phone2', s.phone2) + K.field('WhatsApp number', 'whatsapp', s.whatsapp, 'text', { hint: 'International format, e.g. 254712936685' }) + '</div><div class="grid2">' + K.field('Email', 'email', s.email) + K.field('Send alerts and new orders to', 'notify_email', s.notify_email) + '</div>' + K.field('Postal address', 'address', s.address) + K.field('Pickup address (shop or warehouse)', 'pickup_address', s.pickup_address || '', 'text', { ph: 'e.g. Ground floor, Kenya Cinema Plaza, Moi Avenue, Nairobi', hint: 'Shown to customers who choose pickup, on checkout, tracking and the invoice.' }) + '<div class="grid2">' + K.field('Opening hours', 'hours', s.hours) + K.field('KRA PIN', 'kra_pin', s.kra_pin) + '</div><button class="btn pri" data-s>Save</button>';
       $('[data-s]', b).onclick = function () { save(K.read(b)); };
     }
     if (tab === 'payments') {

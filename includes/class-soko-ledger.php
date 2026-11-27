@@ -11,11 +11,38 @@ final class Soko_Ledger {
 
 	/* ------------------------------------------------------------ products */
 
+	/** Storefront mode: stock shown to customers excludes stock held for unpaid web orders. */
+	public static $storefront = false;
+	private static $held_cache = null;
+
+	/** Units held for unpaid website orders placed in the last 48 hours, by product. */
+	public static function held() {
+		if ( null !== self::$held_cache ) {
+			return self::$held_cache;
+		}
+		global $wpdb;
+		$since = gmdate( 'Y-m-d H:i:s', strtotime( soko_now() . ' -48 hours' ) );
+		$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT l.product_id AS pid, SUM(l.qty) AS q FROM ' . soko_t( 'lines' ) . ' l JOIN ' . soko_t( 'docs' ) . " d ON d.id = l.doc_id WHERE d.type = 'invoice' AND d.source = 'web' AND d.status <> 'void' AND d.paid < d.total AND d.fulfil <> 'delivered' AND d.created >= %s AND l.product_id > 0 GROUP BY l.product_id", $since ), ARRAY_A ); // phpcs:ignore
+		self::$held_cache = array();
+		foreach ( (array) $rows as $x ) {
+			self::$held_cache[ (int) $x['pid'] ] = (float) $x['q'];
+		}
+		return self::$held_cache;
+	}
+
 	public static function product_row( $r ) {
 		if ( ! $r ) {
 			return null;
 		}
 		$r          = (array) $r;
+		if ( 'product' === ( isset( $r['kind'] ) ? $r['kind'] : '' ) ) {
+			$h           = self::held();
+			$r['held']   = isset( $h[ (int) $r['id'] ] ) ? $h[ (int) $r['id'] ] : 0;
+			$r['available'] = max( 0, (float) $r['stock'] - $r['held'] );
+			if ( self::$storefront ) {
+				$r['stock'] = $r['available'];
+			}
+		}
 		$r['specs'] = soko_json( $r['specs'] );
 		$r['images'] = soko_abs( soko_json( $r['images'] ) );
 		if ( $r['images'] && 1 === count( $r['images'] ) && false !== strpos( $r['images'][0], '/assets/seed/prod-' ) ) {
@@ -538,7 +565,7 @@ final class Soko_Ledger {
 				'total'       => $pay['amount'],
 				'paid'        => $pay['amount'],
 				'parent_id'   => $inv['id'],
-				'meta'        => wp_json_encode( array( 'invoice' => $inv['number'], 'code' => $pay['code'], 'method' => $pay['method'], 'balance' => max( 0, $inv['total'] - $paid ) ) ),
+				'meta'        => wp_json_encode( array( 'invoice' => $inv['number'], 'code' => $pay['code'], 'method' => $pay['method'], 'balance' => max( 0, $inv['total'] - $paid ), 'credit' => max( 0, round( $paid - $inv['total'], 2 ) ) ) ),
 				'token'       => wp_generate_password( 20, false ),
 				'demo'        => $pay['demo'],
 				'created'     => soko_now(),

@@ -392,6 +392,36 @@ final class Soko_Sections {
 		return sanitize_textarea_field( (string) $v );
 	}
 
+	/** Keep the last ten published versions so a change can be undone. */
+	public static function remember( $site ) {
+		$h = get_option( 'soko_site_history', array() );
+		$h = is_array( $h ) ? $h : array();
+		$u = wp_get_current_user();
+		array_unshift( $h, array( 'time' => soko_now(), 'user' => $u && $u->ID ? $u->display_name : '', 'site' => $site ) );
+		update_option( 'soko_site_history', array_slice( $h, 0, 10 ), false );
+	}
+
+	public static function history() {
+		$h = get_option( 'soko_site_history', array() );
+		$out = array();
+		foreach ( (array) $h as $i => $v ) {
+			$out[] = array( 'i' => $i, 'time' => $v['time'], 'user' => $v['user'] );
+		}
+		return $out;
+	}
+
+	public static function restore( $i ) {
+		$h = get_option( 'soko_site_history', array() );
+		if ( empty( $h[ $i ]['site'] ) ) {
+			return new WP_Error( 'soko', 'That version is no longer available.', array( 'status' => 404 ) );
+		}
+		$ver = $h[ $i ]['site'];
+		self::remember( self::site() );
+		update_option( 'soko_site', $ver, false );
+		update_option( 'soko_flush', 1, false );
+		return $ver;
+	}
+
 	public static function save( $data ) {
 		if ( isset( $data['site'] ) && is_array( $data['site'] ) && isset( $data['site']['pages'] ) ) {
 			$data = $data['site'];
@@ -404,6 +434,7 @@ final class Soko_Sections {
 			return array( 'draft' => true );
 		}
 		$old = self::site();
+		self::remember( $old );
 		update_option( 'soko_site', $site, false );
 		delete_transient( 'soko_site_draft_' . get_current_user_id() );
 		update_option( 'soko_flush', 1, false );

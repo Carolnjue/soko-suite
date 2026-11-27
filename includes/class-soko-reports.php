@@ -299,6 +299,12 @@ final class Soko_Reports {
 		$topack   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $D WHERE type='invoice' AND fulfil = 'to_pack'" ); // phpcs:ignore
 		$neworders = $wpdb->get_results( $wpdb->prepare( "SELECT d.id, d.number, d.total, d.paid, c.name FROM $D d LEFT JOIN " . soko_t( 'customers' ) . " c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.source = 'web' AND d.status <> 'void' AND d.paid < d.total AND d.date >= %s ORDER BY d.id DESC LIMIT 5", gmdate( 'Y-m-d', strtotime( soko_today() . ' -14 days' ) ) ), ARRAY_A ); // phpcs:ignore
 		$money_view = soko_can( 'soko_reports' );
+		if ( ! $money_view ) {
+			foreach ( $weeks as &$wk ) {
+				$wk['out'] = 0;
+			}
+			unset( $wk );
+		}
 		return array(
 			'month'        => date_i18n( 'F Y' ),
 			'sales'        => $sales,

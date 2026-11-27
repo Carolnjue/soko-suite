@@ -152,7 +152,7 @@ final class Soko_Mpesa_Free {
 			$name = preg_replace( '/^.*?\bfrom\b/i', '', $party );
 			$name = preg_replace( '/(?:\bAcc(?:ount)?\.?(?:\s*(?:Number|No\.?))?|\bA\/C(?:\s*No\.?)?)\s*[:#]?\s*[A-Za-z0-9-]+.*$/i', '', $name );
 			$name = trim( preg_replace( '/[\d*]{6,}/', ' ', $name ), " -\t" );
-			$time  = null !== $cols['time'] && ! empty( $r[ $cols['time'] ] ) ? gmdate( 'Y-m-d H:i:s', strtotime( $r[ $cols['time'] ] ) ) : soko_now();
+			$time  = null !== $cols['time'] && ! empty( $r[ $cols['time'] ] ) ? self::when( $r[ $cols['time'] ] ) : soko_now();
 			$seen++;
 			$before = Soko_Ledger::payment_exists( $r[ $cols['code'] ] );
 			Soko_Ledger::record_payment(
@@ -195,6 +195,23 @@ final class Soko_Mpesa_Free {
 			}
 		}
 		return null;
+	}
+
+	/** Statement dates: Kenyan statements use day first (27/11/2026 11:05:00). */
+	public static function when( $v ) {
+		$v = trim( (string) $v );
+		if ( preg_match( '#^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?)?#', $v, $m ) ) {
+			$h = isset( $m[4] ) && '' !== $m[4] ? (int) $m[4] : 0;
+			if ( ! empty( $m[7] ) ) {
+				$pm = 'p' === strtolower( $m[7][0] );
+				$h  = $h % 12 + ( $pm ? 12 : 0 );
+			}
+			if ( checkdate( (int) $m[2], (int) $m[1], (int) $m[3] ) ) {
+				return sprintf( '%04d-%02d-%02d %02d:%02d:%02d', $m[3], $m[2], $m[1], $h, isset( $m[5] ) ? (int) $m[5] : 0, isset( $m[6] ) ? (int) $m[6] : 0 );
+			}
+		}
+		$t = strtotime( $v );
+		return $t ? gmdate( 'Y-m-d H:i:s', $t ) : soko_now();
 	}
 }
 add_action( 'init', array( 'Soko_Mpesa_Free', 'pretty_route' ), 1 );

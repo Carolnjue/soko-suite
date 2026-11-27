@@ -915,3 +915,4 @@ html[data-theme=dark] .soko .hrs input{color:#fff;background:#23272d}
 .track li i{z-index:2;border-color:var(--card)}.track li::before{z-index:0;left:calc(-50% + 14px);right:calc(50% + 14px)}
 @media(max-width:600px){.costeps li i{position:relative;z-index:2}.costeps li+li::before{right:calc(50% + 17px);width:calc(100% - 30px)}}
 @media(max-width:1024px){.ann-r{display:none}.ann-l{flex-wrap:nowrap;overflow:hidden}}
+.pickup{display:flex;gap:10px;align-items:flex-start;background:var(--alt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:4px 0 16px;color:var(--ink)}

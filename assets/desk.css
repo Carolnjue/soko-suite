@@ -338,3 +338,6 @@ td.nw{white-space:nowrap}@media(max-width:640px){.stack td.nw{white-space:normal
 /* run 3: on phones keep toasts clear of form buttons */
 @media (max-width:760px){.toast{top:calc(10px + env(safe-area-inset-top));bottom:auto!important}.toast:not(.on){transform:translateX(-50%) translateY(-20px)!important}}
 .toast.err{color:#fff;border-color:transparent}
+/* phone search */
+.top .msearch{display:none}
+@media(max-width:640px){.top .msearch{display:grid;place-items:center;width:44px;height:44px;padding:0;margin-left:auto}.gsearch.mopen{display:block;position:fixed;left:10px;right:10px;top:calc(62px + env(safe-area-inset-top));max-width:none;z-index:60}.gsearch.mopen input{min-height:48px;box-shadow:0 18px 40px -18px rgba(0,0,0,.45)}.gsearch.mopen .gres{max-height:60vh;overflow:auto}}

@@ -28,7 +28,7 @@
   function toast(msg, link) {
     var t = $('[data-toast]');
     if (!t) return;
-    t.innerHTML = esc(msg) + (link ? ' <a href="' + esc(link[1]) + '">' + esc(link[0]) + '</a>' : '');
+    t.innerHTML = '<span>' + esc(msg) + '</span>' + (link ? ' <a href="' + esc(link[1]) + '">' + esc(link[0]) + '</a>' : '');
     t.classList.add('on');
     clearTimeout(toastT);
     toastT = setTimeout(function () { t.classList.remove('on'); }, 3200);
@@ -50,7 +50,7 @@
     var l = cart.filter(function (c) { return c.id === id && !!c.install === !!install; })[0];
     if (l) l.qty += qty || 1; else cart.push({ id: id, qty: qty || 1, install: install ? 1 : 0 });
     saveCart(true);
-    if (!silent) toast(byId[id].name + ' added to your cart.', ['View cart', S.home + 'cart/']);
+    if (!silent) toast('Added to cart: ' + byId[id].name, ['View cart', S.home + 'cart/']);
   }
   function lineTotal(c) { var p = byId[c.id]; return (p.price + (c.install ? p.install : 0)) * c.qty; }
   function subtotal() { return cart.reduce(function (a, c) { return a + lineTotal(c); }, 0); }

@@ -547,11 +547,14 @@ final class Soko_Store {
 <meta name="viewport" content="width=device-width, initial-scale=1"><?php if ( ! has_site_icon() ) : ?><link rel="icon" type="image/png" href="<?php echo esc_url( SOKO_URL . 'assets/app/icon-192.png' ); ?>"><link rel="apple-touch-icon" href="<?php echo esc_url( SOKO_URL . 'assets/app/apple-touch.png' ); ?>"><?php endif; ?>
 <?php if ( ! current_theme_supports( 'title-tag' ) ) : ?><title><?php echo esc_html( $title ); ?></title><?php endif; ?>
 <?php if ( $desc ) : ?><meta name="description" content="<?php echo esc_attr( $desc ); ?>"><?php endif; ?>
-<meta property="og:title" content="<?php echo esc_attr( $title ); ?>">
-<meta property="og:description" content="<?php echo esc_attr( $desc ); ?>">
+<?php $home_share = in_array( self::$route, array( 'home', '' ), true ) || '/' === wp_parse_url( $canon, PHP_URL_PATH ); ?>
+<meta property="og:site_name" content="<?php echo esc_attr( $s['business'] ); ?>">
+<meta property="og:title" content="<?php echo esc_attr( $home_share ? $s['business'] . ': solar and IT solutions in Kenya' : $title ); ?>">
+<meta property="og:description" content="<?php echo esc_attr( $home_share ? 'Solar kits, panels, batteries, inverters, water heaters and pumps, supplied and installed across Kenya.' : $desc ); ?>">
 <meta property="og:type" content="<?php echo 'product' === self::$route ? 'product' : 'website'; ?>">
 <meta property="og:url" content="<?php echo $canon; // phpcs:ignore ?>">
-<meta property="og:image" content="<?php echo esc_url( self::$image ? self::$image : $logo ); ?>">
+<meta property="og:image" content="<?php echo esc_url( self::$image ? self::$image : SOKO_URL . 'assets/img/dss-share.jpg' ); ?>"><?php if ( ! self::$image ) : ?><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><?php endif; ?>
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="<?php echo esc_attr( $b['deep'] ); ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="<?php echo esc_url( self::fonts( $site ) ); ?>">

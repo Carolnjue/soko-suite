@@ -372,6 +372,9 @@ final class Soko_PDF {
 				unset( $r['_b'] );
 				$pdf->SetFont( 'Helvetica', $bold ? 'B' : '', $small ? 7.5 : 9 );
 				foreach ( array_values( $r ) as $i => $v ) {
+					if ( is_string( $v ) && preg_match( '/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?$/', $v ) ) {
+						$v = date_i18n( 'j M Y', strtotime( substr( $v, 0, 10 ) ) );
+					}
 					if ( $i > 0 && is_numeric( $v ) && ! preg_match( '/^0\d/', (string) $v ) ) {
 						$v = $v < 0 ? '(' . number_format( abs( $v ) ) . ')' : number_format( (float) $v );
 					}

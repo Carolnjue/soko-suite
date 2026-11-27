@@ -409,7 +409,16 @@ final class Soko_Reports {
 		$owed   = (float) $wpdb->get_var( "SELECT SUM(total - paid) FROM $D WHERE type='invoice' AND status <> 'void' AND paid < total" ); // phpcs:ignore
 		$over   = $wpdb->get_results( $wpdb->prepare( "SELECT d.id, d.number, d.total - d.paid bal, d.due, c.name FROM $D d LEFT JOIN " . soko_t( 'customers' ) . " c ON c.id = d.customer_id WHERE d.type='invoice' AND d.status <> 'void' AND d.paid < d.total - 0.5 AND d.due < %s ORDER BY d.due LIMIT 8", soko_today() ), ARRAY_A ); // phpcs:ignore
 		$unm    = $wpdb->get_results( "SELECT id, code, amount, payer FROM $P WHERE status <> 'matched' ORDER BY received DESC LIMIT 5", ARRAY_A ); // phpcs:ignore
-		$low    = $wpdb->get_results( 'SELECT id, name, stock FROM ' . soko_t( 'products' ) . " WHERE kind = 'product' AND stock <= reorder ORDER BY stock LIMIT 5", ARRAY_A ); // phpcs:ignore
+		$held   = Soko_Ledger::held();
+		$low    = array();
+		foreach ( $wpdb->get_results( 'SELECT id, name, stock, reorder FROM ' . soko_t( 'products' ) . " WHERE kind = 'product'", ARRAY_A ) as $lp ) { // phpcs:ignore
+			$free = (float) $lp['stock'] - ( isset( $held[ (int) $lp['id'] ] ) ? $held[ (int) $lp['id'] ] : 0 );
+			if ( $free <= (float) $lp['reorder'] ) {
+				$low[] = array( 'id' => $lp['id'], 'name' => $lp['name'], 'stock' => $lp['stock'] + 0, 'free' => $free );
+			}
+		}
+		usort( $low, function ( $a, $b ) { return $a['free'] <=> $b['free']; } );
+		$low = array_slice( $low, 0, 5 );
 		$today  = $wpdb->get_results( $wpdb->prepare( 'SELECT id, title, start, who, location, kind FROM ' . soko_t( 'events' ) . ' WHERE done = 0 AND start BETWEEN %s AND %s ORDER BY start', soko_today() . ' 00:00:00', soko_today() . ' 23:59:59' ), ARRAY_A ); // phpcs:ignore
 		$lic    = $wpdb->get_results( $wpdb->prepare( 'SELECT id, name, expires FROM ' . soko_t( 'licences' ) . ' WHERE expires <= %s ORDER BY expires LIMIT 4', gmdate( 'Y-m-d', strtotime( soko_today() . ' +60 days' ) ) ), ARRAY_A ); // phpcs:ignore
 		$weeks  = array();

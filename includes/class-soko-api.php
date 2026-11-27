@@ -531,6 +531,12 @@ final class Soko_API {
 				$row[ $f ] = $v;
 			}
 		}
+		if ( 'licences' === $name && ! $id && ( empty( $b['name'] ) || empty( $b['expires'] ) ) ) {
+			return new WP_Error( 'soko', 'Enter the licence or permit name and its expiry date.', array( 'status' => 400 ) );
+		}
+		if ( 'expenses' === $name && ! empty( $b['date'] ) && $b['date'] > soko_today() ) {
+			return new WP_Error( 'soko', 'The expense date is in the future. Use the date it was paid.', array( 'status' => 400 ) );
+		}
 		if ( 'expenses' === $name ) {
 			if ( isset( $b['amount'] ) && (float) $b['amount'] <= 0 ) {
 				return new WP_Error( 'soko', 'Enter an amount above zero.', array( 'status' => 400 ) );
@@ -545,8 +551,8 @@ final class Soko_API {
 			}
 			if ( ! empty( $b['phone'] ) ) {
 				$pd = soko_phone( $b['phone'] );
-				if ( strlen( $pd ) > 13 || ( 0 === strpos( $pd, '254' ) && 12 !== strlen( $pd ) ) ) {
-					return new WP_Error( 'soko', 'That phone number has too many digits. Use a format like 0712 345 678.', array( 'status' => 400 ) );
+				if ( ! soko_phone_valid( $b['phone'] ) ) {
+					return new WP_Error( 'soko', 'That phone number does not look right. Use 10 digits like 0712 345 678, or +254 712 345 678.', array( 'status' => 400 ) );
 				}
 				if ( 'customers' === $name && empty( $b['allow_dup'] ) ) {
 					$dup = $wpdb->get_row( $wpdb->prepare( 'SELECT id, name FROM ' . soko_t( 'customers' ) . ' WHERE phone = %s AND id <> %d', $pd, $id ), ARRAY_A ); // phpcs:ignore
@@ -559,9 +565,7 @@ final class Soko_API {
 		if ( ! $id && in_array( $name, array( 'leads', 'customers' ), true ) && empty( $row['name'] ) && empty( $row['phone'] ) ) {
 			return new WP_Error( 'soko', 'Enter a name or phone number.', array( 'status' => 400 ) );
 		}
-		if ( ! empty( $b['phone'] ) && in_array( $name, array( 'leads', 'customers' ), true ) && strlen( preg_replace( '/\D/', '', (string) $b['phone'] ) ) < 9 ) {
-			return new WP_Error( 'soko', 'That phone number looks too short. Use a format like 0712 345 678.', array( 'status' => 400 ) );
-		}
+
 		if ( 'expenses' === $name && ! isset( $row['user_id'] ) ) {
 			$row['user_id'] = get_current_user_id();
 		}
@@ -669,6 +673,21 @@ final class Soko_API {
 		}
 		if ( empty( $b['name'] ) && empty( $req['id'] ) ) {
 			return new WP_Error( 'soko', 'Give the product a name.', array( 'status' => 400 ) );
+		}
+		if ( isset( $b['price'] ) && (float) $b['price'] <= 0 ) {
+			return new WP_Error( 'soko', 'Enter a selling price above zero.', array( 'status' => 400 ) );
+		}
+		foreach ( array( 'was', 'cost', 'install_fee', 'reorder' ) as $nk ) {
+			if ( isset( $b[ $nk ] ) && '' !== $b[ $nk ] && (float) $b[ $nk ] < 0 ) {
+				return new WP_Error( 'soko', 'Prices, costs and reorder levels cannot be negative.', array( 'status' => 400 ) );
+			}
+		}
+		if ( ! empty( $b['sku'] ) ) {
+			global $wpdb;
+			$dup = $wpdb->get_var( $wpdb->prepare( 'SELECT name FROM ' . soko_t( 'products' ) . ' WHERE sku = %s AND id <> %d', sanitize_text_field( $b['sku'] ), (int) $req['id'] ) ); // phpcs:ignore
+			if ( $dup ) {
+				return new WP_Error( 'soko', sprintf( 'The product code %s is already used by %s. Choose a different code.', sanitize_text_field( $b['sku'] ), $dup ), array( 'status' => 400 ) );
+			}
 		}
 		$out = Soko_Ledger::save_product( $b, (int) $req['id'] );
 		if ( is_array( $out ) && ! self::sees_cost() ) {
@@ -867,7 +886,36 @@ final class Soko_API {
 				$wpdb->update( soko_t( 'docs' ), array( 'fulfil' => sanitize_key( $b['fulfil'] ) ), array( 'id' => $id ) );
 				return array( 'doc' => Soko_Ledger::doc( $id ), 'message' => 'Updated.' );
 			case 'etims':
+				$ref = strtoupper( trim( sanitize_text_field( isset( $b['ref'] ) ? $b['ref'] : '' ) ) );
+				if ( ! $ref ) {
+					return new WP_Error( 'soko', 'Type the eTIMS invoice number shown on KRA after signing.', array( 'status' => 400 ) );
+				}
+				if ( ! preg_match( '/^[A-Z0-9\-\/]{8,40}$/', $ref ) ) {
+					return new WP_Error( 'soko', 'That does not look like an eTIMS number. It is usually 8 or more letters and numbers, for example KRACU0300001234.', array( 'status' => 400 ) );
+				}
+				$b['ref'] = $ref;
 				return array( 'doc' => Soko_Etims::record( $id, isset( $b['ref'] ) ? $b['ref'] : '' ), 'message' => 'eTIMS number saved.' );
+			case 'apply_credit':
+				global $wpdb;
+				$D    = soko_t( 'docs' );
+				$need = max( 0, round( (float) $d['total'] - (float) $d['paid'], 2 ) );
+				$used = 0;
+				foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT id, number, total, paid FROM $D WHERE type = 'invoice' AND status <> 'void' AND customer_id = %d AND paid > total AND id <> %d ORDER BY id", $d['customer_id'], $d['id'] ), ARRAY_A ) as $src ) { // phpcs:ignore
+					if ( $need <= 0.005 ) {
+						break;
+					}
+					$take = min( $need, round( (float) $src['paid'] - (float) $src['total'], 2 ) );
+					$wpdb->update( $D, array( 'paid' => (float) $src['paid'] - $take ), array( 'id' => (int) $src['id'] ) );
+					$need -= $take;
+					$used += $take;
+				}
+				if ( $used <= 0 ) {
+					return new WP_Error( 'soko', 'This customer has no credit to apply.', array( 'status' => 400 ) );
+				}
+				$wpdb->update( $D, array( 'paid' => (float) $d['paid'] + $used, 'updated' => soko_now() ), array( 'id' => $d['id'] ) );
+				Soko_Accounts::flush();
+				soko_log( 'Applied ' . soko_money( $used ) . ' customer credit to ' . $d['number'], 'invoice', $d['number'] );
+				return array( 'message' => soko_money( $used ) . ' of credit applied to ' . $d['number'] . '.' );
 			case 'credit':
 				global $wpdb;
 				if ( 'invoice' !== $d['type'] || 'void' === $d['status'] ) {
@@ -1065,6 +1113,9 @@ final class Soko_API {
 			$lines[] = array( 'product_id' => $p ? $p['id'] : 0, 'name' => $p ? $p['name'] : sanitize_text_field( $l['name'] ), 'qty' => $q, 'cost' => $c );
 			$total  += $q * $c;
 		}
+		if ( ! empty( $b['expected'] ) && ! empty( $b['date'] ) && $b['expected'] < $b['date'] ) {
+			return new WP_Error( 'soko', 'The expected delivery date is before the order date.', array( 'status' => 400 ) );
+		}
 		$row = array(
 			'supplier_id' => (int) $b['supplier_id'],
 			'date'        => ! empty( $b['date'] ) ? sanitize_text_field( $b['date'] ) : soko_today(),
@@ -1128,10 +1179,17 @@ final class Soko_API {
 			array(
 				'status'   => 'received',
 				'received' => soko_now(),
-				'paid'     => isset( $b['paid'] ) ? (float) $b['paid'] : (float) $po['total'],
 			),
 			array( 'id' => $po['id'] )
 		);
+		// Any amount paid now is added to what was already paid, never replacing it.
+		$now = isset( $b['pay_now'] ) ? round( (float) $b['pay_now'], 2 ) : 0;
+		$due = round( (float) $po['total'] - (float) $po['paid'], 2 );
+		if ( $now > 0 ) {
+			$now = min( $now, max( 0, $due ) );
+			$wpdb->update( soko_t( 'purchases' ), array( 'paid' => (float) $po['paid'] + $now ), array( 'id' => $po['id'] ) );
+			Soko_Accounts::journal( soko_today(), 'Paid supplier, ' . $po['number'], array( array( '2000', $now, 0 ), array( Soko_Accounts::money_account( isset( $b['method'] ) ? $b['method'] : 'bank' ), 0, $now ) ), 'supplier_pay', $po['number'] );
+		}
 		soko_log( 'Received ' . $po['number'] . ' into stock', 'purchase', $po['number'] );
 		return array( 'message' => $po['number'] . ' received. Stock updated.' );
 	}
@@ -1292,6 +1350,25 @@ final class Soko_API {
 		if ( array_key_exists( 'business', (array) $b ) && '' === trim( (string) $b['business'] ) ) {
 			return new WP_Error( 'soko', 'The business name cannot be blank. It prints on every invoice.', array( 'status' => 400 ) );
 		}
+		foreach ( array( 'email' => 'business email', 'notify_email' => 'alerts email' ) as $ek => $el ) {
+			if ( ! empty( $b[ $ek ] ) && ! is_email( $b[ $ek ] ) ) {
+				return new WP_Error( 'soko', sprintf( 'The %s does not look right, for example name@gmail.com.', $el ), array( 'status' => 400 ) );
+			}
+		}
+		foreach ( array( 'phone' => 'phone number', 'phone2' => 'second phone number', 'whatsapp' => 'WhatsApp number' ) as $pk => $pl ) {
+			if ( ! empty( $b[ $pk ] ) && ! soko_phone_valid( $b[ $pk ] ) ) {
+				return new WP_Error( 'soko', sprintf( 'The %s does not look right. Use 10 digits like 0712 345 678.', $pl ), array( 'status' => 400 ) );
+			}
+		}
+		if ( ! empty( $b['kra_pin'] ) && ! preg_match( '/^[AP]\d{9}[A-Z]$/i', trim( $b['kra_pin'] ) ) ) {
+			return new WP_Error( 'soko', 'A KRA PIN has 11 characters, like P051234567X.', array( 'status' => 400 ) );
+		}
+		if ( ! empty( $b['whatsapp'] ) ) {
+			$b['whatsapp'] = soko_phone( $b['whatsapp'] );
+		}
+		if ( ! empty( $b['kra_pin'] ) ) {
+			$b['kra_pin'] = strtoupper( trim( $b['kra_pin'] ) );
+		}
 		if ( isset( $b['vat_rate'] ) && ( ! is_numeric( $b['vat_rate'] ) || $b['vat_rate'] < 0 || $b['vat_rate'] > 30 ) ) {
 			return new WP_Error( 'soko', 'Enter a VAT rate between 0 and 30%. Kenya\'s standard rate is 16%.', array( 'status' => 400 ) );
 		}
@@ -1368,6 +1445,9 @@ final class Soko_API {
 
 	public static function save_user( $req ) {
 		$b    = $req->get_json_params();
+		if ( ! empty( $b['phone'] ) && ! soko_phone_valid( $b['phone'] ) ) {
+			return new WP_Error( 'soko', 'That phone number does not look right. Use 10 digits like 0712 345 678.', array( 'status' => 400 ) );
+		}
 		$id   = (int) $req['id'];
 		$role = sanitize_key( $b['role'] );
 		if ( ! isset( soko_roles()[ $role ] ) ) {

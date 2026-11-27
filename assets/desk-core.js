@@ -109,7 +109,7 @@
   };
   K.confirm = function (text, ok, danger) {
     return new Promise(function (res) {
-      var m = K.modal('Please confirm', '<p>' + text + '</p>', '<button class="btn" data-no>Cancel</button><button class="btn ' + (danger ? 'danger' : 'pri') + '" data-yes>' + (ok || 'Yes') + '</button>');
+      var m = K.modal('Please confirm', '<p>' + text + '</p>', '<button class="btn" data-no>Go back</button><button class="btn ' + (danger ? 'danger' : 'pri') + '" data-yes>' + (ok || 'Yes') + '</button>');
       $('[data-no]', m).onclick = function () { K.closeModal(); res(false); };
       $('[data-yes]', m).onclick = function () { K.closeModal(); res(true); };
     });
@@ -233,13 +233,14 @@
     document.addEventListener('click', function (e) { if (!e.target.closest('[data-me]')) { var p = $('.menu-pop'); if (p) p.remove(); } if (!e.target.closest('.gsearch')) { var g = $('[data-gr]'); if (g) g.hidden = true; } });
     var gs = $('[data-gs]'), gr = $('[data-gr]'), gT;
     var msb = $('[data-msearch]'); if (msb) msb.onclick = function () { var box = gs.closest('.gsearch'); box.classList.toggle('mopen'); if (box.classList.contains('mopen')) gs.focus(); else { gr.hidden = true; } };
+    document.addEventListener('click', function (e) { var pq = e.target.closest('.gres a[data-pq]'); if (pq && K.S && K.S.pay) { K.S.pay.f = ''; K.S.pay.q = pq.dataset.pq; if (location.hash === '#payments') { e.preventDefault(); K.route(); } } });
     document.addEventListener('click', function (e) { if (!e.target.closest('.gres') || !e.target.closest('a')) return; var box = gs.closest('.gsearch'); box.classList.remove('mopen'); });
     gs.addEventListener('input', function () {
       clearTimeout(gT); var q = gs.value.trim();
       if (q.length < 2) { gr.hidden = true; return; }
       gT = setTimeout(function () {
         K.api('search?q=' + encodeURIComponent(q)).then(function (r) {
-          gr.innerHTML = r.length ? r.map(function (x) { var href = x.kind === 'product' ? '#stock/' + x.id : x.kind === 'customer' ? '#crm/c' + x.id : x.kind === 'lead' ? '#crm/l' + x.id : x.kind === 'payment' ? '#payments' : '#sales/' + x.id; return '<a href="' + href + '"><span class="k">' + esc(x.kind) + '</span><span style="flex:1">' + esc(x.title) + '</span><small>' + esc(x.sub) + '</small></a>'; }).join('') : '<div class="empty" style="padding:14px">No matches</div>';
+          gr.innerHTML = r.length ? r.map(function (x) { var href = x.kind === 'product' ? '#stock/' + x.id : x.kind === 'customer' ? '#crm/c' + x.id : x.kind === 'lead' ? '#crm/l' + x.id : x.kind === 'payment' ? '#payments" data-pq="' + esc(String(x.title).split(' · ')[0]) : '#sales/' + x.id; return '<a href="' + href + '"><span class="k">' + esc(x.kind) + '</span><span style="flex:1">' + esc(x.title) + '</span><small>' + esc(x.sub) + '</small></a>'; }).join('') : '<div class="empty" style="padding:14px">No matches</div>';
           gr.hidden = false;
         }).catch(function () {});
       }, 220);

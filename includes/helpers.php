@@ -43,6 +43,16 @@ function soko_phone_like( $q ) {
 	return '%' . $wpdb->esc_like( $d ) . '%';
 }
 
+/** A real phone number: Kenyan (07…/01…, +254…) or another country in international form (+…). */
+function soko_phone_valid( $p ) {
+	$raw = trim( (string) $p );
+	$d   = preg_replace( '/\D+/', '', $raw );
+	if ( 0 === strpos( $raw, '+' ) && 0 !== strpos( $d, '254' ) ) {
+		return strlen( $d ) >= 8 && strlen( $d ) <= 15;
+	}
+	return (bool) preg_match( '/^254[17]\d{8}$/', soko_phone( $raw ) );
+}
+
 function soko_phone( $p ) {
 	$d = preg_replace( '/\D+/', '', (string) $p );
 	if ( 0 === strpos( $d, '0' ) && 10 === strlen( $d ) ) {

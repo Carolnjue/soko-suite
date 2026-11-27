@@ -350,3 +350,5 @@ td.nw{white-space:nowrap}@media(max-width:640px){.stack td.nw{white-space:normal
 .legend .k-oth{background:var(--line2)}
 html[data-theme=dark] .k-del{background:#0f2d33;color:#a7e6ef}html[data-theme=dark] .k-meet{background:#3a1626;color:#f6bfd4}
 .box td select[data-m]{max-width:220px;width:100%;min-width:150px}
+/* run 4: phone fit */
+@media(max-width:640px){.kpi b{font-size:clamp(16px,5vw,22px);overflow-wrap:anywhere}.drawer table,.docv table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}.drawer td.n,.drawer th.n{white-space:nowrap}}

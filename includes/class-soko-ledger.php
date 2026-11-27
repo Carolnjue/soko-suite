@@ -283,6 +283,12 @@ final class Soko_Ledger {
 		$d['meta']        = soko_json( $d['meta'] );
 		$d['balance']     = 'void' === $d['status'] || 'invoice' !== $d['type'] ? 0 : max( 0, round( $d['total'] - $d['paid'], 2 ) );
 		$d['state']       = self::state( $d );
+		if ( $with_lines && 'invoice' === $d['type'] ) {
+			$d['job_id'] = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . soko_t( 'jobs' ) . ' WHERE doc_id = %d ORDER BY id LIMIT 1', $d['id'] ) ); // phpcs:ignore
+		}
+		if ( $with_lines && 'invoice' === $d['type'] && $d['customer_id'] && $d['balance'] > 0 ) {
+			$d['customer_credit'] = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(paid - total) FROM ' . soko_t( 'docs' ) . " WHERE type = 'invoice' AND status <> 'void' AND customer_id = %d AND paid > total", $d['customer_id'] ) ); // phpcs:ignore
+		}
 		if ( $with_lines ) {
 			$d['lines'] = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'lines' ) . ' WHERE doc_id = %d ORDER BY sort, id', $d['id'] ), ARRAY_A ); // phpcs:ignore
 			foreach ( $d['lines'] as &$l ) {

@@ -393,11 +393,11 @@ final class Soko_Sections {
 	}
 
 	/** Keep the last ten published versions so a change can be undone. */
-	public static function remember( $site ) {
+	public static function remember( $site, $note = '' ) {
 		$h = get_option( 'soko_site_history', array() );
 		$h = is_array( $h ) ? $h : array();
 		$u = wp_get_current_user();
-		array_unshift( $h, array( 'time' => soko_now(), 'user' => $u && $u->ID ? $u->display_name : '', 'site' => $site ) );
+		array_unshift( $h, array( 'time' => soko_now(), 'user' => $u && $u->ID ? $u->display_name : '', 'note' => $note, 'site' => $site ) );
 		update_option( 'soko_site_history', array_slice( $h, 0, 10 ), false );
 	}
 
@@ -405,7 +405,7 @@ final class Soko_Sections {
 		$h = get_option( 'soko_site_history', array() );
 		$out = array();
 		foreach ( (array) $h as $i => $v ) {
-			$out[] = array( 'i' => $i, 'time' => $v['time'], 'user' => $v['user'] );
+			$out[] = array( 'i' => $i, 'time' => $v['time'], 'user' => $v['user'], 'note' => isset( $v['note'] ) ? $v['note'] : '' );
 		}
 		return $out;
 	}
@@ -416,7 +416,7 @@ final class Soko_Sections {
 			return new WP_Error( 'soko', 'That version is no longer available.', array( 'status' => 404 ) );
 		}
 		$ver = $h[ $i ]['site'];
-		self::remember( self::site() );
+		self::remember( self::site(), 'restore of an earlier version' );
 		update_option( 'soko_site', $ver, false );
 		update_option( 'soko_flush', 1, false );
 		return $ver;
@@ -434,7 +434,26 @@ final class Soko_Sections {
 			return array( 'draft' => true );
 		}
 		$old = self::site();
-		self::remember( $old );
+		$what = array();
+		foreach ( (array) ( isset( $site['pages'] ) ? $site['pages'] : array() ) as $k => $pg ) {
+			if ( ! isset( $old['pages'][ $k ] ) ) {
+				$what[] = 'new page ' . ( isset( $pg['title'] ) ? $pg['title'] : $k );
+			} elseif ( wp_json_encode( $old['pages'][ $k ] ) !== wp_json_encode( $pg ) ) {
+				$what[] = ( isset( $pg['title'] ) ? $pg['title'] : $k ) . ' page';
+			}
+		}
+		foreach ( array( 'header' => 'header and menu', 'footer' => 'footer' ) as $k => $lab ) {
+			if ( isset( $site[ $k ] ) && wp_json_encode( isset( $old[ $k ] ) ? $old[ $k ] : null ) !== wp_json_encode( $site[ $k ] ) ) {
+				$what[] = $lab;
+			}
+		}
+		if ( ! $what && wp_json_encode( $old ) !== wp_json_encode( $site ) ) {
+			$what[] = 'site settings';
+		}
+		if ( ! $what ) {
+			return $site; // nothing changed, so no new version
+		}
+		self::remember( $old, 'changes to ' . implode( ', ', array_slice( $what, 0, 4 ) ) );
 		update_option( 'soko_site', $site, false );
 		delete_transient( 'soko_site_draft_' . get_current_user_id() );
 		update_option( 'soko_flush', 1, false );

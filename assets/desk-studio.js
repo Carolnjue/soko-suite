@@ -22,6 +22,7 @@
   }
   function preview() {
     var f = $('[data-pf]'); if (!f) return;
+    fitFrame();
     var body = JSON.parse(JSON.stringify(S.site)); body._draft = 1;
     K.api('site', { body: body }).then(function () {
       var y = 0; try { y = f.contentWindow.scrollY; } catch (e) {}
@@ -184,7 +185,7 @@
   }
   function history() {
     K.api('site/history').then(function (h) {
-      var m = K.modal('Published versions', h.length ? '<p class="sub">Restore puts that version back live. What is live now is kept here too, so you can switch back.</p><ul class="list">' + h.map(function (x) { return '<li style="display:flex;align-items:center;gap:10px;justify-content:space-between"><span><b>' + esc(K.ds ? K.ds(x.time) : x.time) + '</b><br><small class="tiny">' + (x.user ? 'Before changes by ' + esc(x.user) : 'Earlier version') + '</small></span><button class="btn sm" data-ri="' + x.i + '">Restore</button></li>'; }).join('') + '</ul>' : '<div class="empty"><b>No earlier versions yet</b>Each time you publish, the previous version is kept here.</div>', '<button class="btn" data-mx>Close</button>');
+      var m = K.modal('Published versions', h.length ? '<p class="sub">Restore puts that version back live. What is live now is kept here too, so you can switch back.</p><ul class="list">' + h.map(function (x) { return '<li style="display:flex;align-items:center;gap:10px;justify-content:space-between"><span><b>' + esc(K.d(String(x.time).slice(0, 10)) + ' at ' + String(x.time).slice(11, 16)) + '</b><br><small class="tiny">' + (x.note ? 'Before: ' + esc(x.note) : 'Earlier version') + (x.user ? ' · by ' + esc(x.user) : '') + '</small></span><button class="btn sm" data-ri="' + x.i + '">Restore</button></li>'; }).join('') + '</ul>' : '<div class="empty"><b>No earlier versions yet</b>Each time you publish, the previous version is kept here.</div>', '<button class="btn" data-mx>Close</button>');
       $$('[data-ri]', m).forEach(function (b) { b.onclick = function () { K.confirm('Put this version back live on the website?', 'Restore').then(function (y) { if (!y) return; K.api('site/restore', { body: { i: +b.dataset.ri } }).then(function () { K.closeModal(); K.toast('Restored. The website is updated.'); load(true); }).catch(K.fail); }); }; });
     }).catch(K.fail);
   }
@@ -196,10 +197,20 @@
     K.api('site').then(function (s) { S.site = s; S.dirty = false; if (!S.site.pages[S.page]) S.page = 'home'; S.sec = null; drawPanel(); if (reset) preview(); }).catch(K.fail);
   }
 
+  /* Desktop preview renders at a real desktop width (1280px) and is scaled to fit, so it shows the desktop layout. */
+  function fitFrame() {
+    var fr = document.querySelector('[data-frame]'), ifr = fr && fr.querySelector('iframe');
+    if (!ifr) return;
+    if (fr.classList.contains('mobile')) { ifr.style.width = ''; ifr.style.transform = ''; ifr.style.height = ''; fr.style.height = ''; return; }
+    var w = fr.clientWidth, sc = Math.min(1, w / 1280), h = Math.max(420, window.innerHeight - 170);
+    ifr.style.width = '1280px'; ifr.style.maxWidth = 'none'; ifr.style.transformOrigin = '0 0'; ifr.style.transform = 'scale(' + sc + ')'; ifr.style.height = (h / sc) + 'px'; ifr.style.margin = '0';
+    var bar = fr.querySelector('.pbar'); fr.style.height = (h + (bar ? bar.offsetHeight : 0)) + 'px';
+  }
+  window.addEventListener('resize', function () { if (K.mod === 'studio') fitFrame(); });
   K.V.studio = function (v) {
     v.innerHTML = K.head('Site Studio', 'Edit the website without code. Click any part of the preview to edit it, or pick a section from the list. Changes show in the preview straight away and go live when you publish.', '<div class="chips"><button class="chip on" data-dev="desktop">Desktop</button><button class="chip" data-dev="mobile">Phone</button></div><a class="btn" target="_blank" rel="noopener" data-live href="' + esc(D.site) + '">' + ic(I.ext) + 'Open live site</a>') +
       '<div class="studio"><aside class="stpanel" data-panel><div class="boot" style="height:40vh"><div class="spin"></div></div></aside><div class="pframe" data-frame><div class="pbar"><i></i><i></i><i></i><span class="url" data-url>' + esc(D.site) + '</span></div><iframe data-pf title="Website preview"></iframe></div></div>';
-    $$('[data-dev]', v).forEach(function (b) { b.onclick = function () { S.device = b.dataset.dev; $$('[data-dev]', v).forEach(function (x) { x.classList.toggle('on', x === b); }); $('[data-frame]', v).classList.toggle('mobile', S.device === 'mobile'); }; });
+    $$('[data-dev]', v).forEach(function (b) { b.onclick = function () { S.device = b.dataset.dev; $$('[data-dev]', v).forEach(function (x) { x.classList.toggle('on', x === b); }); $('[data-frame]', v).classList.toggle('mobile', S.device === 'mobile'); fitFrame(); }; });
     K.api('site').then(function (s) {
       S.site = s; S.dirty = false; S.sec = null;
       if (!S.site.pages[S.page]) S.page = 'home';

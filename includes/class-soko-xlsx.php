@@ -48,7 +48,7 @@ final class Soko_XLSX {
 		$zip->addFromString( '_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' );
 		$zip->addFromString( 'xl/workbook.xml', $wb );
 		$zip->addFromString( 'xl/_rels/workbook.xml.rels', $rels );
-		$zip->addFromString( 'xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1B4F9E"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="4"><xf/><xf fontId="1" fillId="2" applyFont="1" applyFill="1"/><xf numFmtId="164" applyNumberFormat="1"/><xf fontId="0" applyFont="1"/></cellXfs></styleSheet>' );
+		$zip->addFromString( 'xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00"/><numFmt numFmtId="165" formatCode="d mmm yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1B4F9E"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="5"><xf/><xf fontId="1" fillId="2" applyFont="1" applyFill="1"/><xf numFmtId="164" applyNumberFormat="1"/><xf fontId="0" applyFont="1"/><xf numFmtId="165" applyNumberFormat="1"/></cellXfs></styleSheet>' );
 		return $zip->bytes();
 	}
 
@@ -61,7 +61,15 @@ final class Soko_XLSX {
 			foreach ( array_values( (array) $row ) as $c => $v ) {
 				$ref         = self::col( $c ) . ( $r + 1 );
 				$width[ $c ] = max( isset( $width[ $c ] ) ? $width[ $c ] : 8, min( 60, mb_strlen( (string) $v ) + 2 ) );
-				if ( 0 !== $r && is_numeric( $v ) && ! preg_match( '/^0\d/', (string) $v ) ) {
+				if ( '' === (string) $v || null === $v ) {
+					continue; // a truly empty cell, so sums and filters work
+				}
+				if ( 0 !== $r && is_string( $v ) && preg_match( '/^(\d{4})-(\d{2})-(\d{2})(?: [\d:]+)?$/', $v, $dm ) && checkdate( (int) $dm[2], (int) $dm[3], (int) $dm[1] ) ) {
+					// A real date: Excel counts days from 30 Dec 1899.
+					$serial = (int) round( ( gmmktime( 0, 0, 0, (int) $dm[2], (int) $dm[3], (int) $dm[1] ) - gmmktime( 0, 0, 0, 12, 30, 1899 ) ) / 86400 );
+					$xml   .= '<c r="' . $ref . '" s="4"><v>' . $serial . '</v></c>';
+					$width[ $c ] = max( $width[ $c ], 12 );
+				} elseif ( 0 !== $r && is_numeric( $v ) && ! preg_match( '/^0\d/', (string) $v ) ) {
 					$xml .= '<c r="' . $ref . '" s="2"><v>' . ( $v + 0 ) . '</v></c>';
 				} else {
 					$xml .= '<c r="' . $ref . '" t="inlineStr"' . ( 0 === $r ? ' s="1"' : '' ) . '><is><t>' . self::x( $v ) . '</t></is></c>';
@@ -74,7 +82,7 @@ final class Soko_XLSX {
 			$cols .= '<col min="' . ( $c + 1 ) . '" max="' . ( $c + 1 ) . '" width="' . $w . '" customWidth="1"/>';
 		}
 		$cols .= '</cols>';
-		return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' . $cols . '<sheetData>' . $xml . '</sheetData></worksheet>';
+		return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0">' . ( isset( $s['freeze'] ) && ! $s['freeze'] ? '' : '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' ) . '</sheetView></sheetViews>' . $cols . '<sheetData>' . $xml . '</sheetData></worksheet>';
 	}
 }
 

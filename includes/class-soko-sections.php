@@ -747,7 +747,7 @@ final class Soko_Sections {
 		$right = $limit ? '<a class="btn b-line" href="' . esc_url( home_url( '/projects/' ) ) . '">All projects</a>' : '';
 		$h     = '<section class="band tint"><div class="wrap">' . self::head( $p, $right ) . $filters . '<div class="proj">';
 		foreach ( $items as $x ) {
-			$h .= '<figure class="pj" data-sector="' . esc_attr( $x['sector'] ) . '"><img src="' . esc_url( $x['img'] ) . '" alt="' . esc_attr( $x['name'] . ' solar installation' ) . '" loading="lazy"><figcaption><span class="size">' . self::e( $x['size'] ) . '</span><h3>' . self::e( $x['name'] ) . '</h3><p>' . self::e( $x['type'] ) . ' · ' . self::e( $x['place'] ) . '</p></figcaption></figure>';
+			$h .= '<figure class="pj" data-sector="' . esc_attr( $x['sector'] ) . '" tabindex="0" role="button" aria-label="' . esc_attr( 'More about ' . $x['name'] ) . '" data-pj="' . esc_attr( wp_json_encode( array( 'name' => $x['name'], 'place' => $x['place'], 'size' => $x['size'], 'type' => $x['type'], 'sector' => $x['sector'], 'img' => $x['img'], 'details' => isset( $x['details'] ) ? $x['details'] : '' ) ) ) . '"><img src="' . esc_url( $x['img'] ) . '" alt="' . esc_attr( $x['name'] . ' solar installation' ) . '" loading="lazy"><figcaption><span class="size">' . self::e( $x['size'] ) . '</span><h3>' . self::e( $x['name'] ) . '</h3><p>' . self::e( $x['type'] ) . ' · ' . self::e( $x['place'] ) . '</p></figcaption></figure>';
 		}
 		return $h . '</div></div></section>';
 	}

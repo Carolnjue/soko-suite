@@ -37,6 +37,7 @@ final class Soko_Settings {
 			'next_credit'     => 1001,
 			'quote_valid'     => 14,
 			'invoice_due'     => 14,
+			'lock_date'       => '',
 			'deposit_percent' => 60,
 			'notify_email'    => 'dynamicsmartsystems@gmail.com',
 			'invoice_note'    => 'Thank you for choosing Dynamic Smart Systems. Goods remain the property of Dynamic Smart Systems until paid in full.',

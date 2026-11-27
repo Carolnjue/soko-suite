@@ -95,7 +95,11 @@ final class Soko_Reports {
 				$days = (int) round( ( strtotime( $to ) - strtotime( $from ) ) / DAY_IN_SECONDS );
 				$pt   = gmdate( 'Y-m-d', strtotime( $from . ' -1 day' ) );
 				$pf   = gmdate( 'Y-m-d', strtotime( $pt . ' -' . $days . ' days' ) );
-				if ( gmdate( 'd', strtotime( $from ) ) === '01' && gmdate( 'Y-m-t', strtotime( $to ) ) === $to ) {
+				if ( '01-01' === substr( $from, 5 ) ) {
+					// Year to date or a full year: compare with the same dates last year.
+					$pf = ( (int) substr( $from, 0, 4 ) - 1 ) . substr( $from, 4 );
+					$pt = ( (int) substr( $to, 0, 4 ) - 1 ) . ( '02-29' === substr( $to, 5 ) ? '-02-28' : substr( $to, 4 ) );
+				} elseif ( gmdate( 'd', strtotime( $from ) ) === '01' && gmdate( 'Y-m-t', strtotime( $to ) ) === $to ) {
 					$months = ( (int) gmdate( 'Y', strtotime( $to ) ) - (int) gmdate( 'Y', strtotime( $from ) ) ) * 12 + (int) gmdate( 'n', strtotime( $to ) ) - (int) gmdate( 'n', strtotime( $from ) ) + 1;
 					$pf     = gmdate( 'Y-m-01', strtotime( $from . ' -' . $months . ' months' ) );
 				}
@@ -151,14 +155,24 @@ final class Soko_Reports {
 				}
 				$section = function ( $pp ) use ( $grp ) {
 					$codes = isset( $grp[ $pp[6] . ':' . $pp[7] ] ) ? $grp[ $pp[6] . ':' . $pp[7] ] : array();
+					$in = $pp[2] - $pp[3] >= 0;
+					if ( ! array_diff( array_keys( $codes ), array( '1000', '1010', '1020' ) ) ) {
+						return 'skip'; // moving money between your own accounts is not cash in or out
+					}
 					if ( isset( $codes['1500'] ) ) {
-						return array( 'Investing', 'Equipment and vehicles' );
+						return array( 'Investing', $in ? 'Equipment and vehicles sold' : 'Equipment and vehicles bought' );
 					}
 					if ( isset( $codes['2300'] ) ) {
-						return array( 'Financing', 'Loans' );
+						return array( 'Financing', $in ? 'Loans received' : 'Loans repaid' );
 					}
-					if ( isset( $codes['3000'] ) || isset( $codes['3100'] ) ) {
-						return array( 'Financing', 'Owner money in and out' );
+					if ( isset( $codes['3000'] ) ) {
+						return array( 'Financing', $in ? 'Capital put in by the owner' : 'Capital taken out' );
+					}
+					if ( isset( $codes['3100'] ) ) {
+						return array( 'Financing', $in ? 'Drawings returned' : 'Owner drawings' );
+					}
+					if ( in_array( $pp[6], array( 'manual' ), true ) ) {
+						return array( 'Operating', $in ? 'Other money in' : 'Charges and other payments' );
 					}
 					return null;
 				};
@@ -172,6 +186,9 @@ final class Soko_Reports {
 						continue;
 					}
 					$sx = $section( $pp );
+					if ( 'skip' === $sx ) {
+						continue;
+					}
 					$c  = $sx ? $sx[0] . '|' . $sx[1] : 'Operating|' . ( isset( $label[ $pp[6] ] ) ? $label[ $pp[6] ] : ( 'refund' === $pp[6] ? 'Refunds to customers' : 'Other' ) );
 					if ( ! isset( $cats[ $c ] ) ) {
 						$cats[ $c ] = array( 'in' => 0, 'out' => 0 );
@@ -320,7 +337,7 @@ final class Soko_Reports {
 				$out['kpis'] = array( array( 'Output VAT', soko_money( $n['vat'] ) ), array( 'Input VAT', soko_money( $ein + $pin ) ), array( $net >= 0 ? 'VAT payable' : 'VAT credit', soko_money( abs( $net ) ) ) );
 				$out['sections'][] = array( 'title' => 'VAT position', 'head' => array( 'Line', 'KES' ), 'rows' => array( array( 'Output VAT on sales', $n['vat'] ), array( 'Input VAT on purchases', -round( $pin, 2 ) ), array( 'Input VAT on expenses', -round( $ein, 2 ) ), array( $net >= 0 ? 'Payable to KRA' : 'Credit carried forward', round( $net, 2 ), '_b' => 1 ) ), 'widths' => array( 130, 50 ) );
 				$inv = $wpdb->get_results( $wpdb->prepare( "SELECT d.number, d.date, c.name, c.kra, d.subtotal, d.vat, d.total, d.etims_ref FROM $D d LEFT JOIN $C c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ) . " AND d.date BETWEEN %s AND %s ORDER BY d.date", $from, $to ), ARRAY_A ); // phpcs:ignore
-				$out['sections'][] = array( 'title' => 'Sales invoices', 'head' => array( 'Invoice', 'Date', 'Customer', 'KRA PIN', 'Net', 'VAT', 'eTIMS' ), 'rows' => array_map( function ( $r ) { return array( $r['number'], $r['date'], $r['name'], $r['kra'], round( $r['subtotal'] ), round( $r['vat'] ), $r['etims_ref'] ); }, $inv ), 'widths' => array( 22, 22, 45, 26, 22, 18, 25 ) );
+				$out['sections'][] = array( 'title' => 'Sales invoices', 'head' => array( 'Invoice', 'Date', 'Customer', 'KRA PIN', 'Net', 'VAT', 'eTIMS' ), 'rows' => array_merge( array_map( function ( $r ) { return array( $r['number'], $r['date'], $r['name'], $r['kra'], round( $r['subtotal'], 2 ), round( $r['vat'], 2 ), $r['etims_ref'] ); }, $inv ), array( array( 'Total', '', '', '', round( array_sum( wp_list_pluck( $inv, 'subtotal' ) ), 2 ), round( array_sum( wp_list_pluck( $inv, 'vat' ) ), 2 ), '', '_b' => 1 ) ) ), 'widths' => array( 22, 22, 45, 26, 22, 18, 25 ) );
 				$cn = $wpdb->get_results( $wpdb->prepare( "SELECT d.number, d.date, c.name, d.subtotal, d.vat FROM $D d LEFT JOIN $C c ON c.id = d.customer_id WHERE d.type = 'credit' AND d.status <> 'void' AND d.date BETWEEN %s AND %s ORDER BY d.date", $from, $to ), ARRAY_A ); // phpcs:ignore
 				if ( $cn ) {
 					$out['sections'][] = array( 'title' => 'Credit notes (reduce output VAT)', 'head' => array( 'Credit note', 'Date', 'Customer', 'Net', 'VAT' ), 'rows' => array_map( function ( $r ) { return array( $r['number'], $r['date'], $r['name'], -round( $r['subtotal'], 2 ), -round( $r['vat'], 2 ) ); }, $cn ) );
@@ -346,8 +363,9 @@ final class Soko_Reports {
 					}
 				}
 				if ( $iv ) {
-					$out['sections'][] = array( 'title' => 'Input VAT claimed', 'head' => array( 'Date', 'Supplier', 'Supplier KRA PIN', 'Supplier invoice', 'VAT' ), 'rows' => $iv );
 					$miss = count( array_filter( $iv, function ( $r ) { return '' === (string) $r[2]; } ) );
+					$iv[] = array( 'Total', '', '', '', round( array_sum( array_column( $iv, 4 ) ), 2 ), '_b' => 1 );
+					$out['sections'][] = array( 'title' => 'Input VAT claimed', 'head' => array( 'Date', 'Supplier', 'Supplier KRA PIN', 'Supplier invoice', 'VAT' ), 'rows' => $iv );
 					if ( $miss ) {
 						$out['kpis'][] = array( 'Missing supplier PIN', $miss . ' item' . ( 1 === $miss ? '' : 's' ) );
 					}
@@ -397,15 +415,36 @@ final class Soko_Reports {
 				break;
 
 			case 'expenses':
-				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $E WHERE date BETWEEN %s AND %s ORDER BY date DESC", $from, $to ), ARRAY_A ); // phpcs:ignore
-				$by = array();
+				$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $E WHERE date BETWEEN %s AND %s ORDER BY date DESC", $from, $to ), ARRAY_A ); // phpcs:ignore
+				$by    = array();
+				$asset = 0;
+				$vat   = 0;
 				foreach ( $rows as $r ) {
-					$by[ $r['category'] ] = ( isset( $by[ $r['category'] ] ) ? $by[ $r['category'] ] : 0 ) + $r['amount'];
+					$vat += (float) $r['vat'];
+					if ( preg_match( '/\(kept as an asset\)/i', $r['category'] ) ) {
+						$asset += $r['amount'] - $r['vat'];
+						continue;
+					}
+					$by[ $r['category'] ] = ( isset( $by[ $r['category'] ] ) ? $by[ $r['category'] ] : 0 ) + $r['amount'] - $r['vat'];
 				}
 				arsort( $by );
-				$out['kpis'] = array( array( 'Spent', soko_money( array_sum( $by ) ) ), array( 'Entries', count( $rows ) ) );
-				$out['sections'][] = array( 'title' => 'By category', 'head' => array( 'Category', 'KES' ), 'rows' => array_map( function ( $k, $v ) { return array( $k, round( $v ) ); }, array_keys( $by ), $by ), 'widths' => array( 130, 50 ) );
-				$out['sections'][] = array( 'title' => 'All expenses', 'head' => array( 'Date', 'Category', 'Description', 'Paid by', 'Amount' ), 'rows' => array_map( function ( $r ) { return array( $r['date'], $r['category'], $r['description'], $r['method'], round( $r['amount'] ) ); }, $rows ), 'widths' => array( 22, 40, 70, 22, 26 ) );
+				$run = array_sum( $by );
+				$out['kpis'] = array( array( 'Running costs (before VAT)', soko_money( $run ) ), array( 'Equipment bought', soko_money( $asset ) ), array( 'VAT to claim', soko_money( $vat ) ), array( 'Entries', count( $rows ) ) );
+				$cat = array_map( function ( $k, $v ) { return array( $k, round( $v, 2 ) ); }, array_keys( $by ), $by );
+				$cat[] = array( 'Running costs from expenses', round( $run, 2 ), '_b' => 1 );
+				$out['sections'][] = array( 'title' => 'By category (before VAT)', 'head' => array( 'Category', 'KES' ), 'rows' => $cat, 'widths' => array( 130, 50 ) );
+				// How this ties to the profit and loss, which also includes journals and stock write-offs.
+				$pl  = self::pl_numbers( $from, $to );
+				$oth = round( $pl['opex'] - $run, 2 );
+				$tie = array( array( 'Running costs from expenses', round( $run, 2 ) ) );
+				if ( abs( $oth ) > 0.5 ) {
+					$tie[] = array( 'Journals, stock write-offs and other entries', $oth );
+				}
+				$tie[] = array( 'Operating expenses in the profit and loss', round( $pl['opex'], 2 ), '_b' => 1 );
+				$out['sections'][] = array( 'title' => 'Agrees with the profit and loss', 'head' => array( 'Line', 'KES' ), 'rows' => $tie, 'widths' => array( 130, 50 ) );
+				$list   = array_map( function ( $r ) { return array( $r['date'], $r['category'], $r['description'] . ( $r['supplier'] ? ' (' . $r['supplier'] . ')' : '' ), $r['method'], round( $r['amount'] - $r['vat'], 2 ), round( $r['vat'], 2 ), round( $r['amount'], 2 ) ); }, $rows );
+				$list[] = array( 'Total', '', '', '', round( array_sum( wp_list_pluck( $rows, 'amount' ) ) - $vat, 2 ), round( $vat, 2 ), round( array_sum( wp_list_pluck( $rows, 'amount' ) ), 2 ), '_b' => 1 );
+				$out['sections'][] = array( 'title' => 'All expenses', 'head' => array( 'Date', 'Category', 'Description', 'Paid by', 'Before VAT', 'VAT', 'Total' ), 'rows' => $list, 'widths' => array( 20, 32, 56, 20, 20, 14, 20 ) );
 				$out['chart'] = array_map( function ( $k, $v ) { return array( 'label' => $k, 'value' => $v ); }, array_keys( $by ), $by );
 				break;
 
@@ -443,14 +482,46 @@ final class Soko_Reports {
 					}
 				}
 				// Customers who overpaid: shown as money owed back, not netted inside receivables.
-				$cr = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(paid - total) FROM $D WHERE type = 'invoice' AND status <> 'void' AND paid > total AND date <= %s", $to ) ); // phpcs:ignore
+				$cr = 0;
+				$pa = Soko_Accounts::paid_asat( $to );
+				foreach ( $wpdb->get_results( "SELECT id, date, total FROM $D d WHERE type = 'invoice' AND status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ), ARRAY_A ) as $iv ) { // phpcs:ignore
+					$pd = isset( $pa[ $iv['id'] ] ) ? $pa[ $iv['id'] ] : 0;
+					$cr += $iv['date'] > $to ? $pd : max( 0, $pd - (float) $iv['total'] );
+				}
+				// Suppliers paid before their goods arrived: money owed to us in goods, not a smaller bill.
+				$pre = 0;
+				$pp  = Soko_Accounts::po_paid_asat( $to );
+				foreach ( $wpdb->get_results( 'SELECT number, status, received FROM ' . soko_t( 'purchases' ), ARRAY_A ) as $po ) { // phpcs:ignore
+					if ( ( 'received' !== $po['status'] || substr( (string) $po['received'], 0, 10 ) > $to ) && ! empty( $pp[ $po['number'] ] ) ) {
+						$pre += $pp[ $po['number'] ];
+					}
+				}
+				if ( $pre > 0.005 ) {
+					foreach ( $liabs as &$lr ) {
+						if ( 0 === strpos( $lr[0], '2000' ) ) {
+							$lr[1] = round( $lr[1] + $pre, 2 );
+						}
+					}
+					unset( $lr );
+					if ( ! array_filter( $liabs, function ( $r ) { return 0 === strpos( $r[0], '2000' ); } ) ) {
+						$liabs[] = array( '2000  Accounts payable (suppliers)', round( $pre, 2 ) );
+					}
+					$tl      += $pre;
+					$assets[] = array( 'Paid to suppliers in advance', round( $pre, 2 ) );
+					$ta      += $pre;
+				}
 				if ( $cr > 0.005 ) {
+					$has = false;
 					foreach ( $assets as &$ar ) {
 						if ( 0 === strpos( $ar[0], '1100' ) ) {
 							$ar[1] = round( $ar[1] + $cr, 2 );
+							$has   = true;
 						}
 					}
 					unset( $ar );
+					if ( ! $has ) {
+						$assets[] = array( '1100  ' . $chart['1100']['name'], round( $cr, 2 ) );
+					}
 					$ta     += $cr;
 					$liabs[] = array( 'Customer credit balances (overpayments)', round( $cr, 2 ) );
 					$tl     += $cr;
@@ -551,6 +622,21 @@ final class Soko_Reports {
 					$cells[ $bk ] = $owe;
 					$rows[] = array_merge( array( $r['name'] ? $r['name'] : '—', $r['number'], $d ), $cells );
 				}
+				foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT id, date, supplier, category, amount, method FROM ' . soko_t( 'expenses' ) . ' WHERE date <= %s', $to ), ARRAY_A ) as $e ) { // phpcs:ignore
+					if ( ! Soko_Accounts::is_unpaid_method( $e['method'] ) ) {
+						continue;
+					}
+					$owe = round( (float) $e['amount'] - ( isset( $ppaid[ 'EXP-' . $e['id'] ] ) ? $ppaid[ 'EXP-' . $e['id'] ] : 0 ), 2 );
+					if ( $owe <= 0.5 ) {
+						continue;
+					}
+					$days = max( 0, (int) floor( ( strtotime( $to ) - strtotime( $e['date'] ) ) / DAY_IN_SECONDS ) );
+					$bk   = $days <= 30 ? 0 : ( $days <= 60 ? 1 : ( $days <= 90 ? 2 : 3 ) );
+					$tot[ $bk ] += $owe;
+					$cells = array( '', '', '', '' );
+					$cells[ $bk ] = $owe;
+					$rows[] = array_merge( array( $e['supplier'] ? $e['supplier'] : '—', 'Bill: ' . $e['category'], $e['date'] ), $cells );
+				}
 				$rows[] = array_merge( array( 'Total', '', '' ), array_map( function ( $x ) { return round( $x, 2 ); }, $tot ), array( '_b' => 1 ) );
 				$bk   = Soko_Accounts::balances( $to );
 				$bk   = isset( $bk['2000'] ) ? -round( $bk['2000'], 2 ) : 0;
@@ -565,7 +651,7 @@ final class Soko_Reports {
 				}
 				$prec[] = array( 'Accounts payable in the books', $bk, '_b' => 1 );
 				$out['kpis'] = array( array( 'Owed to suppliers', soko_money( array_sum( $tot ) ) ), array( 'Over 60 days', soko_money( $tot[2] + $tot[3] ) ) );
-				$out['sections'][] = array( 'title' => 'Unpaid supplier bills', 'head' => array( 'Supplier', 'Order', 'Received', '0–30 days', '31–60', '61–90', 'Over 90' ), 'rows' => $rows );
+				$out['sections'][] = array( 'title' => 'Unpaid supplier bills', 'head' => array( 'Supplier', 'Order or bill', 'Date', '0–30 days', '31–60', '61–90', 'Over 90' ), 'rows' => $rows );
 				$out['sections'][] = array( 'title' => 'Agrees with the books', 'head' => array( 'Line', 'KES' ), 'rows' => $prec, 'widths' => array( 130, 50 ) );
 				break;
 		}

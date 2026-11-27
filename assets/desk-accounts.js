@@ -13,9 +13,10 @@
     if (p === 'last') return [ymd(new Date(y, m - 1, 1)), ymd(new Date(y, m, 0))];
     if (p === 'quarter') { var q = Math.floor(m / 3) * 3; return [ymd(new Date(y, q, 1)), ymd(new Date(y, q + 3, 0))]; }
     if (p === 'lastyear') return [(y - 1) + '-01-01', (y - 1) + '-12-31'];
+    if (p === 'custom') return [st.pf || ymd(new Date(y, m, 1)), st.pt || ymd(t)];
     return [y + '-01-01', y + '-12-31'];
   }
-  var PERIODS = [['month', 'This month'], ['last', 'Last month'], ['quarter', 'This quarter'], ['year', 'This year'], ['lastyear', 'Last year']];
+  var PERIODS = [['month', 'This month'], ['last', 'Last month'], ['quarter', 'This quarter'], ['year', 'This year'], ['lastyear', 'Last year'], ['custom', 'Choose dates']];
 
   K.V.accounts = function (v) {
     K.api('accounts').then(function (r) {
@@ -24,7 +25,7 @@
       var cash = bal('1000') + bal('1010') + bal('1020');
       var pr = period(st.p);
       v.innerHTML = K.head('Accounts', 'Your books are kept automatically from invoices, payments, expenses and purchases. Add opening balances and manual entries here, reconcile your money accounts, and download the full accounts pack.',
-        '<label class="tiny" for="accpp" style="align-self:center">Pack period</label><select id="accpp" data-pp style="width:auto">' + PERIODS.map(function (o) { return '<option value="' + o[0] + '"' + (st.p === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><button class="btn sun" data-pack="pdf">' + ic(I.dl) + 'Accounts pack (PDF)</button><button class="btn" data-pack="xlsx">Excel</button>') +
+        '<label class="tiny" for="accpp" style="align-self:center">Pack period</label><select id="accpp" data-pp style="width:auto">' + PERIODS.map(function (o) { return '<option value="' + o[0] + '"' + (st.p === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><span data-pcd' + (st.p === 'custom' ? '' : ' hidden') + ' style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-pf value="' + period('custom')[0] + '" aria-label="From"><span class="tiny">to</span><input type="date" data-pt value="' + period('custom')[1] + '" aria-label="To"></span><button class="btn sun" data-pack="pdf">' + ic(I.dl) + 'Accounts pack (PDF)</button><button class="btn" data-pack="xlsx">Excel</button>') +
         '<div class="kpis">' +
         '<div class="kpi link" data-acc-tab="recon"><small>Cash, M-Pesa and bank</small><b>' + money(cash) + '</b><i class="mut">Reconcile</i></div>' +
         '<div class="kpi link" data-go="#sales" data-set=\'{"sales": {"tab": "invoice", "state": "owed", "q": ""}}\'><small>Owed by customers</small><b>' + money(r.owed) + '</b></div>' +
@@ -32,7 +33,9 @@
         '<div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "vat", "p": "month"}}\'><small>' + (r.vat_month >= 0 ? 'VAT due for this month' : 'VAT to reclaim this month') + '</small><b>' + money(Math.abs(r.vat_month)) + '</b></div></div>' +
         '<div class="kpis"><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "bs"}}\'><small>Balance sheet</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "pl", "p": "year"}}\'><small>Profit and loss</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "tb"}}\'><small>Trial balance</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "gl", "p": "month"}}\'><small>General ledger</small><b style="font-size:16px">Open</b></div></div>' +
         K.tabs('acc', [['chart', 'Chart of accounts'], ['journal', 'Journal entries'], ['opening', 'Opening balances'], ['recon', 'Reconcile']], st.tab) + '<div data-ab></div>';
-      $('[data-pp]', v).onchange = function (e) { st.p = e.target.value; };
+      $('[data-pp]', v).onchange = function (e) { st.p = e.target.value; $('[data-pcd]', v).hidden = st.p !== 'custom'; };
+      $('[data-pf]', v).onchange = function (e) { st.pf = e.target.value; };
+      $('[data-pt]', v).onchange = function (e) { st.pt = e.target.value; };
       $$('[data-pack]', v).forEach(function (b) { b.onclick = function () { var p = period(st.p); K.open('reports/pack?format=' + b.dataset.pack + '&from=' + p[0] + '&to=' + p[1]); K.toast('Preparing the accounts pack…'); }; });
       $$('[data-tabs] button', v).forEach(function (b) { b.onclick = function () { st.tab = b.dataset.t; K.V.accounts(v); }; });
       $$('[data-acc-tab]', v).forEach(function (b) { b.onclick = function () { st.tab = b.dataset.accTab; K.V.accounts(v); }; });
@@ -83,7 +86,7 @@
 
   function journal(host, acc) {
     K.api('journal').then(function (rows) {
-      host.innerHTML = '<div class="box"><div class="toolbar"><span class="sub" style="margin:0">Use a journal entry for anything that is not an invoice, payment, expense or purchase: money the owner puts in or takes out, loans, equipment, VAT paid to KRA, corrections.</span><button class="btn sun" data-nj style="margin-left:auto">' + ic(I.plus) + 'New journal entry</button></div>' +
+      host.innerHTML = '<div class="box"><div class="toolbar"><span class="sub" style="margin:0">Use a journal entry for anything that is not an invoice, payment, expense or purchase: money the owner puts in or takes out, loans, equipment, VAT paid to KRA, corrections.</span><button class="btn" data-mv style="margin-left:auto">' + ic(I.cash) + 'Move money between accounts</button><button class="btn sun" data-nj>' + ic(I.plus) + 'New journal entry</button></div>' +
         K.table([
           { k: 'date', label: 'Date', f: function (j) { return K.ds(j.date); } },
           { k: 'memo', label: 'Details', f: function (j) { return '<b>' + esc(j.memo) + '</b><br><small class="tiny">' + (j.lines || []).map(function (l) { var a = acc.filter(function (x) { return x.code === String(l.code); })[0]; return esc((a ? a.name : l.code) + ' ' + (l.debit > 0 ? 'Dr ' + K.moneyx(l.debit, 1) : 'Cr ' + K.moneyx(l.credit, 1))); }).join(' · ') + '</small>'; } },
@@ -92,6 +95,11 @@
           { k: 'x', label: '', f: function (j) { return j.source === 'manual' ? '<button class="btn sm ghost" data-jd="' + j.id + '" aria-label="Delete entry">' + ic(I.trash) + '</button>' : ''; } }
         ], rows, { empty: 'No journal entries yet', emptySub: 'Invoices, payments, expenses and purchases are posted automatically. Manual entries appear here.' }) + '</div>';
       $('[data-nj]', host).onclick = function () { newJournal(acc); };
+      $('[data-mv]', host).onclick = function () {
+        var mon = acc.filter(function (a) { return a.money; }).map(function (a) { return [a.code, a.name]; });
+        var m = K.modal('Move money between accounts', '<p class="sub">For example banking the day\'s cash, or moving M-Pesa to the bank. It is not income or spending.</p><div class="grid2">' + K.field('From', 'from', mon[0] ? mon[0][0] : '', 'select', { options: mon }) + K.field('To', 'to', mon[2] ? mon[2][0] : (mon[1] ? mon[1][0] : ''), 'select', { options: mon }) + '</div><div class="grid3">' + K.field('Amount', 'amount', '', 'number') + K.field('Charges (optional)', 'fee', '', 'number') + K.field('Date', 'date', K.today(), 'date') + '</div>', '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-go>Move</button>');
+        $('[data-go]', m).onclick = function () { K.api('accounts/transfer', { body: K.read(m) }).then(function (r) { K.closeModal(); K.toast(r.message); K.route(); }).catch(K.fail); };
+      };
       $$('[data-jd]', host).forEach(function (b) { b.onclick = function () { K.confirm('Delete this journal entry? The accounts will update straight away.', 'Delete', true).then(function (y) { if (y) K.api('journal/' + b.dataset.jd, { method: 'DELETE' }).then(function (r) { K.toast(r.message); K.route(); }).catch(K.fail); }); }; });
     }).catch(K.fail);
   }
@@ -133,7 +141,7 @@
     var money_acc = acc.filter(function (a) { return a.money; });
     var load = r0 ? Promise.resolve(r0) : K.api('accounts/' + st.rc + '/recon' + (st.rto ? '?to=' + st.rto : ''));
     load.then(function (r) {
-      st.rto = r.to;
+      st.rto = r.to; st.rcache = r;
       var stmt = r.stmt === null ? '' : r.stmt;
       var diff = stmt === '' ? null : Math.round((stmt - r.cleared) * 100) / 100;
       var ok = diff !== null && Math.abs(diff) < 0.01;
@@ -144,9 +152,9 @@
         '<label class="tiny" style="display:flex;gap:8px;align-items:center">Statement date <input type="date" data-rd value="' + esc(r.to) + '" max="' + K.today() + '"></label>' +
         '<label class="tiny" style="display:flex;gap:8px;align-items:center">Closing balance on the ' + where + ' statement <input type="number" step="any" data-rs value="' + esc(stmt) + '" style="width:160px"></label>' +
         '<button class="btn sm" data-rch>' + ic(I.plus) + 'Charges or interest</button></div>' +
-        (last ? '<p class="tiny">Last reconciled to ' + K.d(last.date) + ' at ' + K.moneyx(last.balance) + ' by ' + esc(last.by) + '.</p>' : '') +
+        '<p class="tiny">' + (last ? 'Last reconciled to ' + K.d(last.date) + ' by ' + esc(last.by) + '. Beginning balance ' + K.moneyx(r.begin) + '.' : 'First reconciliation for this account: tick everything on the statement up to its date.') + '</p>' +
         '<div class="kpis"><div class="kpi"><small>Balance in the books at ' + K.d(r.to) + '</small><b>' + K.moneyx(r.book) + '</b></div><div class="kpi"><small>Ticked as on the statement</small><b>' + K.moneyx(r.cleared) + '</b></div><div class="kpi"><small>Difference</small><b class="' + (diff === null ? '' : ok ? 'up' : 'down') + '">' + (diff === null ? '—' : K.moneyx(diff)) + '</b><i class="mut">' + (diff === null ? 'Enter the statement balance' : ok ? 'Matches the statement' : 'Tick entries that appear on the statement') + '</i></div></div>' +
-        '<div class="toolbar"><label class="tiny" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-rall' + (st.rall ? ' checked' : '') + '> Show items already ticked</label>' + (ok ? '<button class="btn pri sm" data-rfin style="margin-left:auto">' + ic(I.check) + 'Finish reconciliation</button>' : '') + '</div>' +
+        '<div class="toolbar"><label class="tiny" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-rall' + (st.rall ? ' checked' : '') + '> Show items already ticked</label>' + (rows.some(function (x) { return !x.done; }) ? '<button class="btn sm" data-rtall>Tick all shown</button>' : '') + '<button class="btn sm" data-rprint>' + ic(I.dl) + 'Print</button>' + (ok ? '<button class="btn pri sm" data-rfin style="margin-left:auto">' + ic(I.check) + 'Finish reconciliation</button>' : '') + '</div>' +
         K.table([
           { k: 'done', label: 'On statement', f: function (x) { return '<input type="checkbox" data-rk="' + esc(x.key) + '"' + (x.done ? ' checked' : '') + ' aria-label="On statement">'; } },
           { k: 'date', label: 'Date', f: function (x) { return K.ds(x.date); } },
@@ -161,6 +169,9 @@
       $('[data-rs]', host).onchange = saveStmt;
       $('[data-rd]', host).onchange = saveStmt;
       $('[data-rall]', host).onchange = function (e) { st.rall = e.target.checked; recon(host, acc, r); };
+      var ta = $('[data-rtall]', host);
+      if (ta) ta.onclick = function () { post({ keys: rows.filter(function (x) { return !x.done; }).map(function (x) { return x.key; }), on: 1 }).catch(K.fail); };
+      $('[data-rprint]', host).onclick = function () { window.print(); };
       var fin = $('[data-rfin]', host);
       if (fin) fin.onclick = function () { post({ do: 'finish' }).then(function () { K.toast('Reconciliation saved.'); }).catch(K.fail); };
       $('[data-rch]', host).onclick = function () {

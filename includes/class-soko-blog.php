@@ -71,7 +71,7 @@ final class Soko_Blog {
 		if ( $posts ) {
 			$h .= '<div class="bgrid">';
 			foreach ( $posts as $p ) {
-				$h .= '<a class="bcard" href="' . esc_url( $p['url'] ) . '"><span class="bimg">' . ( $p['image'] ? '<img src="' . esc_url( $p['image'] ) . '" alt="" loading="lazy">' : '' ) . '</span>' . ( $p['topic'] ? '<em>' . esc_html( $p['topic'] ) . '</em>' : '' ) . '<h3>' . esc_html( $p['title'] ) . '</h3><p>' . esc_html( $p['excerpt'] ) . '</p><small>' . esc_html( date_i18n( 'j M Y', strtotime( $p['date'] ) ) ) . ' · ' . (int) $p['mins'] . ' min read</small></a>';
+				$h .= '<a class="bcard" href="' . esc_url( $p['url'] ) . '"><span class="bimg">' . ( $p['image'] ? '<img src="' . esc_url( $p['image'] ) . '" alt="" loading="lazy">' : '' ) . '</span>' . ( $p['topic'] ? '<em>' . esc_html( $p['topic'] ) . '</em>' : '' ) . '<h3>' . esc_html( $p['title'] ) . '</h3><p>' . esc_html( $p['excerpt'] ) . '</p><small>' . esc_html( date_i18n( 'j M Y', strtotime( $p['date'] ) ) ) . ' · ' . (int) $p['mins'] . ' min read</small><b class="more">Read article →</b></a>';
 			}
 			$h .= '</div>';
 		}
@@ -90,6 +90,25 @@ final class Soko_Blog {
 			$h .= '<div class="wrap pimgw"><img class="pimg" src="' . esc_url( $p['image'] ) . '" alt=""></div>';
 		}
 		$h .= '<div class="wrap narrow rich pbody">' . self::body( $p['content'] ) . '<aside class="pcta"><div><b>Want this done for you?</b><span>Our EPRA-licensed engineers size, supply and install, then look after it.</span></div><a class="btn b-sun" href="' . esc_url( home_url( '/contact/' ) ) . '">Request a quote</a></aside></div></article>';
+		// Products this article talks about, so a reader can buy in one tap.
+		$text = strtolower( $p['title'] . ' ' . wp_strip_all_tags( $p['content'] ) );
+		$hit  = array();
+		foreach ( soko_categories() as $c ) {
+			$w = strtolower( preg_replace( '/s$/', '', strtok( $c['name'], ' ' ) ) );
+			if ( strlen( $w ) > 3 && preg_match( '/\b' . preg_quote( $w, '/' ) . '/', $text ) ) {
+				$hit[] = $c['id'];
+			}
+		}
+		if ( $hit ) {
+			$prods = array_slice( array_values( array_filter( Soko_Ledger::products( array( 'visible' => 1 ) ), function ( $x ) use ( $hit ) { return in_array( $x['cat'], $hit, true ); } ) ), 0, 4 );
+			if ( $prods ) {
+				$h .= '<section class="band"><div class="wrap"><h2 style="margin-bottom:20px">Products in this article</h2><div class="grid">';
+				foreach ( $prods as $x ) {
+					$h .= Soko_Store::card( $x );
+				}
+				$h .= '</div></div></section>';
+			}
+		}
 		if ( $more ) {
 			$h .= '<section class="band tint"><div class="wrap"><h2 style="margin-bottom:20px">Keep reading</h2><div class="bgrid">';
 			foreach ( $more as $m ) {

@@ -94,6 +94,8 @@ final class Soko_Ledger {
 			$where[] = 'id IN (' . implode( ',', $ids ?: array( 0 ) ) . ')';
 		}
 		if ( ! empty( $args['q'] ) ) {
+			// Common local spellings: "invertor", "betri", "panal", "charge controler".
+			$args['q'] = preg_replace( array( '/invertor/i', '/\bbet(t)?r(i|y)\b/i', '/panal/i', '/controler/i', '/bateri/i', '/camera?s?\b/i' ), array( 'inverter', 'batter', 'panel', 'controller', 'batter', 'cam' ), trim( $args['q'] ) );
 			$like    = '%' . $wpdb->esc_like( $args['q'] ) . '%';
 			$syn     = preg_match( '/repair|fault|fix|broken|service|not working/i', $args['q'] );
 			$where[] = '(name LIKE %s OR sku LIKE %s OR brand LIKE %s OR runs LIKE %s OR description LIKE %s' . ( $syn ? ' OR name LIKE %s OR name LIKE %s' : '' ) . ')';
@@ -190,7 +192,7 @@ final class Soko_Ledger {
 	}
 
 	/** Record a stock movement and update the product. */
-	public static function move( $product_id, $qty, $reason, $ref = '', $apply = true, $cost = null ) {
+	public static function move( $product_id, $qty, $reason, $ref = '', $apply = true, $cost = null, $date = null ) {
 		global $wpdb;
 		$wpdb->insert(
 			soko_t( 'moves' ),
@@ -201,7 +203,7 @@ final class Soko_Ledger {
 				'ref'        => $ref,
 				'cost'       => null !== $cost ? (float) $cost : (float) $wpdb->get_var( $wpdb->prepare( 'SELECT cost FROM ' . soko_t( 'products' ) . ' WHERE id = %d', $product_id ) ), // phpcs:ignore
 				'user_id'    => get_current_user_id(),
-				'created'    => soko_now(),
+				'created'    => $date && substr( $date, 0, 10 ) !== soko_today() ? substr( $date, 0, 10 ) . ' 12:00:00' : soko_now(),
 			)
 		);
 		if ( $apply ) {
@@ -288,6 +290,9 @@ final class Soko_Ledger {
 		$d['meta']        = soko_json( $d['meta'] );
 		$d['balance']     = 'void' === $d['status'] || 'invoice' !== $d['type'] ? 0 : max( 0, round( $d['total'] - $d['paid'], 2 ) );
 		$d['state']       = self::state( $d );
+		if ( 'invoice' === $d['type'] ) {
+			$d['credited'] = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(SUM(total),0) FROM ' . soko_t( 'docs' ) . " WHERE type = 'credit' AND status <> 'void' AND parent_id = %d", $d['id'] ) ); // phpcs:ignore
+		}
 		if ( $with_lines && 'invoice' === $d['type'] ) {
 			$d['job_id'] = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . soko_t( 'jobs' ) . ' WHERE doc_id = %d ORDER BY id LIMIT 1', $d['id'] ) ); // phpcs:ignore
 		}
@@ -369,6 +374,21 @@ final class Soko_Ledger {
 				$d['meta'] = array_merge( isset( $d['meta'] ) ? (array) $d['meta'] : array(), array( 'contact' => $typed ) );
 			}
 		}
+		// When editing, keep what was not sent, and keep the cost each item was sold at.
+		$prev      = $id ? $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'docs' ) . ' WHERE id = %d', $id ), ARRAY_A ) : null; // phpcs:ignore
+		$old_costs = array();
+		if ( $prev ) {
+			foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT product_id, cost FROM ' . soko_t( 'lines' ) . ' WHERE doc_id = %d', $id ), ARRAY_A ) as $ol ) { // phpcs:ignore
+				if ( (float) $ol['cost'] > 0 ) {
+					$old_costs[ (int) $ol['product_id'] ] = (float) $ol['cost'];
+				}
+			}
+			foreach ( array( 'customer_id', 'date', 'due' ) as $k ) {
+				if ( empty( $d[ $k ] ) ) {
+					$d[ $k ] = $prev[ $k ];
+				}
+			}
+		}
 		$lines = array();
 		$i     = 0;
 		foreach ( (array) ( isset( $d['lines'] ) ? $d['lines'] : array() ) as $l ) {
@@ -383,7 +403,7 @@ final class Soko_Ledger {
 				'description' => sanitize_text_field( ! empty( $l['description'] ) ? $l['description'] : ( $prod ? $prod['name'] : 'Item' ) ),
 				'qty'         => $qty,
 				'price'       => isset( $l['price'] ) && '' !== $l['price'] ? (float) $l['price'] : ( $prod ? $prod['price'] : 0 ),
-				'cost'        => $prod ? $prod['cost'] : ( isset( $l['cost'] ) ? (float) $l['cost'] : 0 ),
+				'cost'        => $pid && isset( $old_costs[ $pid ] ) ? $old_costs[ $pid ] : ( $prod ? $prod['cost'] : ( isset( $l['cost'] ) ? (float) $l['cost'] : 0 ) ),
 				'vatable'     => $prod ? $prod['vatable'] : ( isset( $l['vatable'] ) ? (int) $l['vatable'] : 1 ),
 				'sort'        => $i++,
 			);
@@ -400,7 +420,7 @@ final class Soko_Ledger {
 			'updated'     => soko_now(),
 		);
 		$days       = 'quote' === $type ? (int) soko_setting( 'quote_valid', 14 ) : (int) soko_setting( 'invoice_due', 14 );
-		$row['due'] = ! empty( $d['due'] ) ? sanitize_text_field( $d['due'] ) : gmdate( 'Y-m-d', strtotime( $row['date'] . ' +' . $days . ' days' ) );
+		$row['due'] = ! empty( $d['due'] ) && ( ! $prev || $prev['date'] === $row['date'] || $d['due'] !== $prev['due'] ) ? sanitize_text_field( $d['due'] ) : gmdate( 'Y-m-d', strtotime( $row['date'] . ' +' . $days . ' days' ) );
 		if ( isset( $d['meta'] ) ) {
 			$row['meta'] = wp_json_encode( $d['meta'] );
 		}
@@ -450,7 +470,7 @@ final class Soko_Ledger {
 	}
 
 	/** Turn an accepted quote into an invoice. */
-	public static function convert( $quote_id, $deposit = false ) {
+	public static function convert( $quote_id, $deposit = false, $date = '' ) {
 		$q = self::doc( $quote_id );
 		if ( ! $q || 'quote' !== $q['type'] ) {
 			return new WP_Error( 'soko', 'That is not a quotation.' );
@@ -462,6 +482,7 @@ final class Soko_Ledger {
 			array(
 				'type'        => 'invoice',
 				'customer_id' => $q['customer_id'],
+				'date'        => $date ? $date : soko_today(),
 				'lines'       => $q['lines'],
 				'notes'       => $q['notes'],
 				'parent_id'   => $q['id'],
@@ -614,7 +635,7 @@ final class Soko_Ledger {
 	}
 
 	/** Take sold items out of stock once, when an invoice is fully paid or delivered. */
-	public static function fulfil_stock( $inv ) {
+	public static function fulfil_stock( $inv, $date = null ) {
 		global $wpdb;
 		if ( ! empty( $inv['meta']['stock_done'] ) ) {
 			return;
@@ -623,7 +644,12 @@ final class Soko_Ledger {
 			if ( $l['product_id'] ) {
 				$p = self::product( $l['product_id'] );
 				if ( $p && 'product' === $p['kind'] ) {
-					self::move( $l['product_id'], -1 * $l['qty'], 'Sold', $inv['number'] );
+					// Freeze the cost of the sale: a line sold before its cost was known takes today's cost, once.
+					$c = (float) $l['cost'] > 0 ? (float) $l['cost'] : (float) $p['cost'];
+					if ( (float) $l['cost'] <= 0 && $c > 0 && ! empty( $l['id'] ) ) {
+						$wpdb->update( soko_t( 'lines' ), array( 'cost' => $c ), array( 'id' => (int) $l['id'] ) );
+					}
+					self::move( $l['product_id'], -1 * $l['qty'], 'Sold', $inv['number'], true, $c, $date );
 				}
 			}
 		}

@@ -72,12 +72,18 @@ class Soko_Accounts {
 		$new  = false;
 		foreach ( $cats as $c ) {
 			$c = trim( (string) $c );
-			if ( '' === $c || isset( $map[ $c ] ) ) {
+			if ( '' === $c || isset( $map[ $c ] ) || preg_match( '/\(kept as an asset\)/i', $c ) ) {
 				continue;
 			}
 			$map[ $c ] = (string) $next;
 			$next     += 10;
 			$new       = true;
+		}
+		foreach ( array_keys( $map ) as $k ) {
+			if ( preg_match( '/\(kept as an asset\)/i', $k ) ) {
+				unset( $map[ $k ] ); // asset purchases go to 1500, never an expense account
+				$new = true;
+			}
 		}
 		if ( $new ) {
 			update_option( 'soko_expense_accounts', $map, false );
@@ -141,6 +147,20 @@ class Soko_Accounts {
 	}
 
 	/** Where money moved for a payment method. */
+	/** Books are closed up to and including the lock date (Settings, Documents). Returns an error, or null. */
+	public static function locked( $date ) {
+		$lock = (string) soko_setting( 'lock_date', '' );
+		if ( $lock && $date && substr( (string) $date, 0, 10 ) <= $lock ) {
+			return new WP_Error( 'soko_locked', 'The books are closed up to ' . date_i18n( 'j M Y', strtotime( $lock ) ) . '. Use a later date, or ask the owner to change the closing date in Settings.', array( 'status' => 400 ) );
+		}
+		return null;
+	}
+
+	/** An expense recorded before it is paid is a bill owed to the supplier. */
+	public static function is_unpaid_method( $method ) {
+		return (bool) preg_match( '/^(not paid|unpaid|pay later)/i', trim( (string) $method ) );
+	}
+
 	public static function money_account( $method ) {
 		$m = strtolower( str_replace( array( '-', ' ' ), '', (string) $method ) );
 		if ( 'mpesa' === $m ) {
@@ -225,8 +245,8 @@ class Soko_Accounts {
 		// Cost of goods sold is matched to the sale: posted on the invoice date, at the cost on the invoice line.
 		$P      = soko_t( 'products' );
 		$costed = array();
-		foreach ( $wpdb->get_results( "SELECT d.id AS did, d.number, d.date, l.qty, l.cost AS lcost, p.cost AS pcost, p.name FROM $L l JOIN $D d ON d.id = l.doc_id JOIN $P p ON p.id = l.product_id WHERE d.type = 'invoice' AND d.status <> 'void' AND p.kind = 'product' AND " . self::confirmed_sql( 'd' ), ARRAY_A ) as $l ) { // phpcs:ignore
-			$unit = (float) $l['lcost'] > 0 ? (float) $l['lcost'] : (float) $l['pcost'];
+		foreach ( $wpdb->get_results( "SELECT d.id AS did, d.number, d.date, l.qty, l.cost AS lcost, p.cost AS pcost, p.name, (SELECT MAX(m.cost) FROM " . soko_t( 'moves' ) . " m WHERE m.ref = d.number AND m.product_id = l.product_id AND m.reason = 'Sold') AS mcost FROM $L l JOIN $D d ON d.id = l.doc_id JOIN $P p ON p.id = l.product_id WHERE d.type = 'invoice' AND d.status <> 'void' AND p.kind = 'product' AND " . self::confirmed_sql( 'd' ), ARRAY_A ) as $l ) { // phpcs:ignore
+			$unit = (float) $l['lcost'] > 0 ? (float) $l['lcost'] : ( (float) $l['mcost'] > 0 ? (float) $l['mcost'] : (float) $l['pcost'] );
 			$val  = round( $l['qty'] * $unit, 2 );
 			$costed[ $l['number'] ] = true;
 			if ( $val > 0 ) {
@@ -254,7 +274,7 @@ class Soko_Accounts {
 		$ex = self::expense_accounts();
 		foreach ( $wpdb->get_results( 'SELECT id, date, category, description, amount, vat, method, reference FROM ' . soko_t( 'expenses' ), ARRAY_A ) as $e ) { // phpcs:ignore
 			$acc = preg_match( '/\(kept as an asset\)/i', $e['category'] ) ? '1500' : ( isset( $ex[ trim( $e['category'] ) ] ) ? $ex[ trim( $e['category'] ) ] : '6000' );
-			self::add( $out, $e['date'], trim( $e['category'] . ': ' . $e['description'], ': ' ), $e['reference'], 'expense', $e['id'], array( array( $acc, $e['amount'] - $e['vat'] ), array( '1300', $e['vat'] ), array( self::money_account( $e['method'] ), -$e['amount'] ) ) );
+			self::add( $out, $e['date'], trim( $e['category'] . ': ' . $e['description'], ': ' ), $e['reference'], 'expense', $e['id'], array( array( $acc, $e['amount'] - $e['vat'] ), array( '1300', $e['vat'] ), array( self::is_unpaid_method( $e['method'] ) ? '2000' : self::money_account( $e['method'] ), -$e['amount'] ) ) );
 		}
 
 		// 5. Supplier purchases: a received order is a bill we owe.
@@ -437,6 +457,10 @@ class Soko_Accounts {
 	/** Save a journal. $lines: [ [code, debit, credit], … ]. */
 	public static function journal( $date, $memo, $lines, $source = 'manual', $ref = '' ) {
 		global $wpdb;
+		$lk = self::locked( $date );
+		if ( $lk ) {
+			return $lk;
+		}
 		$clean = array();
 		$dr    = 0;
 		$cr    = 0;
@@ -511,6 +535,10 @@ class Soko_Accounts {
 		}
 		if ( abs( $net ) > 0.005 ) {
 			$lines[] = array( 'code' => '3050', 'debit' => max( 0, -$net ), 'credit' => max( 0, $net ) );
+		}
+		$lk = self::locked( $date );
+		if ( $lk ) {
+			return $lk;
 		}
 		$old = (int) $wpdb->get_var( "SELECT MIN(id) FROM $J WHERE source = 'opening'" ); // phpcs:ignore
 		$wpdb->query( "DELETE FROM $J WHERE source = 'opening'" ); // phpcs:ignore

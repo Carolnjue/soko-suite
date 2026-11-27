@@ -84,12 +84,13 @@ final class Soko_PDF {
 		$pdf->SetMargins( 15, 12, 15 );
 		$pdf->SetAutoPageBreak( true, 20 );
 		$pdf->AddPage();
-		$titles = array( 'quote' => 'Quotation', 'invoice' => $s['vat_registered'] ? 'Tax invoice' : 'Invoice', 'receipt' => 'Receipt', 'credit' => 'Credit note' );
+		$pending = 'invoice' === $d['type'] && 'web' === $d['source'] && (float) $d['paid'] <= 0 && ! in_array( $d['fulfil'], array( 'to_pack', 'packed', 'dispatched', 'delivered' ), true );
+		$titles  = array( 'quote' => 'Quotation', 'invoice' => $pending ? 'Order confirmation' : ( $s['vat_registered'] ? 'Tax invoice' : 'Invoice' ), 'receipt' => 'Receipt', 'credit' => 'Credit note' );
 		$right  = array( $d['number'], 'Date: ' . date_i18n( 'j M Y', strtotime( $d['date'] ) ) );
 		if ( 'quote' === $d['type'] && $d['due'] ) {
 			$right[] = 'Valid until: ' . date_i18n( 'j M Y', strtotime( $d['due'] ) );
 		}
-		if ( 'invoice' === $d['type'] && $d['due'] ) {
+		if ( 'invoice' === $d['type'] && $d['due'] && empty( $pending ) ) {
 			$right[] = 'Due: ' . date_i18n( 'j M Y', strtotime( $d['due'] ) );
 		}
 		if ( in_array( $d['type'], array( 'receipt', 'credit' ), true ) && ! empty( $d['meta']['invoice'] ) ) {
@@ -119,7 +120,7 @@ final class Soko_PDF {
 			$info[] = $c['email'];
 		}
 		if ( ! empty( $c['address'] ) || ! empty( $c['county'] ) ) {
-			$info[] = trim( ( isset( $c['address'] ) ? $c['address'] : '' ) . ' ' . ( isset( $c['county'] ) ? $c['county'] : '' ) );
+			$info[] = implode( ', ', array_filter( array( isset( $c['address'] ) ? trim( $c['address'] ) : '', isset( $c['county'] ) ? trim( $c['county'] ) : '' ) ) );
 		}
 		if ( ! empty( $c['kra'] ) ) {
 			$info[] = 'KRA PIN ' . $c['kra'];
@@ -186,7 +187,13 @@ final class Soko_PDF {
 			}
 			$tot[] = array( 'Total', soko_money( $d['total'] ) );
 			if ( 'invoice' === $d['type'] && $d['paid'] > 0 ) {
-				$tot[] = array( 'Paid', '(' . soko_money( $d['paid'] ) . ')' );
+				$cn = isset( $d['credited'] ) ? (float) $d['credited'] : 0;
+				if ( $cn > 0 ) {
+					$tot[] = array( 'Less credit notes', '(' . soko_money( $cn ) . ')' );
+				}
+				if ( $d['paid'] - $cn > 0.005 ) {
+					$tot[] = array( 'Paid', '(' . soko_money( $d['paid'] - $cn ) . ')' );
+				}
 				$tot[] = array( 'Balance due', soko_money( $d['balance'] ) );
 			}
 			if ( ! empty( $d['meta']['deposit'] ) && 'invoice' === $d['type'] && $d['paid'] <= 0 ) {
@@ -219,11 +226,11 @@ final class Soko_PDF {
 					$pdf->Cell( 80, 5, self::t( 'Account number: ' . $ins['account'] ), 0, 2 );
 				}
 			} else {
-				$pdf->Cell( 80, 5, self::t( 'Use the payment link below or call ' . $s['phone'] ), 0, 2 );
+				$pdf->Cell( 80, 5, self::t( 'We confirm your order by phone, then share how to pay. Questions: ' . $s['phone'] ), 0, 2 );
 			}
 			$pdf->SetXY( 105, $y + 3 );
 			$pdf->SetFont( 'Helvetica', 'B', 9.5 );
-			$pdf->Cell( 85, 5, 'Pay or view online', 0, 2 );
+			$pdf->Cell( 85, 5, 'Track this order online', 0, 2 );
 			$pdf->SetFont( 'Helvetica', '', 8 );
 			self::color( $pdf, self::BLUE );
 			$pdf->MultiCell( 85, 4, self::t( $d['pay_url'] ) );

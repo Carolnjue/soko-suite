@@ -986,3 +986,24 @@ html[data-theme=dark] .bo-note,html[data-theme=dark] .inst-note{background:#2a21
 .line .ltot{grid-column:2/-1;justify-self:end;font-size:14px}
 @media(min-width:601px) and (max-width:1024px){.phero.photo{background:linear-gradient(90deg,var(--card) 0,var(--card) 55%,color-mix(in srgb,var(--card) 85%,transparent) 72%,color-mix(in srgb,var(--card) 25%,transparent) 100%),var(--img) right center/cover}.phero.photo .pcopy{max-width:62%}}
 @media(min-width:1181px){.msrch{display:none!important}}
+/* run 7: phone header fits the screen (theme switch stays in the menu) */
+@media(max-width:480px){.tools>.theme{display:none}.tools{gap:4px}}
+html,body{overflow-x:clip}
+.payflow>*+*{margin-top:12px}.payflow .btn+.btn,.payflow .pickup{margin-top:12px}
+.card .body{display:flex;flex-direction:column;flex:1}.card{display:flex;flex-direction:column}.card .body .price{margin-top:auto}
+.card .stock{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-theme=dark] .tl .dot svg{color:#f7a440;stroke:#f7a440}
+.rel-h{font-size:clamp(22px,3vw,28px)!important;margin:28px 0 16px!important}
+@media(hover:none){.line .rm{min-height:44px;min-width:44px}.ups button,.upsell button{min-height:44px}}
+.sv-bars i b{color:#3a1209;font-style:normal;font-weight:700;text-shadow:none}.sv-bars i.g b{color:#06341d}
+.bcard .more{display:block;margin-top:10px;color:var(--blue);font-weight:600;font-size:14px}
+.pj{cursor:pointer}.pj:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
+.pjmodal{position:fixed;inset:0;z-index:90;background:rgba(10,18,34,.55);display:grid;place-items:center;padding:16px;animation:fadeIn .18s ease}
+.pjbox{position:relative;background:var(--card);color:var(--ink);border-radius:18px;max-width:720px;width:100%;max-height:calc(100svh - 32px);overflow:auto;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+.pjbox img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.pjb{padding:20px 22px 24px}.pjb h3{font-size:24px;margin:4px 0 12px}
+.pjb dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0 0 16px}.pjb dt{color:var(--soft)}.pjb dd{margin:0;font-weight:600}
+.pjb .row{display:flex;gap:10px;flex-wrap:wrap}
+.pjx{position:absolute;top:10px;right:10px;background:var(--card);border-radius:50%;width:44px;height:44px;display:grid;place-items:center}
+.pjx svg{width:20px;height:20px}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}

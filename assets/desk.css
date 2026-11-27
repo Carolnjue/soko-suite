@@ -261,3 +261,4 @@ html[data-theme=dark] .side a{color:#c3cbe0}html[data-theme=dark] .side a.on{col
 .themebtn .moon{display:none}html[data-theme=dark] .themebtn .sun{display:none}html[data-theme=dark] .themebtn .moon{display:block}
 html[data-theme=dark] .brand,html[data-theme=dark] .side a:hover{color:#fff}
 .side>*{flex-shrink:0}.brand small{display:block}
+.steps-mini{margin:6px 0 16px;padding-left:20px;display:grid;gap:6px;color:var(--soft)}.steps-mini b{color:var(--ink)}

@@ -118,7 +118,7 @@ final class Soko_Store {
 				self::$title = 'Solar calculator: size your system | ' . soko_setting( 'business' );
 				self::$desc  = 'Choose the appliances you want to run and see the solar system you need, with panels, inverter, battery and price.';
 				echo '<section class="phero sky"><div class="wrap"><div class="pcopy"><h1>Solar calculator</h1><p>Choose the appliances you want to run and see the system you need, with a price.</p></div></div></section>'; // phpcs:ignore
-				echo Soko_Sections::render( array( 'id' => 'pl', 'type' => 'planner', 'props' => array( 'title' => 'What do you want to run?', 'text' => 'Choose each appliance and how many you have. Adjust the hours to match how you use them.' ) ) ); // phpcs:ignore
+				echo Soko_Sections::render( array( 'id' => 'pl', 'type' => 'planner', 'props' => array( 'title' => 'Choose your appliances', 'text' => 'Add each appliance and how many you have, then adjust the hours to match how you use them.' ) ) ); // phpcs:ignore
 				echo '<section class="band"><div class="wrap narrow"><div class="faq"><details><summary>How is my system sized?</summary><p>We add up the energy your appliances use in a day, allow for losses, and size the battery to cover the evening and night. Panels are sized for about five useful sun hours a day, which is typical for most of Kenya. The inverter covers everything you might run at once, with headroom for motors such as pumps and fridges.</p></details><details><summary>Is the price final?</summary><p>It is an estimate. An engineer confirms the final size and price after a site survey, because roofs, cable runs and existing wiring differ.</p></details></div></div></section>'; // phpcs:ignore
 				break;
 			case 'cart':
@@ -236,7 +236,7 @@ final class Soko_Store {
 		self::$title = ( $q ? 'Search: ' . $q : ( $c ? $c['name'] . ' in Kenya' : 'Shop solar products' ) ) . ' | ' . soko_setting( 'business' );
 		self::$desc  = $c ? 'Buy ' . strtolower( $c['name'] ) . ' online. Pay by M-Pesa, delivery countrywide and installation by EPRA-licensed technicians.' : 'Solar kits, panels, inverters, lithium batteries, water heaters, pumps and lighting. Pay by M-Pesa.';
 		$brands = array_unique( array_filter( wp_list_pluck( $list, 'brand' ) ) );
-		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><nav class="crumbs"><a href="' . esc_url( home_url( '/' ) ) . '">Home</a><span>/</span><a href="' . esc_url( home_url( '/shop/' ) ) . '">Shop</a>' . ( $c ? '<span>/</span>' . esc_html( $c['name'] ) : '' ) . '</nav><h1>' . esc_html( $q ? 'Results for "' . $q . '"' : ( $c ? $c['name'] : 'Shop all products' ) ) . '</h1><p>Tap any product for specs, what it powers, warranty, stock and installation.</p></div></div></section>'; // phpcs:ignore
+		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><nav class="crumbs"><a href="' . esc_url( home_url( '/' ) ) . '">Home</a><span>/</span><a href="' . esc_url( home_url( '/shop/' ) ) . '">Shop</a>' . ( $c ? '<span>/</span>' . esc_html( $c['name'] ) : '' ) . '</nav><h1>' . esc_html( $q ? 'Results for "' . $q . '"' : ( $c ? $c['name'] : 'Shop all products' ) ) . '</h1><p>' . ( soko_setting( 'vat_registered' ) && soko_setting( 'prices_incl_vat' ) ? 'Prices include VAT. ' : '' ) . 'Every product shows its specifications, what it can power, warranty and installation cost.</p></div></div></section>'; // phpcs:ignore
 		echo '<section class="band shopband"><div class="wrap shop"><aside class="side" aria-label="Categories"><a class="' . ( ! $cat ? 'on' : '' ) . '" href="' . esc_url( home_url( '/shop/' ) ) . '">' . soko_icon( 'kit', 22 ) . 'All products<em>' . count( $all ) . '</em></a>'; // phpcs:ignore
 		foreach ( $cats as $x ) {
 			$n = count( array_filter( $all, function ( $p ) use ( $x ) { return $p['cat'] === $x['id']; } ) );
@@ -346,7 +346,7 @@ final class Soko_Store {
 		foreach ( (array) $s['delivery'] as $i => $d ) {
 			$del .= '<label><input type="radio" name="delivery" value="' . (int) $i . '" data-fee="' . esc_attr( $d['fee'] ) . '"' . ( 0 === $i ? ' checked' : '' ) . '><span><b>' . esc_html( $d['label'] ) . '</b><small>' . esc_html( $d['note'] ) . '</small></span><b>' . ( (float) $d['fee'] ? esc_html( soko_money( $d['fee'] ) ) : 'Free' ) . '</b></label>';
 		}
-		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><h1>Checkout</h1><p>Pay securely with M-Pesa. Your receipt arrives by email and you can track your order online.</p></div></div></section>';
+		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><h1>Checkout</h1><p>Pay securely with M-Pesa. You get a receipt straight away and can track your order online.</p><ol class="costeps"><li class="on"><i>1</i>Cart</li><li class="on"><i>2</i>Your details</li><li><i>3</i>Pay with M-Pesa</li><li><i>4</i>Receipt</li></ol></div></div></section>';
 		echo '<section class="band"><div class="wrap co" data-checkout><form class="panel" data-co-form novalidate><h3>Your details</h3>
 			<div class="f2"><div class="f"><label for="cName">Full name</label><input id="cName" name="name" autocomplete="name" required></div><div class="f"><label for="cPhone">Phone (M-Pesa)</label><input id="cPhone" name="phone" inputmode="tel" autocomplete="tel" placeholder="07XX XXX XXX" required></div></div>
 			<div class="f2"><div class="f"><label for="cEmail">Email for your receipt</label><input id="cEmail" name="email" type="email" autocomplete="email"></div><div class="f"><label for="cCounty">County or town</label><input id="cCounty" name="county" autocomplete="address-level2"></div></div>
@@ -358,7 +358,7 @@ final class Soko_Store {
 			<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 			<h3>Payment</h3><div class="paybox"><span class="mpesa">M-Pesa</span><p>When you tap pay, a prompt appears on your phone. Enter your M-Pesa PIN to complete.</p></div>
 			<button class="btn b-sun wide" type="submit" data-pay>Pay with M-Pesa</button><p class="formmsg" role="status"></p></form>
-			<aside class="panel summary"><h3>Order summary</h3><div data-co-lines></div><div class="sum" data-co-sum></div></aside></div></section>'; // phpcs:ignore
+			<aside class="panel summary"><h3>Order summary</h3><div data-co-lines></div><div class="sum" data-co-sum></div><ul class="cotrust"><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>You only pay when the M-Pesa prompt arrives on your own phone.</span></li><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Your receipt and invoice are issued the moment payment is confirmed.</span></li><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Installed by EPRA-licensed technicians, with warranty and aftercare.</span></li></ul></aside></div></section>'; // phpcs:ignore
 	}
 
 	private static function track() {

@@ -36,6 +36,27 @@ final class Soko_Mpesa {
 		return rest_url( 'soko/v1/mpesa/' . self::cfg()['token'] . '/' . $what );
 	}
 
+	/** Check the keys with Safaricom without charging anyone. */
+	public static function test() {
+		$c = self::cfg();
+		if ( empty( $c['key'] ) || empty( $c['secret'] ) ) {
+			return array( 'ok' => false, 'message' => 'Paste the Consumer Key and Consumer Secret first, then save.' );
+		}
+		delete_transient( 'soko_mpesa_token' );
+		$t = self::token();
+		if ( is_wp_error( $t ) ) {
+			return array( 'ok' => false, 'message' => $t->get_error_message() );
+		}
+		$miss = array();
+		if ( empty( $c['shortcode'] ) ) {
+			$miss[] = 'shortcode';
+		}
+		if ( empty( $c['passkey'] ) ) {
+			$miss[] = 'passkey';
+		}
+		return array( 'ok' => ! $miss, 'message' => $miss ? 'Safaricom accepted the keys. Still missing: ' . implode( ' and ', $miss ) . '.' : 'Connected to Safaricom (' . ( 'live' === $c['env'] ? 'live' : 'sandbox' ) . '). Prompts and automatic matching are on.' );
+	}
+
 	private static function token() {
 		$cached = get_transient( 'soko_mpesa_token' );
 		if ( $cached ) {

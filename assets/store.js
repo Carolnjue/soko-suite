@@ -66,7 +66,7 @@
     var s = subtotal(), vat = S.vat ? Math.round((s + fee) * S.vat / (100 + S.vat)) : 0;
     return '<div><span>Items</span><span>' + money(s) + '</span></div><div><span>Delivery</span><span>' + (fee ? money(fee) : 'Free') + '</span></div>' + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + fee) + '</span></div>';
   }
-  function emptyCart() { return '<h3>Your cart is empty</h3><p class="muted" style="margin:8px 0 18px">Start with the solar calculator or browse the shop.</p><div class="row"><a class="btn b-sun" href="' + S.home + 'planner/">Plan my system</a><a class="btn b-line" href="' + S.home + 'shop/">Go to the shop</a></div>'; }
+  function emptyCart() { return '<h3>Your cart is empty</h3><p class="muted" style="margin:8px 0 18px">Start with the solar calculator or browse the shop.</p><div class="row"><a class="btn b-sun" href="' + S.home + 'planner/">Calculate my system</a><a class="btn b-line" href="' + S.home + 'shop/">Go to the shop</a></div>'; }
   function cartDrawer() {
     var x = '<div class="dhead"><b>Your cart</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
     if (!cart.length) return openDrawer(x + '<div class="dbody">' + emptyCart() + '</div>');
@@ -116,6 +116,7 @@
     ['CCTV camera', 20, 24], ['Water pump', 750, 2], ['Iron box', 1000, 0.5], ['Microwave', 1000, 0.3], ['Freezer', 200, 12], ['Desktop computer', 150, 8],
     ['Borehole pump', 1500, 5], ['Hair salon dryer', 1200, 2], ['Electric kettle', 1500, 0.3], ['Posho mill', 3000, 3]
   ];
+  var AICO = {0: "M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z", 1: "M3 5h18v11H3zM8 20h8M12 16v4", 2: "M6 2h12v20H6zM6 9h12M9 5v2M9 12v4", 3: "M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01", 4: "M4 5h16v10H4zM2 19h20", 5: "M7 2h10v20H7zM11 18h2", 6: "M3 7l13-3 2 6-13 3zM8 12l1 4M5 18h6", 7: "M4 14h10a3 3 0 0 0 3-3V7M17 4v3M6 14v6M10 14v6M3 20h10", 8: "M3 17h15l3-6H9a6 6 0 0 0-6 6zM12 7h4", 9: "M2 6h20v12H2zM15 6v12M18 10v.01M18 14v.01", 10: "M5 2h14v20H5zM5 8h14M8 4.5v1.5M8 11v4", 11: "M3 4h18v12H3zM9 20h6M12 16v4", 12: "M12 2v6M8 8h8v6a4 4 0 0 1-8 0zM12 18v4M6 22h12", 13: "M14 4a6 6 0 1 1-6 6M8 10l-5 9M10 14l-3 5", 14: "M6 8h12l-1 12H7zM9 8V5h6v3M18 11h2v4h-2", 15: "M4 20h16M6 20V9l6-5 6 5v11M10 20v-5h4v5"};
   var picks = {}, hours = {};
   try { var sv = JSON.parse(sessionStorage.getItem('soko_planner') || 'null'); if (sv) { picks = sv.p || {}; hours = sv.h || {}; } } catch (e) {}
   if (!Object.keys(picks).length) picks = { 0: 8, 1: 1, 2: 1, 3: 1 };
@@ -152,7 +153,7 @@
   }
   function appBtn(a, i) {
     var n = picks[i] || 0, h = hours[i] != null ? hours[i] : a[2];
-    return '<div class="app' + (n ? ' on' : '') + '" role="button" tabindex="0" data-app="' + i + '"><span>' + esc(a[0]) + '<small>' + a[1] + ' W' + (n ? '' : ' · tap to add') + '</small>' + (n ? '<label class="hrs" data-stop>Hours a day <input type="number" min="0.1" max="24" step="0.5" value="' + h + '" data-hrs="' + i + '" aria-label="Hours a day for ' + esc(a[0]) + '"></label>' : '') + '</span>' +
+    return '<div class="app' + (n ? ' on' : '') + '" role="button" tabindex="0" data-app="' + i + '"><i class="aico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + (AICO[i] || '') + '"/></svg></i><span>' + esc(a[0]) + '<small>' + a[1] + ' W' + (n ? '' : ' · tap to add') + '</small>' + (n ? '<label class="hrs" data-stop>Hours a day <input type="number" min="0.1" max="24" step="0.5" value="' + h + '" data-hrs="' + i + '" aria-label="Hours a day for ' + esc(a[0]) + '"></label>' : '') + '</span>' +
       (n ? '<span class="qty" data-stop><button type="button" data-dec="' + i + '" aria-label="One less">−</button><b>' + n + '</b><button type="button" data-inc="' + i + '" aria-label="One more">+</button></span>' : '<span class="qty"><span>+</span></span>') + '</div>';
   }
   function renderPlanner(keepFocus) {

@@ -606,3 +606,22 @@ html[data-theme=dark] .soko .search input{background:transparent}
 html[data-theme=dark] .kick,html[data-theme=dark] .catbar .menu>li:last-child>a,html[data-theme=dark] .dd-cats .dd-all,html[data-theme=dark] .sbody em,html[data-theme=dark] .bfeat em,html[data-theme=dark] .bcard em,html[data-theme=dark] .tiles small,html[data-theme=dark] .bfeat b,html[data-theme=dark] .catbar .menu>li:hover>a,html[data-theme=dark] .rich a,html[data-theme=dark] .crumbs a:hover{color:#8ab8ff}
 html[data-theme=dark] .sbody>svg,html[data-theme=dark] .strip svg,html[data-theme=dark] .cat .cimg svg{color:#8ab8ff}
 html[data-theme=dark] .ptabs button.on{background:var(--sun);border-color:var(--sun);color:#1b1100}
+@media(max-width:700px){.ptabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:calc(-1 * max(16px,4vw));padding-inline:max(16px,4vw)}.ptabs::-webkit-scrollbar{display:none}.ptabs button{flex:none}.cb{flex-direction:column}.cb input:not(.hp){flex:none;width:100%;border-bottom:1px solid var(--line)!important;border-radius:0}.cb .btn{width:100%}}
+.apps{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.app>span{min-width:0}
+.paybox .mpesa{flex:none}
+.pdp{padding-top:24px}
+.app{justify-content:flex-start;gap:10px}.app>span{flex:1}
+.aico{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--muted);color:var(--blue);transition:.2s}
+.app.on .aico{background:var(--blue);color:#fff}
+.app:hover .aico{transform:scale(1.06)}
+.meter div{background:var(--sky)}
+/* checkout steps and trust */
+.costeps{display:flex;gap:8px;list-style:none;padding:0;margin:18px 0 0;flex-wrap:wrap}
+.costeps li{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--soft)}
+.costeps li i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--muted);font-style:normal;font-size:13px}
+.costeps li.on{color:var(--head)}.costeps li.on i{background:var(--sun);color:#1b1100}
+.costeps li+li::before{content:"";width:28px;height:2px;background:var(--line2);margin-right:4px}
+.cotrust{list-style:none;padding:14px 0 0;margin:14px 0 0;border-top:1px solid var(--line);display:grid;gap:10px}
+.cotrust li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--soft)}
+.cotrust svg{flex:none;color:var(--ok);margin-top:2px}

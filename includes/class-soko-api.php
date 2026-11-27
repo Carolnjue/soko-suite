@@ -97,6 +97,7 @@ final class Soko_API {
 		$r( '/payments', 'GET', array( __CLASS__, 'payments' ), self::perm( 'soko_payments' ) );
 		$r( '/payments', 'POST', array( __CLASS__, 'add_payment' ), self::perm( 'soko_payments' ) );
 		$r( '/payments/(?P<id>\d+)/match', 'POST', array( __CLASS__, 'match_payment' ), self::perm( 'soko_payments' ) );
+		$r( '/mpesa/test', 'POST', function () { return Soko_Mpesa::test(); }, self::perm( 'soko_settings' ) );
 		$r( '/mpesa/register', 'POST', function () { return Soko_Mpesa::register_c2b(); }, self::perm( 'soko_settings' ) );
 
 		$r( '/purchases', 'GET', array( __CLASS__, 'purchases' ), self::perm( 'soko_purchases', array( 'soko_stock' ) ) );

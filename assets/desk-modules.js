@@ -128,7 +128,7 @@
         '<div class="actgrid">' + acts.join('') + '</div>' + stks + fulfil + pays + etims;
       var dr = K.drawer(esc(isQ ? 'Quotation' : isInv ? 'Invoice' : 'Receipt') + ' ' + esc(d.number), body, '', true);
       var act = function (a, extra) {
-        return K.api('docs/' + d.id + '/action', { body: Object.assign({ action: a }, extra || {}) }).then(function (r) { K.dirty = true; if (r.message) K.toast(r.message); if (r.job_id) { K.openJob = r.job_id; K.closeDrawer(); if (location.hash === '#jobs') K.route(); else location.hash = '#jobs'; } return r; });
+        return K.api('docs/' + d.id + '/action', { body: Object.assign({ action: a }, extra || {}) }).then(function (r) { K.dirty = true; if (r.message) K.toast(r.message); if (r.job_id) { K.openJob = r.job_id; K.dirty = false; K.closeDrawer(); if (location.hash === '#jobs') K.route(); else location.hash = '#jobs'; } return r; });
       };
       $$('[data-open]', dr).forEach(function (a) { a.onclick = function (e) { e.preventDefault(); K.openDoc(+a.dataset.open); }; });
       $$('[data-ff]', dr).forEach(function (b) { b.onclick = function () { (b.dataset.ff === 'delivered' ? act('deliver') : act('fulfil', { fulfil: b.dataset.ff })).then(function () { K.openDoc(d.id); K.refreshBadges(); }); }; });

@@ -229,7 +229,8 @@
     $$('[data-nav]').forEach(function (a) { a.classList.toggle('on', a.dataset.nav === m); });
     $('[data-side]').classList.remove('on');
     K.dirty = false; K.closeDrawer();
-    var v = $('#view');
+    var old = $('#view'), v = old.cloneNode(false);
+    old.parentNode.replaceChild(v, old); // late replies from the previous screen land in the detached copy, never on this one
     if (!m || !K.V[m]) { v.innerHTML = '<div class="empty"><b>No access</b>Ask the owner to give your account access to a module.</div>'; return; }
     K.mod = m;
     v.innerHTML = '<div class="boot" style="height:50vh"><div class="spin"></div></div>';

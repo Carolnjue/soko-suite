@@ -77,16 +77,15 @@ final class Soko_Desk {
 			$tok   = isset( $parts[1] ) ? $parts[1] : '';
 			$saved = $uid ? get_user_meta( $uid, 'soko_signin', true ) : '';
 			if ( is_array( $saved ) && $tok && hash_equals( (string) $saved['h'], wp_hash( $tok ) ) && time() < (int) $saved['x'] && ! get_user_meta( $uid, 'soko_disabled', true ) ) {
-				delete_user_meta( $uid, 'soko_signin' );
 				wp_clear_auth_cookie();
 				wp_set_current_user( $uid );
 				wp_set_auth_cookie( $uid, true, is_ssl() );
 				soko_log( 'Signed in with a sign-in link', 'user', $uid );
-				wp_safe_redirect( home_url( '/desk/#setpw' ) );
+				wp_safe_redirect( home_url( '/desk/' ) );
 				exit;
 			}
 			if ( ! is_user_logged_in() ) {
-				$GLOBALS['soko_signin_error'] = 'This sign-in link has expired or was already used. Ask the owner for a new one, or sign in below.';
+				$GLOBALS['soko_signin_error'] = 'This sign-in link has expired. Ask the owner for a new one, or sign in below.';
 			}
 		}
 		if ( ! is_user_logged_in() || ! soko_is_staff() ) {

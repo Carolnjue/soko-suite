@@ -2182,16 +2182,16 @@ final class Soko_API {
 		return array( 'id' => $uid, 'login' => $login, 'password' => empty( $b['password'] ) ? $pass : '', 'sent' => $sent, 'message' => 'Account created.' );
 	}
 
-	/** A one-time sign-in link (valid 3 days) the owner shares on WhatsApp: no password needs to be sent. */
+	/** A sign-in link (works for 90 days, until a new one is made) the owner shares on WhatsApp: no password needs to be sent. */
 	public static function signin_link( $req ) {
 		$u = get_userdata( (int) $req['id'] );
 		if ( ! $u || ( user_can( $u, 'manage_options' ) && (int) $u->ID !== get_current_user_id() ) ) {
 			return new WP_Error( 'soko', 'A sign-in link cannot be made for this account.', array( 'status' => 400 ) );
 		}
 		$tok = wp_generate_password( 32, false );
-		update_user_meta( $u->ID, 'soko_signin', array( 'h' => wp_hash( $tok ), 'x' => time() + 3 * DAY_IN_SECONDS ) );
+		update_user_meta( $u->ID, 'soko_signin', array( 'h' => wp_hash( $tok ), 'x' => time() + 90 * DAY_IN_SECONDS ) );
 		soko_log( 'Made a sign-in link for ' . $u->display_name, 'user', $u->ID );
-		return array( 'url' => home_url( '/desk/?signin=' . $u->ID . '.' . $tok ), 'expires' => wp_date( 'j M Y, H:i', time() + 3 * DAY_IN_SECONDS ), 'login' => $u->user_login );
+		return array( 'url' => home_url( '/desk/?signin=' . $u->ID . '.' . $tok ), 'expires' => wp_date( 'j M Y', time() + 90 * DAY_IN_SECONDS ), 'login' => $u->user_login );
 	}
 
 	/** The signed-in person chooses their own password. */

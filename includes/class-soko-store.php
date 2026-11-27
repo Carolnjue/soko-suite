@@ -546,6 +546,7 @@ $chev = '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none
 				'whatsapp' => preg_replace( '/\D/', '', $s['whatsapp'] ),
 				'mpesa'    => Soko_Mpesa::ready(),
 				'pay'      => Soko_Mpesa::instructions( '' ),
+				'phone'    => soko_phone( $s['phone'] ),
 				'route'    => self::$route,
 				'icons'    => array_combine( soko_icon_names(), array_map( function ( $k ) { return soko_icon( $k, 100 ); }, soko_icon_names() ) ),
 			)

@@ -295,6 +295,7 @@
 
   /* Payment flow: STK prompt with live status, falling back to Paybill instructions. */
   function payFlow(host, d, stk, pay) {
+    setTimeout(function () { try { host.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} var st = document.querySelectorAll('.costeps li'); if (st[2]) st[2].classList.add('on'); }, 30);
     var instr = pay && pay.number ? '<div class="paybill"><div><span>M-Pesa ' + esc(pay.kind) + '</span><b>' + esc(pay.number) + '</b></div>' + (pay.kind === 'Paybill' ? '<div><span>Account number</span><b>' + esc(d.doc) + '</b></div>' : '') + '<div><span>Amount</span><b>' + money(d.balance != null ? d.balance : d.total) + '</b></div></div>' : '';
     var trackLink = d.url ? '<a class="btn b-line wide" href="' + esc(d.url) + '">View and track this order</a>' : '';
     if (stk && stk.ok) {
@@ -315,6 +316,8 @@
         }).catch(function () { setTimeout(poll, 4000); });
       };
       setTimeout(poll, 4000);
+    } else if (!instr) {
+      host.innerHTML = '<div class="payflow"><div class="okc" style="background:var(--blue)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l5 5 9-10"/></svg></div><h3>Order ' + esc(d.doc) + ' received</h3><p class="muted">Thank you. Our team will call you shortly to confirm your order and how you would like to pay.</p>' + (S.phone ? '<a class="btn b-sun wide" href="tel:' + esc(S.phone) + '">Call us now</a>' : '') + trackLink + '</div>';
     } else {
       host.innerHTML = '<div class="payflow"><div class="okc" style="background:var(--blue)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l5 5 9-10"/></svg></div><h3>Order ' + esc(d.doc) + ' placed</h3><p class="muted">' + esc(stk && stk.message ? stk.message : 'Complete payment from your M-Pesa menu.') + '</p>' + instr + '<button class="btn b-sun wide" data-recheck>I have paid, check now</button><div style="height:10px"></div>' + trackLink + '</div>';
       $('[data-recheck]', host).onclick = function () { recheck(host, d, pay); };
@@ -328,7 +331,8 @@
   function retry(host, d, pay) {
     api('store/pay', { method: 'POST', body: { doc: d.doc, t: d.t, phone: d.phone } }).then(function (r) { payFlow(host, d, r, pay); }).catch(function (e) { toast(e.message); });
   }
-  function paidView(host, d, s) {
+  function paidView(host2) { var st = document.querySelectorAll('.costeps li'); for (var i = 0; i < st.length; i++) st[i].classList.add('on'); return paidView0.apply(this, arguments); }
+  function paidView0(host, d, s) {
     host.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Payment received</h3><p class="muted">Thank you. Order <b>' + esc(d.doc) + '</b> is paid' + (s.balance > 0 ? ', with ' + money(s.balance) + ' still due' : '') + '. Your receipt is on its way by email.</p><div class="row" style="justify-content:center;margin-top:14px">' + (s.receipts && s.receipts.length ? '<a class="btn b-sun" target="_blank" rel="noopener" href="' + esc(s.receipts[s.receipts.length - 1].pdf) + '">Download receipt</a>' : '') + (d.url ? '<a class="btn b-line" href="' + esc(d.url) + '">Track this order</a>' : '') + '</div></div>';
   }
 

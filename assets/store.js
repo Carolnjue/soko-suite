@@ -120,7 +120,7 @@
     openDrawer('<div class="dhead"><b>' + esc(p.cat) + '</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
       '<div class="dbody"><div class="art' + (p.img ? '' : ' ic') + '">' + (p.img ? '<img src="' + esc(p.img) + '" alt="">' : '<span class="ill">' + (S.icons[p.icon] || '').replace(/width="100" height="100"/, 'width="130" height="130"') + '</span>') + (p.tag ? '<span class="tag">' + esc(p.tag) + '</span>' : '') + '</div>' +
       '<h2>' + esc(p.name) + '</h2><div class="price"><b>' + money(p.price) + '</b>' + (p.was > p.price ? '<s>' + money(p.was) + '</s>' : '') + '</div>' +
-      (p.kind === 'product' ? '<span class="stock' + (p.stock <= 0 ? ' out' : '') + '">' + (p.stock <= 0 ? 'Order in, about a week' : p.stock + ' in stock') + '</span>' : '') +
+      (p.kind === 'product' ? '<span class="stock' + (p.stock <= 0 ? ' out' : '') + '">' + (p.stock <= 0 ? 'Order in, 1 week' : p.stock + ' in stock') + '</span>' : '') +
       '<div class="runsbox">' + (S.icons.bulb || '').replace(/width="100" height="100"/, 'width="30" height="30"') + '<div><b>What it powers</b><p>' + esc(p.runs) + '</p></div></div>' +
       '<table class="specs">' + Object.keys(p.specs || {}).map(function (k) { return '<tr><th>' + esc(k) + '</th><td>' + esc(p.specs[k]) + '</td></tr>'; }).join('') + (p.warranty ? '<tr><th>Warranty</th><td>' + esc(p.warranty) + '</td></tr>' : '') + '</table>' +
       (hasInst ? '<div class="opts"><label><input type="radio" name="qinst" value="0" checked><span>Supply only</span><b>No installation</b></label><label><input type="radio" name="qinst" value="1"><span>Supply and install</span><b>+ ' + money(p.install) + '</b></label></div>' : '') +
@@ -704,4 +704,14 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   var t = new URLSearchParams(location.search).get('topic'), f = document.getElementById('quote-form');
   if (!t || !f || !f.message || f.message.value) return;
   f.message.value = t.slice(0, 200) + '. ';
+})();
+
+/* back to top: appears after the first screen, sits above the WhatsApp button */
+(function () {
+  var b = document.querySelector('[data-totop]'); if (!b) return;
+  var tick = false;
+  function upd() { tick = false; var on = scrollY > innerHeight * 0.9; if (on) b.hidden = false; b.classList.toggle('on', on); }
+  addEventListener('scroll', function () { if (!tick) { tick = true; requestAnimationFrame(upd); } }, { passive: true });
+  b.addEventListener('click', function () { var r = matchMedia('(prefers-reduced-motion: reduce)').matches; scrollTo({ top: 0, behavior: r ? 'auto' : 'smooth' }); });
+  upd();
 })();

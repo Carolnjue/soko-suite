@@ -1007,3 +1007,30 @@ html[data-theme=dark] .tl .dot svg{color:#f7a440;stroke:#f7a440}
 .pjx{position:absolute;top:10px;right:10px;background:var(--card);border-radius:50%;width:44px;height:44px;display:grid;place-items:center}
 .pjx svg{width:20px;height:20px}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+/* small light/dark switch in the top bar */
+.tmini{display:grid!important;place-items:center;width:28px;height:28px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--soft);margin-left:auto;flex:none;padding:0}
+.tmini:hover{color:var(--head);border-color:var(--soft)}
+.ann-r+.tmini{margin-left:6px}
+@media(hover:none){.tmini{width:32px;height:32px}}
+/* back to top */
+.totop{position:fixed;right:24px;bottom:86px;z-index:54;width:44px;height:44px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--head);display:grid;place-items:center;box-shadow:0 10px 24px -10px rgba(15,29,54,.45);cursor:pointer;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s}
+.totop.on{opacity:1;transform:none}.totop[hidden]{display:none}
+.totop:hover{color:var(--blue);border-color:var(--blue)}
+@media(max-width:600px){.totop{right:22px;bottom:84px;width:42px;height:42px}}
+/* compact top bar on phones: small visuals, tap area kept by an invisible margin */
+@media(max-width:600px){
+.announce .wrap{min-height:40px;gap:6px}
+.ann-l a,.ann-r a{min-height:0}
+.ann-m{gap:6px}
+.ann-m a{min-height:0!important;min-width:30px!important;height:28px!important;padding:0 7px!important;border-radius:8px!important;font-size:12.5px;position:relative}
+.ann-m a svg{width:14px;height:14px}
+.ann-m a.am-wa{padding:0 9px!important}
+.ann-m a::after,.tmini::after{content:"";position:absolute;inset:-7px -3px}
+.tmini{position:relative;width:26px!important;height:26px!important;margin-left:4px}
+}
+/* small switch inside the phone menu too */
+.mtools .theme{width:32px!important;height:32px!important;border-radius:99px!important}
+.mtools .theme svg{width:15px;height:15px}
+.tmini{min-width:0!important;min-height:0!important}
+@media(max-width:900px){.totop{bottom:152px}}
+.mtools .theme{min-width:0!important;min-height:0!important}

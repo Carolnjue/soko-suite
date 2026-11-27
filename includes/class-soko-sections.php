@@ -588,7 +588,7 @@ final class Soko_Sections {
 				return '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' . $d . '"/></svg>';
 			};
 			return '<section class="phero actions"><div class="wrap"><div class="pcopy">' . $copy . '</div><div class="qa">'
-				. '<a href="tel:' . esc_attr( soko_phone( $st['phone'] ) ) . '"><i>' . $ico( 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2' ) . '</i><b>Call us</b><span>' . self::e( $st['phone'] ) . '</span></a>'
+				. '<a href="tel:+' . esc_attr( soko_phone( $st['phone'] ) ) . '"><i>' . $ico( 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2' ) . '</i><b>Call us</b><span>' . self::e( $st['phone'] ) . '</span></a>'
 				. '<a href="' . esc_url( $wa ) . '" target="_blank" rel="noopener" class="wa2"><i>' . $ico( 'M3 21l1.6-4.6A8.5 8.5 0 1 1 8 20z' ) . '</i><b>WhatsApp</b><span>Chat with an engineer</span></a>'
 				. '<a href="mailto:' . esc_attr( $st['email'] ) . '"><i>' . $ico( 'M3 5h18v14H3zM3 7l9 6 9-6' ) . '</i><b>Email</b><span>' . self::e( $st['email'] ) . '</span></a>'
 				. '<a href="#quote"><i>' . $ico( 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' ) . '</i><b>Quote form</b><span>Reply with advice and a price</span></a>'
@@ -815,7 +815,7 @@ final class Soko_Sections {
 
 	private static function r_cta_band( $p ) {
 		$img  = ! empty( $p['image'] ) ? $p['image'] : '';
-		$form = ! empty( $p['callback'] ) ? '<form class="cb" data-lead-form data-source="Call-me-back request" novalidate><input class="hp" name="website" tabindex="-1" autocomplete="off"><input name="name" placeholder="Your name" autocomplete="name" required aria-label="Your name"><input name="phone" placeholder="Phone, e.g. 0712 345 678" inputmode="tel" autocomplete="tel" required aria-label="Phone"><input type="hidden" name="interest" value="Call me back"><button class="btn b-sun" type="submit">Call me back</button></form>' : '';
+		$form = ! empty( $p['callback'] ) ? '<form class="cb" data-lead-form data-source="Call-me-back request" novalidate><input class="hp" name="website" tabindex="-1" autocomplete="off"><input name="name" placeholder="Your name" autocomplete="name" required aria-label="Your name"><input name="phone" placeholder="Phone number" inputmode="tel" autocomplete="tel" required aria-label="Phone"><input type="hidden" name="interest" value="Call me back"><button class="btn b-sun" type="submit">Call me back</button></form>' : '';
 		return '<section class="cta band' . ( $img ? ' has-img' : '' ) . '"><div class="wrap"><div class="cta-copy hd"><span class="kick">' . self::e( ! empty( $p['kicker'] ) ? $p['kicker'] : 'Free consultation' ) . '</span><h2>' . self::e( $p['title'] ) . '</h2><p>' . self::e( $p['text'] ) . '</p>' . $form . '<div class="row">' . self::btn( $p['cta_label'], $p['cta_link'], $form ? 'b-line' : 'b-sun' ) . self::btn( isset( $p['cta2_label'] ) ? $p['cta2_label'] : '', isset( $p['cta2_link'] ) ? $p['cta2_link'] : '', 'b-line' ) . '</div></div>' . ( $img ? '<div class="cta-pic"><img src="' . esc_url( $img ) . '" alt="" loading="lazy"><span class="cta-badge"><b>EPRA</b>licensed engineers</span></div>' : '' ) . '</div></section>';
 	}
 

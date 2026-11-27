@@ -322,3 +322,16 @@ td.nw{white-space:nowrap}@media(max-width:640px){.stack td.nw{white-space:normal
 .kpi.link:hover{transform:translateY(-2px)}
 .kpi.link:hover::after{opacity:1;transform:none;color:var(--brand)}
 .box.link h3::after{content:" →";color:var(--soft);font-weight:500;opacity:0;transition:.2s}.box.link:hover h3::after{opacity:1}
+.medgrid .empty{grid-column:1/-1}
+/* quotation/invoice lines on phones: one card per line */
+@media(max-width:640px){
+.lines thead{display:none}
+.lines,.lines tbody{display:block}
+.lines tr{display:grid;grid-template-columns:70px minmax(0,1fr) auto 40px;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.lines td{padding:0!important;width:auto!important}
+.lines td.d{grid-column:1/-1}
+.lines td.a{font-weight:600;font-size:14px}
+.lines input{width:100%;font-size:16px}
+.pickrow{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.pickrow .btn{width:100%}
+}

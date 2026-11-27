@@ -175,6 +175,9 @@ final class Soko_Mpesa {
 		}
 		$cid = $cb['CheckoutRequestID'];
 		$row = self::stk_status( $cid );
+		if ( empty( $row['id'] ) || ! in_array( $row['status'], array( 'sent', 'pending' ), true ) ) {
+			return; // only answers to prompts this site actually sent
+		}
 		if ( 0 !== (int) $cb['ResultCode'] ) {
 			$wpdb->update( soko_t( 'stk' ), array( 'status' => 'failed', 'message' => substr( $cb['ResultDesc'], 0, 250 ) ), array( 'checkout_id' => $cid ) );
 			return;

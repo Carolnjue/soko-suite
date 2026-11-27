@@ -119,6 +119,7 @@ final class Soko_Mpesa_Free {
 		$cols = array();
 		$new  = 0;
 		$seen = 0;
+		$unm  = 0;
 		while ( ( $r = fgetcsv( $fh ) ) !== false ) {
 			if ( ! $head ) {
 				$low = array_map( function ( $x ) { return strtolower( trim( (string) $x ) ); }, $r );
@@ -143,8 +144,14 @@ final class Soko_Mpesa_Free {
 				continue;
 			}
 			$party = null !== $cols['party'] && isset( $r[ $cols['party'] ] ) ? $r[ $cols['party'] ] : '';
-			$phone = preg_match( '/(2547\d{8}|07\d{8}|01\d{8})/', $party, $pm ) ? $pm[1] : '';
-			$name  = trim( preg_replace( '/[\d*\s-]{6,}/', ' ', $party ), ' -' );
+			$phone = preg_match( '/(254[17]\d{8}|0[17]\d{8})/', $party, $pm ) ? $pm[1] : '';
+			$ref   = null !== $cols['ref'] && isset( $r[ $cols['ref'] ] ) ? trim( $r[ $cols['ref'] ] ) : '';
+			if ( '' === $ref && preg_match( '/(?:\bAcc(?:ount)?\.?(?:\s*(?:Number|No\.?))?|\bA\/C(?:\s*No\.?)?)\s*[:#]?\s*([A-Za-z0-9][A-Za-z0-9-]*)/i', $party, $am ) ) {
+				$ref = $am[1];
+			}
+			$name = preg_replace( '/^.*?\bfrom\b/i', '', $party );
+			$name = preg_replace( '/(?:\bAcc(?:ount)?\.?(?:\s*(?:Number|No\.?))?|\bA\/C(?:\s*No\.?)?)\s*[:#]?\s*[A-Za-z0-9-]+.*$/i', '', $name );
+			$name = trim( preg_replace( '/[\d*]{6,}/', ' ', $name ), " -\t" );
 			$time  = null !== $cols['time'] && ! empty( $r[ $cols['time'] ] ) ? gmdate( 'Y-m-d H:i:s', strtotime( $r[ $cols['time'] ] ) ) : soko_now();
 			$seen++;
 			$before = Soko_Ledger::payment_exists( $r[ $cols['code'] ] );
@@ -155,13 +162,18 @@ final class Soko_Mpesa_Free {
 					'amount'      => $amt,
 					'payer'       => ucwords( strtolower( $name ) ),
 					'phone'       => $phone,
-					'account_ref' => null !== $cols['ref'] && isset( $r[ $cols['ref'] ] ) ? $r[ $cols['ref'] ] : '',
+					'account_ref' => $ref,
 					'received'    => $time,
 					'raw'         => array( 'statement' => $r ),
 				)
 			);
 			if ( ! $before ) {
 				$new++;
+				global $wpdb;
+				$pst = $wpdb->get_var( $wpdb->prepare( 'SELECT status FROM ' . soko_t( 'payments' ) . ' WHERE code = %s', strtoupper( sanitize_text_field( $r[ $cols['code'] ] ) ) ) ); // phpcs:ignore
+				if ( 'matched' !== $pst ) {
+					$unm++;
+				}
 			}
 		}
 		fclose( $fh );
@@ -169,7 +181,9 @@ final class Soko_Mpesa_Free {
 			return array( 'ok' => false, 'message' => 'This does not look like an M-Pesa statement. Export it as CSV (Excel) from the M-Pesa business portal and try again.' );
 		}
 		soko_log( 'Imported M-Pesa statement', 'payments', $new . ' new payments' );
-		return array( 'ok' => true, 'message' => $seen . ' payments read, ' . $new . ' new. Paid invoices have been updated.' );
+		$msg = $seen . ' payments read, ' . $new . ' new.';
+		$msg .= $new ? ( $unm ? ' ' . ( $new - $unm ) . ' matched to invoices; ' . $unm . ' need matching by hand.' : ' All matched to their invoices.' ) : ' Nothing new to add.';
+		return array( 'ok' => true, 'message' => $msg );
 	}
 
 	private static function find( $row, $names ) {

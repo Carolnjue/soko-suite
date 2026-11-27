@@ -130,6 +130,10 @@ final class Soko_Settings {
 	/** Settings safe to send to staff without secrets. */
 	public static function public_view( $full = false ) {
 		$s = self::all();
+		unset( $s['mpesa']['token'] ); // the callback secret never leaves the server
+		if ( isset( $s['etims'] ) && is_array( $s['etims'] ) ) {
+			unset( $s['etims']['cmc'] );
+		}
 		if ( ! $full ) {
 			unset( $s['mpesa']['secret'], $s['mpesa']['passkey'], $s['mpesa']['key'], $s['smtp'] );
 		} else {

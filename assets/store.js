@@ -29,6 +29,7 @@
     var t = $('[data-toast]');
     if (!t) return;
     t.innerHTML = '<span>' + esc(msg) + '</span>' + (link ? ' <a href="' + esc(link[1]) + '">' + esc(link[0]) + '</a>' : '');
+    t.classList.toggle('up', !!document.querySelector('.sbuy.on'));
     t.classList.add('on');
     clearTimeout(toastT);
     toastT = setTimeout(function () { t.classList.remove('on'); }, 3200);
@@ -48,10 +49,14 @@
     id = +id;
     if (!byId[id]) return;
     var l = cart.filter(function (c) { return c.id === id && !!c.install === !!install; })[0];
-    if (l) l.qty += qty || 1; else cart.push({ id: id, qty: qty || 1, install: install ? 1 : 0 });
+    var cap = maxQty(id), have = cart.filter(function (c) { return c.id === id; }).reduce(function (a, c) { return a + c.qty; }, 0);
+    qty = Math.max(1, qty || 1);
+    if (have + qty > cap) { qty = cap - have; if (qty <= 0) { toast('Only ' + cap + ' of ' + byId[id].name + ' available. Call us for larger orders.'); return; } toast('Only ' + cap + ' available, so ' + qty + ' added.'); silent = true; }
+    if (l) l.qty += qty; else cart.push({ id: id, qty: qty, install: install ? 1 : 0 });
     saveCart(true);
     if (!silent) toast('Added to cart: ' + byId[id].name, ['View cart', S.home + 'cart/']);
   }
+  function maxQty(id) { var p = byId[id]; return p && p.kind === 'product' && p.stock > 0 ? Math.min(500, Math.floor(p.stock)) : 500; }
   function lineTotal(c) { var p = byId[c.id]; return (p.price + (c.install ? p.install : 0)) * c.qty; }
   function subtotal() { return cart.reduce(function (a, c) { return a + lineTotal(c); }, 0); }
   function thumb(p) { return '<div class="thumb">' + (p.img ? '<img src="' + esc(p.img) + '" alt="">' : (S.icons[p.icon] || '').replace(/width="100" height="100"/, 'width="38" height="38"')) + '</div>'; }
@@ -63,8 +68,8 @@
     }).join('');
   }
   function sumHTML(fee) {
-    var s = subtotal(), vat = S.vat ? Math.round((s + fee) * S.vat / (100 + S.vat)) : 0;
-    return '<div><span>Items</span><span>' + money(s) + '</span></div><div><span>Delivery</span><span>' + (fee ? money(fee) : 'Free') + '</span></div>' + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + fee) + '</span></div>';
+    var s = subtotal(), vat = S.vat ? Math.round((s + (fee || 0)) * S.vat / (100 + S.vat)) : 0;
+    return '<div><span>Items</span><span>' + money(s) + '</span></div><div><span>Delivery</span><span>' + (fee === null ? 'Chosen at checkout' : fee ? money(fee) : 'Free') + '</span></div>' + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + (fee || 0)) + '</span></div>';
   }
   function emptyCart() { return '<h3>Your cart is empty</h3><p class="muted" style="margin:8px 0 18px">Start with the solar calculator or browse the shop.</p><div class="row"><a class="btn b-sun" href="' + S.home + 'planner/">Calculate my system</a><a class="btn b-line" href="' + S.home + 'shop/">Go to the shop</a></div>'; }
   function upsell() {
@@ -78,18 +83,19 @@
   function cartDrawer() {
     var x = '<div class="dhead"><b>Your cart</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
     if (!cart.length) return openDrawer(x + '<div class="dbody">' + emptyCart() + '</div>');
-    openDrawer(x + '<div class="dbody">' + linesHTML(true) + '<div class="sum" style="margin-top:12px">' + sumHTML(0) + '</div><p class="muted" style="font-size:14px;margin-top:8px">Delivery is chosen at checkout.</p>' + upsell() + '</div><div class="buybar"><a class="btn b-line" href="' + S.home + 'cart/">View cart</a><a class="btn b-sun" href="' + S.home + 'checkout/">Checkout</a></div>');
+    openDrawer(x + '<div class="dbody">' + linesHTML(true) + '<div class="sum" style="margin-top:12px">' + sumHTML(null) + '</div><p class="muted" style="font-size:14px;margin-top:8px">Delivery is chosen at checkout.</p>' + upsell() + '</div><div class="buybar"><a class="btn b-line" href="' + S.home + 'cart/">View cart</a><a class="btn b-sun" href="' + S.home + 'checkout/">Checkout</a></div>');
   }
   function renderCartPage() {
     var el = $('[data-cart-page]');
     if (!el) return;
     if (!cart.length) { el.innerHTML = '<div class="panel">' + emptyCart() + '</div>'; return; }
-    el.innerHTML = '<div class="panel">' + linesHTML(true) + '</div><aside class="panel summary"><h3>Summary</h3><div class="sum">' + sumHTML(0) + '</div><a class="btn b-sun wide" style="margin-top:14px" href="' + S.home + 'checkout/">Checkout with M-Pesa</a><a class="btn b-line wide" style="margin-top:10px" href="' + S.home + 'shop/">Keep shopping</a></aside>';
+    el.innerHTML = '<div class="panel">' + linesHTML(true) + '</div><aside class="panel summary"><h3>Summary</h3><div class="sum">' + sumHTML(null) + '</div><a class="btn b-sun wide" style="margin-top:14px" href="' + S.home + 'checkout/">Checkout with M-Pesa</a><a class="btn b-line wide" style="margin-top:10px" href="' + S.home + 'shop/">Keep shopping</a></aside>';
   }
 
   /* ---------------- drawer ---------------- */
   var lastFocus;
   function openDrawer(h) {
+    var tt = document.querySelector('[data-toast]'); if (tt) tt.classList.remove('on');
     var d = $('[data-drawer]');
     lastFocus = document.activeElement;
     d.innerHTML = h;
@@ -113,7 +119,7 @@
       (p.kind === 'product' ? '<span class="stock' + (p.stock <= 0 ? ' out' : '') + '">' + (p.stock <= 0 ? 'Order in, about a week' : p.stock + ' in stock') + '</span>' : '') +
       '<div class="runsbox">' + (S.icons.bulb || '').replace(/width="100" height="100"/, 'width="30" height="30"') + '<div><b>What it powers</b><p>' + esc(p.runs) + '</p></div></div>' +
       '<table class="specs">' + Object.keys(p.specs || {}).map(function (k) { return '<tr><th>' + esc(k) + '</th><td>' + esc(p.specs[k]) + '</td></tr>'; }).join('') + (p.warranty ? '<tr><th>Warranty</th><td>' + esc(p.warranty) + '</td></tr>' : '') + '</table>' +
-      (hasInst ? '<div class="opts"><label><input type="radio" name="qinst" value="0" checked><span>Supply only</span><b>Included</b></label><label><input type="radio" name="qinst" value="1"><span>Supply and install</span><b>+ ' + money(p.install) + '</b></label></div>' : '') +
+      (hasInst ? '<div class="opts"><label><input type="radio" name="qinst" value="0" checked><span>Supply only</span><b>No installation</b></label><label><input type="radio" name="qinst" value="1"><span>Supply and install</span><b>+ ' + money(p.install) + '</b></label></div>' : '') +
       '<a class="btn b-line wide" href="' + esc(p.url) + '">See full details</a></div>' +
       '<div class="buybar"><button class="btn b-blue" data-q-add="' + p.id + '">Add to cart</button><button class="btn b-sun" data-q-buy="' + p.id + '">Buy now</button></div>');
   }
@@ -164,8 +170,8 @@
     return '<div class="app' + (n ? ' on' : '') + '" role="button" tabindex="0" data-app="' + i + '"><i class="aico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + (AICO[i] || '') + '"/></svg></i><span>' + esc(a[0]) + '<small>' + a[1] + ' W' + (n ? '' : ' · add') + '</small>' + (n ? '<label class="hrs" data-stop>Hours a day <input type="number" min="0.1" max="24" step="0.5" value="' + h + '" data-hrs="' + i + '" aria-label="Hours a day for ' + esc(a[0]) + '"></label>' : '') + '</span>' +
       (n ? '<span class="qty" data-stop><button type="button" data-dec="' + i + '" aria-label="One less">−</button><b>' + n + '</b><button type="button" data-inc="' + i + '" aria-label="One more">+</button></span>' : '<span class="qty"><span>+</span></span>') + '</div>';
   }
-  function renderPlanner(keepFocus) {
-    $$('[data-planner-apps]').forEach(function (el) { el.innerHTML = APPS.map(appBtn).join(''); });
+  function renderPlanner(onlyResult) {
+    if (!onlyResult) $$('[data-planner-apps]').forEach(function (el) { el.innerHTML = APPS.map(appBtn).join(''); });
     var r = size();
     $$('[data-planner-result]').forEach(function (el) {
       if (!r) { el.innerHTML = '<h3>Your recommended system</h3><p class="empty">Choose at least one appliance to see your system and price.</p>'; return; }
@@ -248,12 +254,30 @@
   function formData(f) { var o = {}; new FormData(f).forEach(function (v, k) { o[k] = v; }); return o; }
   function validPhone(p) { var d = String(p).replace(/\D/g, ''); return /^(0[17]\d{8}|254[17]\d{8}|[17]\d{8})$/.test(d); }
   function msg(f, text, ok) { var m = $('.formmsg', f); if (m) { m.textContent = text; m.className = 'formmsg ' + (ok ? 'ok' : 'err'); } }
+  var FMSG = { name: 'Please enter your full name.', phone: 'Enter a valid phone number, for example 0712 345 678.', email: 'Enter a valid email address, for example name@gmail.com.', county: 'Please enter your county or town.', address: 'Please enter where we should deliver or install.', message: 'Tell us briefly what you need.', number: 'Enter your order or invoice number.' };
+  function fieldErr(i, text) {
+    var box = i.closest('.f') || i.parentNode, e = box.querySelector('.ferr');
+    i.classList.toggle('input-err', !!text); i.setAttribute('aria-invalid', text ? 'true' : 'false');
+    if (!text) { if (e) e.remove(); return; }
+    if (!e) { e = document.createElement('small'); e.className = 'ferr'; e.id = (i.id || i.name) + '-err'; box.appendChild(e); i.setAttribute('aria-describedby', e.id); }
+    e.textContent = text;
+  }
   function check(f) {
     var bad = null;
-    $$('[required]', f).forEach(function (i) { var v = i.value.trim(); var b = !v || (i.name === 'phone' && !validPhone(v)); i.classList.toggle('input-err', b); if (b && !bad) bad = i; });
-    if (bad) { bad.focus(); msg(f, bad.name === 'phone' ? 'Enter a valid Safaricom or Airtel number, for example 0712 345 678.' : 'Please fill in the highlighted fields.'); return false; }
+    $$('input,textarea,select', f).forEach(function (i) {
+      if (i.type === 'hidden' || i.classList.contains('hp') || i.type === 'radio' || i.type === 'checkbox') return;
+      var v = (i.value || '').trim(), err = '';
+      if (i.required && !v) err = FMSG[i.name] || 'This field is needed.';
+      else if (v && i.name === 'phone' && !validPhone(v)) err = FMSG.phone;
+      else if (v && i.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) err = FMSG.email;
+      fieldErr(i, err);
+      if (err && !bad) bad = i;
+    });
+    if (bad) { bad.focus(); bad.scrollIntoView({ block: 'center', behavior: 'smooth' }); msg(f, 'Please check the highlighted field' + ($$('.input-err', f).length > 1 ? 's' : '') + '.'); return false; }
+    msg(f, '');
     return true;
   }
+  document.addEventListener('input', function (e) { if (e.target.classList && e.target.classList.contains('input-err')) fieldErr(e.target, ''); });
   $$('[data-lead-form]').forEach(function (f) {
     try { var pre = sessionStorage.getItem('soko_lead_msg'); if (pre) { f.message.value = pre; sessionStorage.removeItem('soko_lead_msg'); } } catch (e) {}
     f.addEventListener('submit', function (e) {
@@ -287,6 +311,8 @@
     coForm.addEventListener('change', function (e) { if (e.target.name === 'delivery') renderCheckout(); });
     coForm.addEventListener('submit', function (e) {
       e.preventDefault();
+      var dsel = coForm.querySelector('[name=delivery]:checked'), needAddr = (dsel && +dsel.value > 0) || cart.some(function (c) { return c.install; });
+      ['address', 'county'].forEach(function (n) { if (coForm[n]) coForm[n].required = !!needAddr; });
       if (!cart.length || !check(coForm)) return;
       var b = formData(coForm), btn = $('[data-pay]', coForm);
       try { localStorage.setItem('soko_me', JSON.stringify({ name: b.name, phone: b.phone, email: b.email, county: b.county, address: b.address })); } catch (x) {}
@@ -325,7 +351,7 @@
       };
       setTimeout(poll, 4000);
     } else if (!instr) {
-      host.innerHTML = '<div class="payflow"><div class="okc" style="background:var(--blue)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l5 5 9-10"/></svg></div><h3>Order ' + esc(d.doc) + ' received</h3><p class="muted">Thank you. Our team will call you shortly to confirm your order and how you would like to pay.</p>' + (S.phone ? '<a class="btn b-sun wide" href="tel:' + esc(S.phone) + '">Call us now</a>' : '') + trackLink + '</div>';
+      host.innerHTML = '<div class="payflow"><div class="okc" style="background:var(--blue)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l5 5 9-10"/></svg></div><h3>Order ' + esc(d.doc) + ' received</h3><p class="muted">Thank you. Our team will call you shortly to confirm your order and how you would like to pay.</p>' + (S.phone ? '<a class="btn b-sun wide" href="tel:+' + esc(String(S.phone).replace(/^\+/, '')) + '">Call us now</a>' : '') + trackLink + '</div>';
     } else {
       host.innerHTML = '<div class="payflow"><div class="okc" style="background:var(--blue)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l5 5 9-10"/></svg></div><h3>Order ' + esc(d.doc) + ' placed</h3><p class="muted">' + esc(stk && stk.message ? stk.message : 'Complete payment from your M-Pesa menu.') + '</p>' + instr + '<button class="btn b-sun wide" data-recheck>I have paid, check now</button><div style="height:10px"></div>' + trackLink + '</div>';
       $('[data-recheck]', host).onclick = function () { recheck(host, d, pay); };
@@ -352,9 +378,10 @@
       api('store/status?doc=' + encodeURIComponent(td.doc) + '&t=' + encodeURIComponent(td.t)).then(function (s) {
         var rc = $('[data-receipts]');
         if (rc && s.receipts.length) rc.innerHTML = '<h3 style="margin-top:20px">Receipts</h3>' + s.receipts.map(function (r) { return '<div class="line" style="grid-template-columns:minmax(0,1fr) auto auto"><span>' + esc(r.number) + ' · ' + esc(r.date) + '</span><b>' + money(r.total) + '</b><a class="btn b-line" style="min-height:38px" target="_blank" rel="noopener" href="' + esc(r.pdf) + '">PDF</a></div>'; }).join('');
+        if (s.void) { pp.innerHTML = '<div class="payflow"><h3>Order cancelled</h3><p class="muted">This order was cancelled and nothing is due. Call us if you would like to order again.</p><a class="btn b-sun wide" href="tel:+' + esc(String(S.phone || '').replace(/^\+/, '')) + '">Call us</a></div>'; return; }
         if (s.balance <= 0) { pp.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Fully paid</h3><p class="muted">Thank you. We will be in touch to arrange delivery' + (s.fulfil === 'dispatched' || s.fulfil === 'delivered' ? '' : ' and installation where you chose it') + '.</p></div>'; return; }
         if (!S.stk) {
-          pp.innerHTML = '<h3>Balance ' + money(s.balance) + '</h3>' + (S.pay && S.pay.number ? '<p class="muted">Pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div><p class="muted" style="margin-top:12px">Your receipt appears here once the payment is confirmed.</p>' : '<p class="muted">Our team will call you to confirm your order and how you would like to pay.</p>') + '<a class="btn b-sun wide" href="tel:' + esc(S.phone || '') + '">Call us</a>';
+          pp.innerHTML = '<h3>Balance ' + money(s.balance) + '</h3>' + (S.pay && S.pay.number ? '<p class="muted">Pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div><p class="muted" style="margin-top:12px">Your receipt appears here once the payment is confirmed.</p>' : '<p class="muted">Our team will call you to confirm your order and how you would like to pay.</p>') + '<a class="btn b-sun wide" href="tel:+' + esc(String(S.phone || '').replace(/^\+/, '')) + '">Call us</a>';
           return;
         }
         pp.innerHTML = '<h3>Pay ' + money(s.balance) + '</h3><form data-paybal novalidate><div class="f"><label for="pPhone">M-Pesa number</label><input id="pPhone" name="phone" inputmode="tel" value="' + esc(td.phone) + '" required></div><div class="f"><label for="pAmt">Amount</label><input id="pAmt" name="amount" type="number" min="1" max="' + s.balance + '" value="' + Math.ceil(s.balance) + '"></div><button class="btn b-sun wide">Send M-Pesa prompt</button><p class="formmsg"></p></form>' + (S.pay && S.pay.number ? '<p class="muted" style="margin-top:14px">Or pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div>' : '');
@@ -396,18 +423,20 @@
     };
     $$('[name=inst]', pdp).forEach(function (r) { r.addEventListener('change', syncPrice); });
     if (q) q.addEventListener('input', syncPrice);
-    $$('[data-qty] button', pdp).forEach(function (b) { b.onclick = function () { q.value = Math.max(1, (+q.value || 1) + +b.dataset.d); syncPrice(); }; });
+    var capQ = function () { var mx = maxQty(pd.id), v = Math.round(+q.value || 1); if (v > mx) { v = mx; toast('Only ' + mx + ' available. Call us for larger orders.'); } q.value = Math.max(1, v); };
+    if (q) { q.max = maxQty(pd.id); q.min = 1; q.addEventListener('change', function () { capQ(); syncPrice(); }); }
+    $$('[data-qty] button', pdp).forEach(function (b) { b.onclick = function () { q.value = Math.max(1, (+q.value || 1) + +b.dataset.d); capQ(); syncPrice(); }; });
     $('[data-add-pdp]', pdp).onclick = function () { add(pd.id, Math.max(1, +q.value || 1), inst()); };
     $('[data-buy-pdp]', pdp).onclick = function () { add(pd.id, Math.max(1, +q.value || 1), inst(), true); location.href = S.home + 'checkout/'; };
     $$('.thumbs button', pdp).forEach(function (b) { b.onclick = function () { $$('.thumbs button', pdp).forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on'); var im = $('.gmain img', pdp); if (im) im.src = b.dataset.img; }; });
     var rt = $('[data-runtime]', pdp);
     if (rt) {
-      var kwh = +rt.dataset.runtime, loads = [['LED bulbs (×6)', 60, true], ['TV', 100, true], ['Fridge', 60, true], ['Wi-Fi router', 15, true], ['Laptop', 60, false], ['CCTV (×2)', 40, false], ['POS and phone charging', 30, false], ['Desktop computer', 150, false]];
+      var kwh = +rt.dataset.runtime, loads = [['LED bulbs (×6)', 60, true], ['TV', 100, true], ['Fridge (average draw)', 60, true], ['Wi-Fi router', 15, true], ['Laptop', 60, false], ['CCTV (×2)', 40, false], ['POS and phone charging', 30, false], ['Desktop computer', 150, false]];
       $('.rt-list', rt).innerHTML = loads.map(function (l, i) { return '<label><input type="checkbox" data-rt="' + i + '"' + (l[2] ? ' checked' : '') + '><span>' + esc(l[0]) + '</span><small>' + l[1] + ' W</small></label>'; }).join('');
       var calc = function () {
         var w = 0; $$('[data-rt]', rt).forEach(function (c) { if (c.checked) w += loads[c.dataset.rt][1]; });
         var hrs = w ? kwh * 1000 * 0.85 / w : 0;
-        $('.rt-out', rt).innerHTML = '<span>About ' + w + ' W running</span><b>' + (w ? (hrs >= 24 ? Math.floor(hrs / 24) + ' day' + (hrs >= 48 ? 's ' : ' ') + Math.round(hrs % 24) + ' h' : (Math.round(hrs * 10) / 10) + ' hours') : '—') + '</b>';
+        $('.rt-out', rt).innerHTML = (w ? '<span>About ' + w + ' W running</span>' : '<span>Tick what you would run</span>') + '<b>' + (w ? (hrs >= 24 ? Math.floor(hrs / 24) + ' day' + (hrs >= 48 ? 's ' : ' ') + Math.round(hrs % 24) + ' h' : (Math.round(hrs * 10) / 10) + ' hours') : '—') + '</b>';
       };
       rt.addEventListener('change', calc); calc();
     }
@@ -431,7 +460,7 @@
     var qb = t.closest('[data-q-buy]'); if (qb) { var r2 = $('[name=qinst]:checked'); add(qb.dataset.qBuy, 1, r2 && r2.value === '1', true); location.href = S.home + 'checkout/'; return; }
     if (t.closest('[data-close]') || t.closest('[data-scrim]')) { closeDrawer(); return; }
     if (t.closest('[data-open-cart]')) { cartDrawer(); return; }
-    var cq = t.closest('[data-cq]'); if (cq) { var c = cart[+cq.dataset.cq]; c.qty += +cq.dataset.d; if (c.qty <= 0) cart.splice(+cq.dataset.cq, 1); saveCart(); if ($('[data-drawer]').classList.contains('on')) cartDrawer(); return; }
+    var cq = t.closest('[data-cq]'); if (cq) { var c = cart[+cq.dataset.cq]; if (+cq.dataset.d > 0 && cart.filter(function (x) { return x.id === c.id; }).reduce(function (a, x) { return a + x.qty; }, 0) >= maxQty(c.id)) { toast('Only ' + maxQty(c.id) + ' available.'); return; } if (+cq.dataset.d < 0 && c.qty <= 1) { return; } c.qty += +cq.dataset.d; saveCart(); if ($('[data-drawer]').classList.contains('on')) cartDrawer(); return; }
     var rm = t.closest('[data-rm]'); if (rm) { cart.splice(+rm.dataset.rm, 1); saveCart(); if ($('[data-drawer]').classList.contains('on')) cartDrawer(); return; }
     if (t.closest('[data-burger]')) { $('[data-mnav]').classList.add('on'); return; }
     if (t.closest('[data-close-mnav]')) { $('[data-mnav]').classList.remove('on'); return; }
@@ -463,7 +492,7 @@
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-app]')) { e.preventDefault(); e.target.click(); }
   });
   document.addEventListener('input', function (e) {
-    if (e.target.matches('[data-hrs]')) { hours[e.target.dataset.hrs] = Math.max(0.1, Math.min(24, +e.target.value || 0.1)); var r = size(); savePlan(); var pos = e.target.selectionStart; renderPlanner(); var ni = $('[data-hrs="' + e.target.dataset.hrs + '"]'); if (ni) { ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (x) {} } }
+    if (e.target.matches('[data-hrs]')) { hours[e.target.dataset.hrs] = Math.max(0.1, Math.min(24, +e.target.value || 0.1)); savePlan(); renderPlanner(true); }
   });
   document.addEventListener('change', function (e) { if (e.target.matches('[data-f-brand],[data-f-stock],[data-f-sort]')) filterShop(); });
 
@@ -587,4 +616,10 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   document.body.appendChild(bar);
   bar.querySelector('button').addEventListener('click', function () { var b = document.querySelector('[data-add-pdp]'); if (b) b.click(); });
   new IntersectionObserver(function (es) { bar.classList.toggle('on', !es[0].isIntersecting && es[0].boundingClientRect.top < 0); }).observe(row);
+})();
+/* phones: keep the WhatsApp button off the home banner buttons while the banner is on screen */
+(function () {
+  var hero = document.querySelector('.hero'), wa = document.querySelector('.wa');
+  if (!hero || !wa || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(function (es) { wa.classList.toggle('wa-hide', es[0].isIntersecting && innerWidth < 760); }, { threshold: 0.35 }).observe(hero);
 })();

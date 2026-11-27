@@ -243,6 +243,9 @@ final class Soko_API {
 		if ( is_wp_error( $d ) ) {
 			return $d;
 		}
+		if ( 'void' === $d['status'] || 'void' === $d['state'] || $d['balance'] <= 0 ) {
+			return new WP_Error( 'soko', 'void' === $d['state'] || 'void' === $d['status'] ? 'This order was cancelled. Please call us if you would like to order again.' : 'Nothing to pay on this order.', array( 'status' => 400 ) );
+		}
 		$amt = isset( $req['amount'] ) && (float) $req['amount'] > 0 ? min( (float) $req['amount'], $d['balance'] ) : null;
 		return Soko_Mpesa::stk( $d, $req['phone'], $amt );
 	}
@@ -265,7 +268,8 @@ final class Soko_API {
 			'state'    => $d['state'],
 			'total'    => $d['total'],
 			'paid'     => $d['paid'],
-			'balance'  => $d['balance'],
+			'balance'  => 'void' === $d['state'] ? 0 : $d['balance'],
+			'void'     => 'void' === $d['state'],
 			'fulfil'   => $d['fulfil'],
 			'stk'      => $stk ? array( 'status' => $stk['status'], 'message' => $stk['message'] ) : null,
 			'pdf'      => rest_url( self::NS . '/doc-pdf?doc=' . rawurlencode( $d['number'] ) . '&t=' . $d['token'] ),
@@ -292,6 +296,9 @@ final class Soko_API {
 		}
 		if ( empty( $b['name'] ) || strlen( soko_phone( isset( $b['phone'] ) ? $b['phone'] : '' ) ) !== 12 ) {
 			return new WP_Error( 'soko', 'Please enter your name and a valid phone number.', array( 'status' => 400 ) );
+		}
+		if ( ! empty( $b['email'] ) && ! is_email( $b['email'] ) ) {
+			return new WP_Error( 'soko', 'Please check your email address, for example name@gmail.com.', array( 'status' => 400 ) );
 		}
 		global $wpdb;
 		$wpdb->insert(
@@ -330,7 +337,7 @@ final class Soko_API {
 
 	public static function mpesa_callback( $req ) {
 		$cfg = soko_setting( 'mpesa' );
-		if ( ! hash_equals( (string) $cfg['token'], (string) $req['token'] ) ) {
+		if ( empty( $cfg['token'] ) || ! Soko_Mpesa::ready() || ! hash_equals( (string) $cfg['token'], (string) $req['token'] ) ) {
 			return new WP_Error( 'soko', 'Not found', array( 'status' => 404 ) );
 		}
 		$b = $req->get_json_params();

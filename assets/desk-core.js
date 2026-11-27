@@ -69,14 +69,20 @@
     return d;
   };
   K.closeDrawer = function () { var d = $('.drawer'), sc = $('.scrim'); if (d) d.classList.remove('on'); if (sc) sc.classList.remove('on'); K._openDocId = 0; if (K.dirty) { K.dirty = false; if (K.route) K.route(); } };
+  K._mstack = [];
   K.modal = function (title, body, foot, wide) {
     var m = $('.modal');
+    if (m.classList.contains('on') && m.firstChild) { K._mstack.push(m.removeChild(m.firstChild)); } // a picker or confirm opened over a form keeps the form underneath
     m.innerHTML = '<div class="mbox' + (wide ? ' wide' : '') + '" role="dialog" aria-modal="true"><div class="dh"><h2>' + title + '</h2><button class="btn ghost" data-mx aria-label="Close">' + K.ic(K.ICONS.x) + '</button></div><div class="db">' + body + '</div>' + (foot ? '<div class="df">' + foot + '</div>' : '') + '</div>';
     m.classList.add('on');
     var f = m.querySelector('input:not([type=hidden]),select,textarea'); if (f) setTimeout(function () { f.focus(); }, 30);
     return m.firstChild;
   };
-  K.closeModal = function () { $('.modal').classList.remove('on'); $('.modal').innerHTML = ''; };
+  K.closeModal = function () {
+    var m = $('.modal');
+    if (K._mstack.length) { m.innerHTML = ''; m.appendChild(K._mstack.pop()); return; }
+    m.classList.remove('on'); m.innerHTML = '';
+  };
   K.confirm = function (text, ok, danger) {
     return new Promise(function (res) {
       var m = K.modal('Please confirm', '<p>' + text + '</p>', '<button class="btn" data-no>Cancel</button><button class="btn ' + (danger ? 'danger' : 'pri') + '" data-yes>' + (ok || 'Yes') + '</button>');

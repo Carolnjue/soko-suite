@@ -95,7 +95,13 @@ final class Soko_PDF {
 		if ( 'receipt' === $d['type'] && ! empty( $d['meta']['invoice'] ) ) {
 			$right[] = 'For invoice: ' . $d['meta']['invoice'];
 		}
-		self::head( $pdf, $titles[ $d['type'] ], $right );
+		self::head( $pdf, ( 'void' === ( isset( $d['state'] ) ? $d['state'] : '' ) ? 'CANCELLED · ' : '' ) . $titles[ $d['type'] ], $right );
+		if ( 'void' === ( isset( $d['state'] ) ? $d['state'] : '' ) ) {
+			$pdf->SetFont( 'Helvetica', 'B', 11 );
+			$pdf->SetTextColor( 194, 54, 43 );
+			$pdf->Cell( 0, 8, 'This invoice has been cancelled. No payment is due.', 0, 1 );
+			$pdf->SetTextColor( 0, 0, 0 );
+		}
 
 		$c = $d['customer'] ? $d['customer'] : array( 'name' => 'Customer' );
 		$pdf->SetFont( 'Helvetica', 'B', 9 );

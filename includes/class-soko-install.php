@@ -23,9 +23,11 @@ final class Soko_Install {
 			update_option( 'soko_site', Soko_Sections::default_site(), false );
 		}
 		update_option( 'soko_db_version', SOKO_DB_VERSION );
-		Soko_Store::rewrites();
 		Soko_Cron::schedule();
-		flush_rewrite_rules();
+		if ( ! empty( $GLOBALS['wp_rewrite'] ) ) { // during an upgrade this runs before WordPress sets up links; soko_flush rebuilds them on init
+			Soko_Store::rewrites();
+			flush_rewrite_rules();
+		}
 	}
 
 	public static function deactivate() {
@@ -39,6 +41,14 @@ final class Soko_Install {
 				// 1.x staging sites: take the redesigned header, pages and category photos.
 				update_option( 'soko_site', Soko_Sections::default_site(), false );
 				delete_option( 'soko_categories' );
+			}
+			if ( version_compare( (string) get_option( 'soko_db_version' ), '8', '<' ) ) {
+				// New private callback address: earlier builds could show it to staff.
+				$st = get_option( 'soko_settings' );
+				if ( is_array( $st ) && isset( $st['mpesa'] ) ) {
+					$st['mpesa']['token'] = wp_generate_password( 24, false );
+					update_option( 'soko_settings', $st, false );
+				}
 			}
 			self::activate();
 		}

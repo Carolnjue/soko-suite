@@ -66,7 +66,7 @@
           var st = t === 'web' ? (r.fulfil || 'awaiting_payment') : r.state;
           return (!salesState.state || st === salesState.state || (salesState.state === 'owed' && ['unpaid', 'partial', 'overdue'].indexOf(st) > -1)) && (!salesState.q || (r.number + ' ' + (r.customer_name || '') + ' ' + (r.customer_phone || '')).toLowerCase().indexOf(salesState.q.toLowerCase()) > -1);
         });
-        var total = list.reduce(function (a, r) { return a + r.total; }, 0), bal = list.reduce(function (a, r) { return a + (r.type === 'invoice' ? r.balance : 0); }, 0);
+        var live = list.filter(function (r) { return r.state !== 'void' && r.status !== 'void'; }), total = live.reduce(function (a, r) { return a + r.total; }, 0), bal = live.reduce(function (a, r) { return a + (r.type === 'invoice' ? r.balance : 0); }, 0);
         var cols = [{ k: 'number', label: t === 'receipt' ? 'Receipt' : t === 'quote' ? 'Quotation' : 'Invoice', f: function (r) { return '<b class="mono">' + esc(r.number) + '</b>'; } }, { k: 'customer_name', label: 'Customer', f: function (r) { return esc(r.customer_name || '—') + '<div class="tiny">' + esc(K.phone(r.customer_phone)) + '</div>'; } }, { k: 'date', label: 'Date', f: function (r) { return K.ds(r.date); } }];
         if (t === 'invoice' || t === 'web') cols.push({ k: 'due', label: 'Due', f: function (r) { return K.ds(r.due); } });
         if (t === 'quote') cols.push({ k: 'due', label: 'Valid to', f: function (r) { return K.ds(r.due); } });
@@ -99,29 +99,30 @@
       var acts = [];
       acts.push('<button class="btn" data-a="pdf">' + ic(I.eye) + 'View PDF</button>');
       acts.push('<button class="btn" data-a="dl">' + ic(I.dl) + 'Download PDF</button>');
-      if (!isR) acts.push('<button class="btn" data-a="email">' + ic(I.mail) + 'Email</button>');
+      var isVoid = d.state === 'void' || d.status === 'void';
+      if (!isR && !isVoid) acts.push('<button class="btn" data-a="email">' + ic(I.mail) + 'Email</button>');
       acts.push('<a class="btn" target="_blank" rel="noopener" href="' + wa + '">' + ic(I.wa) + 'WhatsApp</a>');
       if (isInv && d.balance > 0 && d.state !== 'void') { acts.push('<button class="btn sun" data-a="stk">' + ic(I.phone) + 'Request M-Pesa</button>'); acts.push('<button class="btn" data-a="pay">' + ic(I.cash) + 'Record payment</button>'); }
       if (isQ && d.status !== 'accepted') { acts.push('<button class="btn sun" data-a="convert">' + ic(I.check) + 'Convert to invoice</button>'); }
-      if (!isR && !(isInv && d.paid > 0)) acts.push('<button class="btn" data-a="edit">' + ic(I.edit) + 'Edit</button>');
+      if (!isR && !isVoid && !(isInv && d.paid > 0)) acts.push('<button class="btn" data-a="edit">' + ic(I.edit) + 'Edit</button>');
       if (!isR) acts.push('<button class="btn" data-a="dup">' + ic(I.copy) + 'Duplicate</button>');
-      if (isInv && K.can('jobs')) acts.push('<button class="btn" data-a="job">' + ic(I.truck) + 'Book installation</button>');
+      if (isInv && !isVoid && K.can('jobs')) acts.push('<button class="btn" data-a="job">' + ic(I.truck) + 'Book installation</button>');
       if (isQ && d.status !== 'accepted' && d.status !== 'declined') acts.push('<button class="btn" data-a="decline">Mark declined</button>');
       if (isInv && !d.paid && d.state !== 'void') acts.push('<button class="btn danger" data-a="void">' + ic(I.trash) + 'Cancel invoice</button>');
       var fulfil = '';
-      if (isInv && (d.source === 'web' || d.fulfil)) {
+      if (isInv && !isVoid && (d.source === 'web' || d.fulfil)) {
         var fs = [['to_pack', 'To pack'], ['packed', 'Packed'], ['dispatched', 'Dispatched'], ['delivered', 'Delivered']];
         fulfil = '<div class="box"><h3>Delivery</h3><p class="sub">Customers see this on their order tracking page.</p><div class="fsteps">' + fs.map(function (f) { return '<button class="chip' + (d.fulfil === f[0] ? ' on' : '') + '" data-ff="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
       } else if (isInv && d.state === 'paid' && !(d.meta && d.meta.stock_done)) {
         fulfil = '<div class="notice info">Paid. <button class="btn sm" data-a="deliver">Mark delivered and take out of stock</button></div>';
       }
-      var etims = isInv ? '<div class="box"><h3>KRA eTIMS</h3>' + (d.etims_status === 'signed' ? '<p>' + K.badge('signed') + ' Control unit invoice <b class="mono">' + esc(d.etims_ref) + '</b></p>' : '<p class="sub">Sign this invoice on KRA eTIMS, then type its eTIMS number here.</p><div class="toolbar"><input placeholder="eTIMS invoice number" data-et style="max-width:260px"><button class="btn" data-a="etims">Save</button></div>') + '</div>' : '';
+      var etims = isInv ? '<div class="box"><h3>KRA eTIMS</h3>' + (d.etims_status === 'signed' ? '<p>' + K.badge('signed') + ' eTIMS number <b class="mono">' + esc(d.etims_ref) + '</b></p>' : '<p class="sub">Sign this invoice on KRA eTIMS, then type its eTIMS number here.</p><div class="toolbar"><input placeholder="eTIMS invoice number" data-et style="max-width:260px"><button class="btn" data-a="etims">Save</button></div>') + '</div>' : '';
       var pays = (d.payments || []).length ? '<div class="box"><h3>Payments</h3>' + K.table([{ k: 'received', label: 'Date', f: function (p) { return K.ds(p.received); } }, { k: 'code', label: 'Code', f: function (p) { return '<span class="mono">' + esc(p.code) + '</span>'; } }, { k: 'method', label: 'Method', f: function (p) { return p.method === 'mpesa' ? 'M-Pesa' : esc(p.method); } }, { k: 'receipt', label: 'Receipt' }, { k: 'amount', label: 'Amount', n: 1, f: function (p) { return money(p.amount); } }], d.payments, { stack: false }) + '</div>' : '';
       var links = [];
       if (d.parent) links.push('From <a href="#" data-open="' + d.parent.id + '">' + esc(d.parent.number) + '</a>');
       (d.children || []).forEach(function (ch) { links.push((ch.type === 'receipt' ? 'Receipt ' : ch.type === 'invoice' ? 'Invoice ' : '') + '<a href="#" data-open="' + ch.id + '">' + esc(ch.number) + '</a>'); });
       var stks = (d.stk || []).length ? '<p class="tiny">Last M-Pesa prompt: ' + esc(d.stk[0].status) + ' · ' + esc(d.stk[0].message) + '</p>' : '';
-      var body = '<div class="docv"><div class="dvh"><div><b>' + esc(d.number) + '</b><div>' + K.badge(d.state) + (d.source === 'web' ? ' <span class="st">Website</span>' : '') + '</div></div><div style="text-align:right"><div class="tiny">' + (isQ ? 'Valid to ' + K.d(d.due) : isInv ? 'Due ' + K.d(d.due) : K.d(d.date)) + '</div><b>' + money(isInv && d.balance > 0 ? d.balance : d.total) + '</b><div class="tiny">' + (isInv ? (d.balance <= 0 ? 'paid in full' : d.balance < d.total ? 'still to pay · ' + money(d.total - d.balance) + ' paid of ' + money(d.total) : 'to pay') : 'total') + '</div></div></div>' +
+      var body = '<div class="docv"><div class="dvh"><div><b>' + esc(d.number) + '</b><div>' + K.badge(d.state) + (d.source === 'web' ? ' <span class="st">Website</span>' : '') + '</div></div><div style="text-align:right"><div class="tiny">' + (isQ ? 'Valid to ' + K.d(d.due) : isInv ? 'Due ' + K.d(d.due) : K.d(d.date)) + '</div><b>' + money(isInv && d.balance > 0 && !isVoid ? d.balance : d.total) + '</b><div class="tiny">' + (isInv ? (isVoid ? 'cancelled · nothing to pay' : d.balance <= 0 ? 'paid in full' : d.balance < d.total ? 'still to pay · ' + money(d.total - d.balance) + ' paid of ' + money(d.total) : 'to pay') : 'total') + '</div></div></div>' +
         '<div style="padding:14px 16px"><dl class="kv"><dt>Customer</dt><dd><b>' + esc(c.name || '—') + '</b></dd><dt>Phone</dt><dd>' + esc(K.phone(c.phone)) + '</dd>' + (c.email ? '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' : '') + (c.kra ? '<dt>KRA PIN</dt><dd>' + esc(c.kra) + '</dd>' : '') + '<dt>Date</dt><dd>' + K.d(d.date) + '</dd>' + (links.length ? '<dt>Linked</dt><dd>' + links.join(' · ') + '</dd>' : '') + '</dl></div>' +
         '<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Price</th><th class="n">Amount</th></tr></thead><tbody>' + d.lines.map(function (l) { return '<tr><td>' + esc(l.description) + '</td><td class="n">' + K.num(l.qty) + '</td><td class="n">' + money(l.price, 1) + '</td><td class="n">' + money(l.qty * l.price, 1) + '</td></tr>'; }).join('') + '</tbody></table>' +
         '<div class="tot">' + (d.vat ? '<div><span>Excl. VAT</span><span>' + money(d.subtotal) + '</span></div><div><span>VAT</span><span>' + money(d.vat) + '</span></div>' : '') + '<div class="g"><span>Total</span><span>' + money(d.total) + '</span></div>' + (isInv && d.paid ? '<div><span>Paid</span><span>' + money(d.paid) + '</span></div><div><b>Balance</b><b>' + money(d.balance) + '</b></div>' : '') + '</div>' + (d.notes ? '<p style="padding:0 16px 14px;white-space:pre-line" class="tiny">' + esc(d.notes) + '</p>' : '') + '</div>' +
@@ -191,10 +192,10 @@
         '<div class="pickrow"><div class="custpick"><input placeholder="Add a product: type to search" data-ps autocomplete="off"><div class="dd" hidden data-pd></div></div><button class="btn" data-addc>' + ic(I.plus) + 'Custom line</button><button class="btn" data-addi>' + ic(I.plus) + 'Installation</button></div>' +
         K.field('Notes on the ' + (type === 'quote' ? 'quotation' : 'invoice'), 'notes', doc ? doc.notes : '', 'textarea', { ph: 'Scope, delivery terms, warranty notes' }) +
         '<div class="totbar"><span class="tiny" data-vat></span><span>Total <b data-tot>' + money(0) + '</b></span></div>';
-      var m = K.modal(title, body, '<button class="btn" data-mx>Cancel</button><button class="btn" data-save="0">Save</button><button class="btn sun" data-save="1">' + (doc ? 'Save' : 'Save and email') + '</button>', true);
+      var m = K.modal(title, body, '<button class="btn" data-mx>Cancel</button><button class="btn" data-save="0">' + (type === 'quote' && !doc ? 'Save as draft' : 'Save') + '</button><button class="btn sun" data-save="1">Save and email</button>', true);
       var ls = $('[data-ls]', m);
       var draw = function () {
-        ls.innerHTML = lines.length ? lines.map(function (l, i) { return '<tr><td><input value="' + esc(l.description) + '" data-ld="' + i + '"></td><td class="q"><input type="number" min="0" step="any" value="' + l.qty + '" data-lq="' + i + '"></td><td class="p"><input type="number" min="0" step="any" value="' + l.price + '" data-lp="' + i + '"></td><td class="a" data-la="' + i + '">' + money(l.qty * l.price, 1) + '</td><td><button class="btn ghost sm" data-lx="' + i + '" aria-label="Remove">' + ic(I.x) + '</button></td></tr>'; }).join('') : '<tr><td colspan="5" class="tiny" style="padding:16px">Add products below. Prices fill in from your catalogue and can be changed.</td></tr>';
+        ls.innerHTML = lines.length ? lines.map(function (l, i) { return '<tr><td class="d"><input value="' + esc(l.description) + '" data-ld="' + i + '" placeholder="Item description" aria-label="Item"></td><td class="q"><input type="number" min="0" step="any" value="' + l.qty + '" data-lq="' + i + '" aria-label="Quantity" placeholder="Qty"></td><td class="p"><input type="number" min="0" step="any" value="' + l.price + '" data-lp="' + i + '" aria-label="Unit price" placeholder="Price"></td><td class="a" data-la="' + i + '">' + money(l.qty * l.price, 1) + '</td><td><button class="btn ghost sm" data-lx="' + i + '" aria-label="Remove">' + ic(I.x) + '</button></td></tr>'; }).join('') : '<tr><td colspan="5" class="tiny" style="padding:16px">Add products below. Prices fill in from your catalogue and can be changed.</td></tr>';
         sum();
       };
       var sum = function () {
@@ -250,7 +251,7 @@
           var f = K.read(m), lns = lines.filter(function (l) { return l.description && l.qty > 0; });
           if (!cs.value.trim()) { K.toast('Choose or type a customer.', true); cs.focus(); return; }
           if (!lns.length) { K.toast('Add at least one item.', true); return; }
-          var payload = { type: type, lines: lns, due: f.due, notes: f.notes, send: +b.dataset.save };
+          var payload = { type: type, lines: lns, due: f.due, notes: f.notes, send: +b.dataset.save }; if (type === 'quote' && !doc && !+b.dataset.save) payload.status = 'draft';
           if (cust) { payload.customer_id = +cust.id; }
           else payload.customer = { name: cs.value.trim(), phone: $('[data-cp]', m).value, email: f.email, kra: f.kra, type: f.kra ? 'Business' : 'Home' };
           if (cust && (f.email !== (cust.email || '') || f.kra !== (cust.kra || ''))) K.api('customers/' + cust.id, { body: { email: f.email, kra: f.kra } });
@@ -370,7 +371,7 @@
       var c = res[0].filter(function (x) { return +x.id === id; })[0]; if (!c) return;
       var docs = res[1];
       var dr = K.drawer(esc(c.name), '<div class="kpis"><div class="kpi"><small>Bought</small><b>' + money(c.ltv) + '</b></div><div class="kpi"><small>Owes</small><b class="' + (c.owes > 0 ? 'down' : '') + '">' + money(c.owes) + '</b></div></div><dl class="kv"><dt>Phone</dt><dd>' + esc(K.phone(c.phone)) + '</dd><dt>Email</dt><dd>' + esc(c.email || '—') + '</dd><dt>KRA PIN</dt><dd>' + esc(c.kra || '—') + '</dd><dt>Location</dt><dd>' + esc([c.address, c.county].filter(Boolean).join(', ') || '—') + '</dd>' + (c.notes ? '<dt>Notes</dt><dd>' + esc(c.notes) + '</dd>' : '') + '</dl>' +
-        '<div class="actgrid"><button class="btn" data-e>' + ic(I.edit) + 'Edit</button>' + (K.can('sales') ? '<button class="btn" data-nq>New quotation</button><button class="btn sun" data-ni>New invoice</button>' : '') + (c.phone ? '<a class="btn" target="_blank" rel="noopener" href="https://wa.me/' + String(c.phone).replace(/\D/g, '') + '">' + ic(I.wa) + 'WhatsApp</a><a class="btn" href="tel:' + esc(c.phone) + '">' + ic(I.phone) + 'Call</a>' : '') + '</div>' +
+        '<div class="actgrid"><button class="btn" data-e>' + ic(I.edit) + 'Edit</button>' + (K.can('sales') ? '<button class="btn" data-nq>New quotation</button><button class="btn sun" data-ni>New invoice</button>' : '') + (c.phone ? '<a class="btn" target="_blank" rel="noopener" href="https://wa.me/' + String(c.phone).replace(/\D/g, '') + '">' + ic(I.wa) + 'WhatsApp</a><a class="btn" href="tel:+' + esc(String(c.phone).replace(/^\+/, '')) + '">' + ic(I.phone) + 'Call</a>' : '') + '</div>' +
         '<div class="box"><h3>History</h3>' + K.table([{ k: 'number', label: 'Document', f: function (d) { return '<b class="mono">' + esc(d.number) + '</b>'; } }, { k: 'date', label: 'Date', f: function (d) { return K.ds(d.date); } }, { k: 'total', label: 'Total', n: 1, f: function (d) { return money(d.total); } }, { k: 'state', label: 'Status', f: function (d) { return K.badge(d.state); } }], docs, { click: 1, stack: false, empty: 'No documents yet' }) + '</div>', '', true);
       $('[data-e]', dr).onclick = function () { K.editCustomer(c); };
       var nq = $('[data-nq]', dr), ni = $('[data-ni]', dr);
@@ -442,8 +443,8 @@
       var evs = res[0], jobs = res[1] || [];
       var linked = {}; evs.forEach(function (e) { if (+e.job_id) linked[e.job_id] = 1; });
       jobs.forEach(function (j) { if (j.date && j.date >= from && j.date <= to && !linked[j.id] && !evs.some(function (e) { return String(e.start).slice(0, 10) === j.date && (String(e.title).toLowerCase().indexOf(String(j.title).toLowerCase()) > -1 || (j.location && e.location === j.location)); })) evs.push({ id: 'j' + j.id, job: j.id, title: j.title + (j.customer ? ' · ' + j.customer : ''), kind: 'Install', start: j.date + ' 08:00:00', who: j.techs || '', location: j.location || '', done: j.stage === 'Commissioned' ? 1 : 0 }); });
-      var people = Array.from(new Set(evs.map(function (e) { return e.who; }).filter(Boolean)));
-      var list = evs.filter(function (e) { return !schedState.who || e.who === schedState.who; });
+      var people = Array.from(new Set([].concat.apply([], evs.map(function (e) { return String(e.who || '').split(/\s*(?:,|&|\+\s*\d+)\s*/); })).map(function (x) { return x.trim(); }).filter(Boolean))).sort();
+      var list = evs.filter(function (e) { return !schedState.who || String(e.who || '').indexOf(schedState.who) > -1; });
       var days = [];
       for (var i = 0; i < 14; i++) days.push(K.add(from, i));
       var wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -452,7 +453,7 @@
         '<div class="box"><div class="toolbar"><select data-who><option value="">Everyone</option>' + people.map(function (p) { return '<option' + (p === schedState.who ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select><span class="tiny">' + K.d(from) + ' to ' + K.d(to) + '</span><span class="legend"><i class="k-ins"></i>Install<i class="k-sur"></i>Survey<i class="k-mnt"></i>Maintenance<i class="k-call"></i>Call</span></div>' +
         '<div class="cal">' + wd.map(function (w) { return '<div class="cal-h">' + w + '</div>'; }).join('') +
         days.map(function (d) {
-          var es = list.filter(function (e) { return String(e.start).slice(0, 10) === d; });
+          var es = list.filter(function (e) { return String(e.start).slice(0, 10) === d; }).sort(function (a, b) { return String(a.start).localeCompare(String(b.start)); });
           var past = d < K.today();
           return '<div class="cal-d' + (d === K.today() ? ' today' : '') + (past ? ' past' : '') + '" data-day="' + d + '"><span class="cal-n">' + K.ds(d) + '</span>' + es.map(function (e) { return '<button class="chip-ev ' + kc(e.kind) + (+e.done ? ' done' : '') + '" ' + (e.job ? 'data-oj="' + e.job + '"' : 'data-ee="' + e.id + '"') + ' title="' + esc(e.title) + '"><time>' + K.t(e.start) + '</time><b>' + esc(e.title) + '</b>' + (e.who ? '<small>' + esc(e.who) + '</small>' : '') + '</button>'; }).join('') + '<button class="cal-add" data-addday="' + d + '" aria-label="Add on ' + K.ds(d) + '">+</button></div>';
         }).join('') + '</div></div>';
@@ -472,7 +473,8 @@
     K.api('team').then(function (team) {
       var m = K.modal(e.id ? 'Edit' : 'Add to schedule', K.field('What', 'title', e.title, 'text', { ph: 'e.g. Site survey at Greenleaf Academy' }) + '<div class="grid3">' + K.field('Date', 'd', String(e.start).slice(0, 10), 'date') + K.field('Time', 't', K.t(e.start), 'time') + K.field('Type', 'kind', e.kind, 'select', { options: opts(['Install', 'Survey', 'Maintenance', 'Delivery', 'Call', 'Meeting', 'Task']) }) + '</div>' +
         '<div class="grid2">' + K.field('Who', 'who', e.who, 'text', { list: 'tl' }) + K.field('Where', 'location', e.location, 'text') + '</div><datalist id="tl">' + team.map(function (t) { return '<option value="' + esc(t.name) + '">'; }).join('') + '</datalist>' + K.field('Email a reminder the evening before', 'remind', e.remind, 'toggle'),
-        (e.id ? '<button class="btn danger" data-del>Delete</button>' : '') + '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-s>Save</button>');
+        (e.id ? '<button class="btn danger" data-del>Delete</button><button class="btn" data-done>' + (+e.done ? 'Mark not done' : '✓ Mark done') + '</button>' : '') + '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-s>Save</button>');
+      var dn = $('[data-done]', m); if (dn) dn.onclick = function () { K.api('events/' + e.id, { body: { done: +e.done ? 0 : 1 } }).then(function () { K.closeModal(); K.toast(+e.done ? 'Marked not done.' : 'Marked done.'); K.route(); }).catch(K.fail); };
       $('[data-s]', m).onclick = function () { var f = K.read(m); f.start = f.d + ' ' + (f.t || '09:00') + ':00'; delete f.d; delete f.t; if (!f.title) { K.toast('Say what it is.', true); return; } K.api('events' + (e.id ? '/' + e.id : ''), { body: f }).then(function () { K.closeModal(); K.toast('Saved'); K.route(); }).catch(K.fail); };
       var del = $('[data-del]', m); if (del) del.onclick = function () { K.api('events/' + e.id, { method: 'DELETE' }).then(function () { K.closeModal(); K.route(); }); };
     });

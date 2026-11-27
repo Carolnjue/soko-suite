@@ -178,7 +178,7 @@
       el.innerHTML = '<h3>Your recommended system</h3><div class="meter"><div><b>' + r.kwh.toFixed(1) + ' kWh</b><small>used per day</small></div><div><b>' + (r.inv ? Math.round(r.inv.watts / 100) / 10 + ' kW' : '—') + '</b><small>inverter</small></div><div><b>' + (r.batt ? Math.round(r.batt.kwh * r.bq) + ' kWh' : '—') + '</b><small>battery</small></div></div>' +
         '<ul class="bom">' + r.items.map(function (x) { return '<li><span>' + (x[1] > 1 ? x[1] + ' × ' : '') + esc(x[0].name) + '</span><span>' + money(x[0].price * x[1]) + '</span></li>'; }).join('') + '<li><span>Installation and commissioning</span><span>' + money(r.inst) + '</span></li></ul>' +
         '<div class="total"><span>Estimated total</span><b>' + money(r.goods + r.inst) + '</b></div>' +
-        '<div class="row"><button class="btn b-sun" data-plan="cart">Add system to cart</button><button class="btn b-line" data-plan="survey">Book a free survey</button></div><p class="fine">Peak load about ' + Math.round(r.peak).toLocaleString() + ' W. An engineer confirms the final size after a site survey.</p>';
+        '<div class="row"><button class="btn b-sun" data-plan="cart">Add system to cart</button><button class="btn b-line" data-plan="survey">Book a site survey</button></div><p class="fine">Peak load about ' + Math.round(r.peak).toLocaleString() + ' W. An engineer confirms the final size after a site survey.</p>';
     });
     savePlan();
   }
@@ -256,10 +256,10 @@
   function msg(f, text, ok) { var m = $('.formmsg', f); if (m) { m.textContent = text; m.className = 'formmsg ' + (ok ? 'ok' : 'err'); } }
   var FMSG = { name: 'Please enter your full name.', phone: 'Enter a valid phone number, for example 0712 345 678.', email: 'Enter a valid email address, for example name@gmail.com.', county: 'Please enter your county or town.', address: 'Please enter where we should deliver or install.', message: 'Tell us briefly what you need.', number: 'Enter your order or invoice number.' };
   function fieldErr(i, text) {
-    var box = i.closest('.f') || i.parentNode, e = box.querySelector('.ferr');
+    var box = i.closest('.f'), e = box ? box.querySelector('.ferr') : (i.nextElementSibling && i.nextElementSibling.classList.contains('ferr') ? i.nextElementSibling : null);
     i.classList.toggle('input-err', !!text); i.setAttribute('aria-invalid', text ? 'true' : 'false');
     if (!text) { if (e) e.remove(); return; }
-    if (!e) { e = document.createElement('small'); e.className = 'ferr'; e.id = (i.id || i.name) + '-err'; box.appendChild(e); i.setAttribute('aria-describedby', e.id); }
+    if (!e) { e = document.createElement('small'); e.className = 'ferr'; e.id = (i.id || i.name) + '-err-' + Math.random().toString(36).slice(2, 6); if (box) box.appendChild(e); else i.insertAdjacentElement('afterend', e); i.setAttribute('aria-describedby', e.id); }
     e.textContent = text;
   }
   function check(f) {
@@ -293,7 +293,8 @@
   });
 
   /* ---------------- checkout ---------------- */
-  function deliveryFee() { var r = $('[name=delivery]:checked'); return r ? +r.dataset.fee : 0; }
+  function hasGoods() { return cart.some(function (c) { var p = byId[c.id]; return !p || p.kind === 'product'; }); }
+  function deliveryFee() { if (!hasGoods()) return 0; var r = $('[name=delivery]:checked'); return r ? +r.dataset.fee : 0; }
   function renderCheckout() {
     var co = $('[data-checkout]');
     if (!co || co.dataset.done) return;
@@ -303,7 +304,9 @@
     lines.innerHTML = linesHTML(false);
     sum.innerHTML = sumHTML(deliveryFee());
     payBtn.textContent = S.stk ? 'Pay ' + money(subtotal() + deliveryFee()) + '' : 'Place order · ' + money(subtotal() + deliveryFee());
-    var inst = $('.inst-date', co); if (inst) inst.hidden = !cart.some(function (c) { return c.install; });
+    var svc = cart.some(function (c) { var p = byId[c.id]; return p && p.kind !== 'product'; });
+    var inst = $('.inst-date', co); if (inst) { inst.hidden = !(svc || cart.some(function (c) { return c.install; })); var dl = $('[data-datelab]', co); if (dl) dl.textContent = cart.some(function (c) { return c.install; }) ? 'Preferred installation date' : 'Preferred visit date'; }
+    var db = $('.delblock', co); if (db) db.hidden = !hasGoods();
   }
   var coForm = $('[data-co-form]');
   if (coForm) {
@@ -311,7 +314,7 @@
     coForm.addEventListener('change', function (e) { if (e.target.name === 'delivery') renderCheckout(); });
     coForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      var dsel = coForm.querySelector('[name=delivery]:checked'), needAddr = (dsel && +dsel.value > 0) || cart.some(function (c) { return c.install; });
+      var dsel = coForm.querySelector('[name=delivery]:checked'), needAddr = (hasGoods() && dsel && +dsel.value > 0) || cart.some(function (c) { return c.install; });
       ['address', 'county'].forEach(function (n) { if (coForm[n]) coForm[n].required = !!needAddr; });
       if (!cart.length || !check(coForm)) return;
       var b = formData(coForm), btn = $('[data-pay]', coForm);
@@ -475,7 +478,7 @@
       if (pl.dataset.plan === 'cart') { r3.items.forEach(function (x) { add(x[0].id, x[1], 1, true); }); toast('Your system was added to the cart with installation.', ['View cart', S.home + 'cart/']); cartDrawer(); }
       else {
         var text = 'Solar calculator result: ' + r3.kwh.toFixed(1) + ' kWh a day, peak about ' + Math.round(r3.peak) + ' W. Appliances: ' + Object.keys(picks).map(function (i) { return picks[i] + ' × ' + APPS[i][0]; }).join(', ') + '. Suggested: ' + r3.items.map(function (x) { return x[1] + ' × ' + x[0].name; }).join(', ') + '.';
-        openDrawer('<div class="dhead"><b>Book a free site survey</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="dbody"><p class="muted" style="margin-bottom:16px">We will call to agree a time. Your planner result is attached.</p><form data-survey novalidate><div class="f"><label for="sName">Full name</label><input id="sName" name="name" required></div><div class="f"><label for="sPhone">Phone</label><input id="sPhone" name="phone" inputmode="tel" required></div><div class="f"><label for="sCounty">Where is the site?</label><input id="sCounty" name="county" placeholder="Estate and county"></div><input type="text" name="website" class="hp" tabindex="-1" autocomplete="off"><button class="btn b-sun wide">Request the survey</button><p class="formmsg"></p></form></div>');
+        openDrawer('<div class="dhead"><b>Book a site survey</b><button class="ico" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="dbody"><p class="muted" style="margin-bottom:16px">We will call to agree a time. Your planner result is attached.</p><form data-survey novalidate><div class="f"><label for="sName">Full name</label><input id="sName" name="name" required></div><div class="f"><label for="sPhone">Phone</label><input id="sPhone" name="phone" inputmode="tel" required></div><div class="f"><label for="sCounty">Where is the site?</label><input id="sCounty" name="county" placeholder="Estate and county"></div><input type="text" name="website" class="hp" tabindex="-1" autocomplete="off"><button class="btn b-sun wide">Request the survey</button><p class="formmsg"></p></form></div>');
         var sf = $('[data-survey]');
         sf.onsubmit = function (ev) {
           ev.preventDefault(); if (!check(sf)) return;
@@ -492,7 +495,7 @@
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-app]')) { e.preventDefault(); e.target.click(); }
   });
   document.addEventListener('input', function (e) {
-    if (e.target.matches('[data-hrs]')) { hours[e.target.dataset.hrs] = Math.max(0.1, Math.min(24, +e.target.value || 0.1)); savePlan(); renderPlanner(true); }
+    if (e.target.matches('[data-hrs]')) { var hv = +e.target.value; if (hv > 24) { e.target.value = 24; toast('A day has at most 24 hours, so we used 24.'); } hours[e.target.dataset.hrs] = Math.max(0.1, Math.min(24, +e.target.value || 0.1)); savePlan(); renderPlanner(true); }
   });
   document.addEventListener('change', function (e) { if (e.target.matches('[data-f-brand],[data-f-stock],[data-f-sort]')) filterShop(); });
 
@@ -561,7 +564,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
       count($('[data-sv-pay]', s), years, function (v) { return v < 1.5 ? 'about a year' : (Math.round(v * 2) / 2) + ' years'; });
       $('[data-sv-now]', s).textContent = kes(bill);
       $('[data-sv-after]', s).textContent = kes(bill - save);
-      $('[data-sv-barafter]', s).style.setProperty('--w', Math.max(12, (1 - share) * 100) + '%');
+      var wA = Math.max(12, (1 - share) * 100), bA = $('[data-sv-barafter]', s); bA.style.setProperty('--w', wA + '%'); bA.classList.toggle('out', wA < 45);
       var kit = $('[data-sv-kit]', s); if (kit) kit.href = kit.href.replace(/\/shop\/[^/]+\/$/, mode === 'home' ? '/shop/kits/' : '/shop/hybrid/');
     };
     r.addEventListener('input', function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(calc); });
@@ -571,7 +574,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
 
   /* scroll reveal + timeline */
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var io = ('IntersectionObserver' in window) && !reduce ? new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -6% 0px', threshold: 0.12 }) : null;
+  var io = ('IntersectionObserver' in window) && !reduce ? new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting && (e.intersectionRatio >= 0.12 || e.intersectionRect.height >= innerHeight * 0.12)) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -6% 0px', threshold: [0, 0.05, 0.12, 0.25] }) : null;
   function watch(el) { if (io) io.observe(el); else el.classList.add('in'); }
   /* section headings: kicker line draws, title rises word by word, intro follows */
   $$('main .sec-head, main .pcopy, main .phero h1, main .cta-copy').forEach(function (h) {
@@ -594,6 +597,10 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   /* larger single blocks */
   $$('main .sv-grid > *, main .cta .wrap > *, main .contact > *, main .ti > *, main .rich, main .cartpage > *, main .co > *').forEach(function (el, i) { if (!el.classList.contains('ri')) { el.classList.add('ri', 'ri-b'); el.style.setProperty('--d', (i % 2) * 120 + 'ms'); watch(el); } });
   $$('.tl').forEach(watch);
+  /* jumping to a section reveals it straight away, so nothing is blank on arrival */
+  function revealAt(id) { var t = id && document.getElementById(id); if (!t) return; [t].concat([].slice.call(t.querySelectorAll('.ri,.hd'))).forEach(function (x) { x.classList.add('in'); }); var r = t.closest('.ri'); if (r) r.classList.add('in'); }
+  document.addEventListener('click', function (e) { var a = e.target.closest('a[href^="#"]'); if (a && a.getAttribute('href').length > 1) revealAt(a.getAttribute('href').slice(1)); });
+  if (location.hash.length > 1) revealAt(location.hash.slice(1));
   /* numbers count up when they come into view */
   function countUp(el) {
     var m = el.textContent.match(/^([^0-9]*)([0-9][0-9,]*\.?[0-9]*)(.*)$/); if (!m) return;
@@ -615,11 +622,11 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   bar.innerHTML = '<div><small>' + (d.name || '') + '</small><b>' + (priceEl ? priceEl.textContent : '') + '</b></div><button class="btn b-sun" type="button">Add to cart</button>';
   document.body.appendChild(bar);
   bar.querySelector('button').addEventListener('click', function () { var b = document.querySelector('[data-add-pdp]'); if (b) b.click(); });
-  new IntersectionObserver(function (es) { bar.classList.toggle('on', !es[0].isIntersecting && es[0].boundingClientRect.top < 0); }).observe(row);
+  new IntersectionObserver(function (es) { var on = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; bar.classList.toggle('on', on); var t = $('.toast'); if (t) t.classList.toggle('up', on); }).observe(row);
 })();
 /* phones: keep the WhatsApp button off the home banner buttons while the banner is on screen */
 (function () {
   var hero = document.querySelector('.hero'), wa = document.querySelector('.wa');
   if (!hero || !wa || !('IntersectionObserver' in window)) return;
-  new IntersectionObserver(function (es) { wa.classList.toggle('wa-hide', es[0].isIntersecting && innerWidth < 760); }, { threshold: 0.35 }).observe(hero);
+  new IntersectionObserver(function (es) { wa.classList.toggle('wa-hide', es[0].isIntersecting && innerWidth < 1100); }, { threshold: 0.35 }).observe(hero);
 })();

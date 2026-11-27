@@ -82,6 +82,13 @@ final class Soko_Store {
 			$route = 'page';
 			set_query_var( 'soko_arg', 'home' );
 		}
+		if ( ! $route && is_search() ) {
+			wp_safe_redirect( add_query_arg( 'q', rawurlencode( get_search_query() ), home_url( '/shop/' ) ), 301 );
+			exit;
+		}
+		if ( ! $route && is_404() ) {
+			$route = 'notfound';
+		}
 		if ( ! $route ) {
 			return;
 		}
@@ -110,6 +117,9 @@ final class Soko_Store {
 					}
 				}
 				break;
+			case 'notfound':
+				self::not_found();
+				break;
 			case 'shop':
 				self::shop( $arg );
 				break;
@@ -119,13 +129,13 @@ final class Soko_Store {
 			case 'planner':
 				self::$title = 'Solar calculator: size your system | ' . soko_setting( 'business' );
 				self::$desc  = 'Choose the appliances you want to run and see the solar system you need, with panels, inverter, battery and price.';
-				echo '<section class="phero plhero"><div class="wrap"><div class="pcopy"><span class="kick">Free sizing tool</span><h1>Solar calculator</h1><p>Choose the appliances you want to run and see the system you need, with a price.</p></div><div class="flowcard"><div class="flowv" aria-hidden="true"><figure>' . soko_icon( 'panel', 44 ) . '<figcaption>Panels</figcaption></figure><i></i><figure>' . soko_icon( 'inverter', 44 ) . '<figcaption>Inverter</figcaption></figure><i></i><figure>' . soko_icon( 'battery', 44 ) . '<figcaption>Battery</figcaption></figure><i></i><figure>' . soko_icon( 'kit', 44 ) . '<figcaption>Your home</figcaption></figure></div><ul class="flowfacts"><li><b>1 min</b><span>to size your system</span></li><li><b>Priced</b><span>with installation</span></li><li><b>Free</b><span>site survey to confirm</span></li></ul></div></div></section>'; // phpcs:ignore
+				echo '<section class="phero plhero"><div class="wrap"><div class="pcopy"><span class="kick">Free sizing tool</span><h1>Solar calculator</h1><p>Choose the appliances you want to run and see the system you need, with a price.</p></div><div class="flowcard"><div class="flowv" aria-hidden="true"><figure>' . soko_icon( 'panel', 44 ) . '<figcaption>Panels</figcaption></figure><i></i><figure>' . soko_icon( 'inverter', 44 ) . '<figcaption>Inverter</figcaption></figure><i></i><figure>' . soko_icon( 'battery', 44 ) . '<figcaption>Battery</figcaption></figure><i></i><figure>' . soko_icon( 'kit', 44 ) . '<figcaption>Your home</figcaption></figure></div><ul class="flowfacts"><li><b>1 min</b><span>to size your system</span></li><li><b>Priced</b><span>with installation</span></li><li><b>Survey</b><span>by an engineer to confirm</span></li></ul></div></div></section>'; // phpcs:ignore
 				echo Soko_Sections::render( array( 'id' => 'pl', 'type' => 'planner', 'props' => array( 'title' => 'Choose your appliances', 'text' => 'Add each appliance and how many you have, then adjust the hours to match how you use them.' ) ) ); // phpcs:ignore
 				echo '<section class="band"><div class="wrap narrow"><div class="faq"><details><summary>How is my system sized?</summary><p>We add up the energy your appliances use in a day, allow for losses, and size the battery to cover the evening and night. Panels are sized for about five useful sun hours a day, which is typical for most of Kenya. The inverter covers everything you might run at once, with headroom for motors such as pumps and fridges.</p></details><details><summary>Is the price final?</summary><p>It is an estimate. An engineer confirms the final size and price after a site survey, because roofs, cable runs and existing wiring differ.</p></details></div></div></section>'; // phpcs:ignore
 				break;
 			case 'cart':
 				self::$title = 'Your cart | ' . soko_setting( 'business' );
-				echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Your order</span><h1>Your cart</h1><ol class="costeps"><li class="on"><i>1</i>Cart</li><li><i>2</i>Your details</li><li><i>3</i>Pay with M&#8209;Pesa</li><li><i>4</i>Receipt</li></ol></div></div></section><section class="band"><div class="wrap cartpage" data-cart-page></div></section>'; // phpcs:ignore
+				echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Your order</span><h1>Your cart</h1><ol class="costeps"><li class="on"><i>1</i>Cart</li><li><i>2</i>Your details</li><li><i>3</i>Payment</li><li><i>4</i>Receipt</li></ol></div></div></section><section class="band"><div class="wrap cartpage" data-cart-page></div></section>'; // phpcs:ignore
 				break;
 			case 'checkout':
 				self::$title = 'Checkout | ' . soko_setting( 'business' );
@@ -163,7 +173,15 @@ final class Soko_Store {
 	private static function not_found() {
 		status_header( 404 );
 		self::$title = 'Page not found | ' . soko_setting( 'business' );
-		echo '<section class="phero sky"><div class="wrap"><div class="pcopy"><h1>We could not find that page</h1><p>It may have moved. Try the shop or call us.</p><div class="row"><a class="btn b-sun" href="' . esc_url( home_url( '/shop/' ) ) . '">Go to the shop</a><a class="btn b-line" href="' . esc_url( home_url( '/' ) ) . '">Home</a></div></div></div></section>'; // phpcs:ignore
+		$cats = array_slice( (array) soko_categories(), 0, 8 );
+		echo '<section class="phero sky"><div class="wrap"><div class="pcopy"><span class="kick">Error 404</span><h1>We could not find that page</h1><p>It may have moved or the link may be old. Search the shop or pick a category below.</p><form class="nfsearch" action="' . esc_url( home_url( '/shop/' ) ) . '" role="search"><label class="sr" for="nfq">Search products</label><input id="nfq" name="q" type="search" placeholder="Search panels, batteries, inverters…"><button class="btn b-sun">Search</button></form><div class="row"><a class="btn b-blue" href="' . esc_url( home_url( '/shop/' ) ) . '">Go to the shop</a><a class="btn b-line" href="' . esc_url( home_url( '/contact/' ) ) . '">Contact us</a></div></div></div></section>'; // phpcs:ignore
+		if ( $cats ) {
+			echo '<section class="band"><div class="wrap"><div class="nfcats">';
+			foreach ( $cats as $c ) {
+				echo '<a href="' . esc_url( home_url( '/shop/' . $c['id'] . '/' ) ) . '">' . soko_icon( isset( $c['icon'] ) ? $c['icon'] : 'panel', 22 ) . '<span>' . esc_html( $c['name'] ) . '</span></a>'; // phpcs:ignore
+			}
+			echo '</div></div></section>';
+		}
 	}
 
 	/* ============================================================= cards */
@@ -218,7 +236,7 @@ final class Soko_Store {
 		foreach ( $types as $t ) {
 			$o .= '<option>' . esc_html( $t ) . '</option>';
 		}
-		return '<form class="panel qform" data-lead-form novalidate><h3>Request a quote</h3>
+		return '<form class="panel qform" id="quote-form" data-lead-form novalidate><h3>Request a quote</h3>
 			<div class="f2"><div class="f"><label for="qName">Full name</label><input id="qName" name="name" autocomplete="name" required></div><div class="f"><label for="qPhone">Phone</label><input id="qPhone" name="phone" inputmode="tel" autocomplete="tel" placeholder="07XX XXX XXX" required></div></div>
 			<div class="f2"><div class="f"><label for="qType">I need</label><select id="qType" name="interest">' . $o . '</select></div><div class="f"><label for="qCounty">County</label><input id="qCounty" name="county" placeholder="e.g. Kiambu"></div></div>
 			<div class="f"><label for="qEmail">Email (optional)</label><input id="qEmail" name="email" type="email" autocomplete="email"></div>
@@ -228,6 +246,15 @@ final class Soko_Store {
 	}
 
 	/* ============================================================== shop */
+
+	/** Link for a menu item: several categories open one combined shop page. */
+	public static function menu_url( $m ) {
+		$ids = ! empty( $m['cats'] ) ? array_values( array_filter( array_map( 'trim', explode( ',', $m['cats'] ) ) ) ) : array();
+		if ( count( $ids ) > 1 ) {
+			return esc_url( add_query_arg( array( 'in' => implode( ',', $ids ), 't' => rawurlencode( $m['label'] ) ), home_url( '/shop/' ) ) );
+		}
+		return Soko_Sections::link( $m['link'] );
+	}
 
 	private static function shop( $cat ) {
 		$cats = soko_categories();
@@ -245,10 +272,21 @@ final class Soko_Store {
 		$q    = isset( $_GET['q'] ) ? sanitize_text_field( wp_unslash( $_GET['q'] ) ) : ''; // phpcs:ignore
 		$all  = Soko_Ledger::products( array( 'visible' => 1 ) );
 		$list = Soko_Ledger::products( array( 'visible' => 1, 'cat' => $cat, 'q' => $q ) );
+		$in   = array();
+		if ( ! $cat && ! empty( $_GET['in'] ) ) { // phpcs:ignore
+			$valid = wp_list_pluck( $cats, 'id' );
+			$in    = array_values( array_intersect( array_map( 'sanitize_key', explode( ',', wp_unslash( $_GET['in'] ) ) ), $valid ) ); // phpcs:ignore
+			if ( $in ) {
+				$list  = array_values( array_filter( $list, function ( $p ) use ( $in ) { return in_array( $p['cat'], $in, true ); } ) );
+				$label = ! empty( $_GET['t'] ) ? sanitize_text_field( wp_unslash( $_GET['t'] ) ) : implode( ', ', array_map( function ( $i ) { $x = soko_category( $i ); return $x['name']; }, $in ) ); // phpcs:ignore
+				$f0    = soko_category( $in[0] );
+				$c     = array( 'id' => '', 'name' => $label, 'image' => isset( $f0['image'] ) ? $f0['image'] : '' );
+			}
+		}
 		self::$title = ( $q ? 'Search: ' . $q : ( $c ? $c['name'] . ' in Kenya' : 'Shop solar products' ) ) . ' | ' . soko_setting( 'business' );
 		self::$desc  = $c ? 'Buy ' . strtolower( $c['name'] ) . ' online. Easy payment, delivery countrywide and installation by EPRA-licensed technicians.' : 'Solar kits, panels, inverters, lithium batteries, water heaters, pumps and lighting. Easy payment and countrywide delivery.';
 		$brands = array_unique( array_filter( wp_list_pluck( $list, 'brand' ) ) );
-		echo '<section class="phero shophero"><div class="wrap"><div class="pcopy"><nav class="crumbs"><a href="' . esc_url( home_url( '/' ) ) . '">Home</a><span>/</span><a href="' . esc_url( home_url( '/shop/' ) ) . '">Shop</a>' . ( $c ? '<span>/</span>' . esc_html( $c['name'] ) : '' ) . '</nav><h1>' . esc_html( $q ? 'Results for "' . $q . '"' : ( $c ? $c['name'] : 'Shop all products' ) ) . '</h1><p>' . ( soko_setting( 'vat_registered' ) && soko_setting( 'prices_incl_vat' ) ? 'Prices include VAT. ' : '' ) . 'Every product shows its specifications, what it can power, warranty and installation cost.</p><div class="shpills"><span>' . soko_icon( 'shield', 18 ) . 'EPRA-licensed installation</span><span>' . soko_icon( 'battery', 18 ) . 'Easy, secure payment</span><span>' . soko_icon( 'kit', 18 ) . 'Delivery countrywide</span></div></div><div class="shimg"><img src="' . esc_url( ( ! empty( $c['image'] ) ? $c['image'] : SOKO_URL . 'assets/stock/cat-panels.jpg' ) ) . '" alt=""><span><b>' . count( $list ) . '</b>' . ( 1 === count( $list ) ? 'product' : 'products' ) . '</span></div></div></section>'; // phpcs:ignore
+		echo '<section class="phero shophero"><div class="wrap"><div class="pcopy"><nav class="crumbs"><a href="' . esc_url( home_url( '/' ) ) . '">Home</a><span>/</span><a href="' . esc_url( home_url( '/shop/' ) ) . '">Shop</a>' . ( $c ? '<span>/</span>' . esc_html( $c['name'] ) : '' ) . '</nav><h1>' . esc_html( $q ? 'Results for “' . $q . '”' : ( $c ? $c['name'] : 'Shop all products' ) ) . '</h1><p>' . ( soko_setting( 'vat_registered' ) && soko_setting( 'prices_incl_vat' ) ? 'Prices include VAT. ' : '' ) . 'Every product shows its specifications, what it can power, warranty and installation cost.</p><div class="shpills"><span>' . soko_icon( 'shield', 18 ) . 'EPRA-licensed installation</span><span>' . soko_icon( 'battery', 18 ) . 'Easy, secure payment</span><span>' . soko_icon( 'kit', 18 ) . 'Delivery countrywide</span></div>' . ( $in ? '<div class="subchips">' . implode( '', array_map( function ( $i ) { $x = soko_category( $i ); return '<a href="' . esc_url( home_url( '/shop/' . $i . '/' ) ) . '">' . esc_html( $x['name'] ) . '</a>'; }, $in ) ) . '</div>' : '' ) . '</div><div class="shimg"><img src="' . esc_url( ( ! empty( $c['image'] ) ? $c['image'] : SOKO_URL . 'assets/stock/cat-panels.jpg' ) ) . '" alt=""><span><b>' . count( $list ) . '</b>' . ( 1 === count( $list ) ? 'product' : 'products' ) . '</span></div></div></section>'; // phpcs:ignore
 		echo '<section class="band shopband"><div class="wrap shop"><aside class="side" aria-label="Categories"><a class="' . ( ! $cat ? 'on' : '' ) . '" href="' . esc_url( home_url( '/shop/' ) ) . '">' . soko_icon( 'kit', 22 ) . 'All products<em>' . count( $all ) . '</em></a>'; // phpcs:ignore
 		foreach ( $cats as $x ) {
 			$n = count( array_filter( $all, function ( $p ) use ( $x ) { return $p['cat'] === $x['id']; } ) );
@@ -316,18 +354,21 @@ final class Soko_Store {
 		if ( 'product' === $p['kind'] ) {
 			echo '<span class="stock' . ( $low ? ' low' : '' ) . ( $out ? ' out' : '' ) . '">' . ( $out ? 'Out of stock: order in, about a week' : ( $low ? 'Only ' . (int) $p['stock'] . ' left in stock' : 'In stock, ready to deliver' ) ) . '</span>';
 		}
-		echo '<div class="runsbox">' . soko_icon( 'bulb', 34 ) . '<div><b>What it powers</b><p>' . esc_html( $p['runs'] ) . '</p></div></div>'; // phpcs:ignore
+		$svc = 'product' !== $p['kind'];
+		if ( $p['runs'] ) {
+			echo '<div class="runsbox">' . soko_icon( $svc ? 'shield' : 'bulb', 34 ) . '<div><b>' . ( $svc ? 'Good to know' : 'What it powers' ) . '</b><p>' . esc_html( $p['runs'] ) . '</p></div></div>'; // phpcs:ignore
+		}
 		if ( $p['install_fee'] > 0 ) {
 			echo '<div class="opts"><label><input type="radio" name="inst" value="0" checked><span>Supply only</span><b>No installation</b></label><label><input type="radio" name="inst" value="1"><span>Supply and install by our technicians</span><b>+ ' . esc_html( soko_money( $p['install_fee'] ) ) . '</b></label></div>';
 		}
 		echo '<div class="buyrow"><div class="qty" data-qty><button type="button" data-d="-1" aria-label="One less">−</button><input type="number" min="1" value="1" aria-label="Quantity"><button type="button" data-d="1" aria-label="One more">+</button></div><button class="btn b-blue" data-add-pdp>Add to cart</button><button class="btn b-sun" data-buy-pdp>Buy now</button></div>';
 		echo '<a class="wa-ask" href="' . esc_url( $wa ) . '" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/></svg>Ask an engineer about this on WhatsApp</a>';
-		echo '<ul class="perks"><li>' . soko_icon( 'battery', 22 ) . 'Easy payment, receipt sent instantly</li><li>' . soko_icon( 'kit', 22 ) . 'Nairobi delivery same or next day</li><li>' . soko_icon( 'shield', 22 ) . 'Warranty: ' . esc_html( $p['warranty'] ? $p['warranty'] : 'manufacturer warranty' ) . '</li></ul></div></div>'; // phpcs:ignore
+		echo '<ul class="perks"><li>' . soko_icon( 'battery', 22 ) . 'Easy payment, receipt sent instantly</li>' . ( $svc ? '<li>' . soko_icon( 'kit', 22 ) . 'We call within one working day to book a time</li><li>' . soko_icon( 'shield', 22 ) . 'Done by EPRA-licensed technicians</li>' : '<li>' . soko_icon( 'kit', 22 ) . 'Nairobi delivery same or next day</li><li>' . soko_icon( 'shield', 22 ) . 'Warranty: ' . esc_html( $p['warranty'] ? $p['warranty'] : 'manufacturer warranty' ) . '</li>' ) . '</ul></div></div>'; // phpcs:ignore
 		echo '<div class="pdp-more"><div><h2>Specifications</h2><table class="specs">';
 		foreach ( $p['specs'] as $k => $v ) {
 			echo '<tr><th scope="row">' . esc_html( $k ) . '</th><td>' . esc_html( $v ) . '</td></tr>';
 		}
-		echo '<tr><th scope="row">Product code</th><td>' . esc_html( $p['sku'] ) . '</td></tr><tr><th scope="row">Warranty</th><td>' . esc_html( $p['warranty'] ) . '</td></tr></table>';
+		echo '<tr><th scope="row">Product code</th><td>' . esc_html( $p['sku'] ) . '</td></tr>' . ( ! $svc && $p['warranty'] ? '<tr><th scope="row">Warranty</th><td>' . esc_html( $p['warranty'] ) . '</td></tr>' : '' ) . '</table>';
 		if ( $p['description'] ) {
 			echo '<div class="rich">' . wp_kses_post( wpautop( $p['description'] ) ) . '</div>';
 		}
@@ -338,12 +379,19 @@ final class Soko_Store {
 			echo '<div class="panel helpbox"><h2>Not sure it fits?</h2><p>Use the solar calculator to size a full system, or ask an engineer.</p><div class="row"><a class="btn b-blue" href="' . esc_url( home_url( '/planner/' ) ) . '">Open the solar calculator</a><a class="btn b-line" href="' . esc_url( $wa ) . '" target="_blank" rel="noopener">WhatsApp us</a></div></div>';
 		}
 		echo '</div>';
-		$rel = array_slice( array_values( array_filter( Soko_Ledger::products( array( 'visible' => 1, 'cat' => $p['cat'] ) ), function ( $x ) use ( $p ) { return $x['id'] !== $p['id']; } ) ), 0, 4 );
+		$rel_h = 'Similar products';
+		if ( 'kits' === $p['cat'] ) {
+			// A complete kit needs add-ons, not other kits.
+			$rel   = array_slice( array_values( array_filter( Soko_Ledger::products( array( 'visible' => 1 ) ), function ( $x ) { return in_array( $x['cat'], array( 'acc', 'services' ), true ) || 'product' !== $x['kind']; } ) ), 0, 4 );
+			$rel_h = 'You may also need';
+		} else {
+			$rel = array_slice( array_values( array_filter( Soko_Ledger::products( array( 'visible' => 1, 'cat' => $p['cat'] ) ), function ( $x ) use ( $p ) { return $x['id'] !== $p['id']; } ) ), 0, 4 );
+		}
 		if ( count( $rel ) < 4 ) {
 			$rel = array_merge( $rel, array_slice( array_values( array_filter( Soko_Ledger::products( array( 'visible' => 1 ) ), function ( $x ) use ( $p ) { return $x['featured'] && $x['id'] !== $p['id'] && $x['cat'] !== $p['cat']; } ) ), 0, 4 - count( $rel ) ) );
 		}
 		if ( $rel ) {
-			echo '<h2 class="rel-h">You may also need</h2><div class="grid">';
+			echo '<h2 class="rel-h">' . esc_html( $rel_h ) . '</h2><div class="grid">';
 			foreach ( $rel as $x ) {
 				echo self::card( $x ); // phpcs:ignore
 			}
@@ -358,14 +406,14 @@ final class Soko_Store {
 		foreach ( (array) $s['delivery'] as $i => $d ) {
 			$del .= '<label><input type="radio" name="delivery" value="' . (int) $i . '" data-fee="' . esc_attr( $d['fee'] ) . '"' . ( 0 === $i ? ' checked' : '' ) . '><span><b>' . esc_html( $d['label'] ) . '</b><small>' . esc_html( $d['note'] ) . '</small></span><b>' . ( (float) $d['fee'] ? esc_html( soko_money( $d['fee'] ) ) : 'Free' ) . '</b></label>';
 		}
-		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Secure checkout</span><h1>Checkout</h1><p>' . ( Soko_Mpesa::ready() ? 'Pay securely with M-Pesa. You get a receipt straight away and can track your order online.' : 'Place your order in a minute. We confirm it with you, you pay, and you can track it online.' ) . '</p><ol class="costeps"><li class="on"><i>1</i>Cart</li><li class="on"><i>2</i>Your details</li><li><i>3</i>Pay with M&#8209;Pesa</li><li><i>4</i>Receipt</li></ol></div></div></section>';
+		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Secure checkout</span><h1>Checkout</h1><p>' . ( Soko_Mpesa::ready() ? 'Pay securely from your phone. You get a receipt straight away and can track your order online.' : 'Place your order in a minute. We confirm it with you, you pay, and you can track it online.' ) . '</p><ol class="costeps"><li class="on"><i>1</i>Cart</li><li class="on"><i>2</i>Your details</li><li><i>3</i>Payment</li><li><i>4</i>Receipt</li></ol></div></div></section>';
 		echo '<section class="band"><div class="wrap co" data-checkout><form class="panel" data-co-form novalidate><h3>Your details</h3>
 			<div class="f2"><div class="f"><label for="cName">Full name</label><input id="cName" name="name" autocomplete="name" required></div><div class="f"><label for="cPhone">Phone</label><input id="cPhone" name="phone" inputmode="tel" autocomplete="tel" placeholder="07XX XXX XXX" required></div></div>
 			<div class="f2"><div class="f"><label for="cEmail">Email for your receipt <span class="opt">(optional)</span></label><input id="cEmail" name="email" type="email" autocomplete="email"></div><div class="f"><label for="cCounty">County or town</label><input id="cCounty" name="county" autocomplete="address-level2"></div></div>
 			<div class="f"><label for="cAddr">Delivery or installation address <span class="opt">(needed for delivery or installation)</span></label><input id="cAddr" name="address" autocomplete="street-address" placeholder="Estate, road, building or landmark"></div>
 			<details class="biz"><summary>Buying for a business? Add your KRA PIN for a tax invoice</summary><div class="f"><label for="cKra">KRA PIN</label><input id="cKra" name="kra" placeholder="P051234567X"></div></details>
-			<h3>Delivery</h3><div class="opts">' . $del . '</div>
-			<div class="f inst-date" hidden><label for="cDate">Preferred installation date <span class="opt">(optional)</span></label><input id="cDate" name="install_date" type="date" min="' . esc_attr( gmdate( 'Y-m-d', strtotime( soko_today() . ' +2 days' ) ) ) . '"></div>
+			<div class="delblock"><h3>Delivery</h3><div class="opts">' . $del . '</div></div>
+			<div class="f inst-date" hidden><label for="cDate"><span data-datelab>Preferred installation date</span> <span class="opt">(optional)</span></label><input id="cDate" name="install_date" type="date" min="' . esc_attr( gmdate( 'Y-m-d', strtotime( soko_today() . ' +2 days' ) ) ) . '"></div>
 			<div class="f"><label for="cNotes">Notes (optional)</label><textarea id="cNotes" name="notes" placeholder="Anything we should know"></textarea></div>
 			<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 			<h3>Payment</h3><div class="paybox"><p>' . ( Soko_Mpesa::ready() ? 'When you tap pay, a payment request appears on your phone. Enter your PIN to complete.' : 'Place your order and we will call to confirm it. You can then pay by mobile money, bank transfer or card, using your order number as the reference.' ) . '</p></div>
@@ -486,10 +534,10 @@ $chev = '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none
 	usort( $top, function ( $x, $y ) { return $y['featured'] - $x['featured']; } );
 	$top = array_slice( $top, 0, 3 );
 	?>
-<li class="<?php echo $ids ? 'has' : ''; ?>"><a href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $m['label'] ); ?><?php echo $ids ? $chev : ''; // phpcs:ignore ?></a>
+<li class="<?php echo $ids ? 'has' : ''; ?>"><a href="<?php echo self::menu_url( $m ); // phpcs:ignore ?>"><?php echo esc_html( $m['label'] ); ?><?php echo $ids ? $chev : ''; // phpcs:ignore ?></a>
 <?php if ( $ids ) : ?>
 <div class="mega"><div class="wrap dd">
-<div class="dd-cats"><h4><?php echo esc_html( $m['label'] ); ?></h4><?php foreach ( $ids as $cid ) : $c = soko_category( $cid ); $n = isset( $bycat[ $cid ] ) ? count( $bycat[ $cid ] ) : 0; ?><a href="<?php echo esc_url( home_url( '/shop/' . $cid . '/' ) ); ?>"><span class="ci"><?php if ( ! empty( $c['image'] ) ) : ?><img src="<?php echo esc_url( $c['image'] ); ?>" alt="" loading="lazy"><?php endif; ?></span><span><b><?php echo esc_html( $c['name'] ); ?></b><small><?php echo (int) $n; ?> <?php echo 1 === $n ? 'product' : 'products'; ?></small></span></a><?php endforeach; ?><a class="dd-all" href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>">View all <?php echo esc_html( strtolower( $m['label'] ) ); ?> →</a></div>
+<div class="dd-cats"><h4><?php echo esc_html( $m['label'] ); ?></h4><?php foreach ( $ids as $cid ) : $c = soko_category( $cid ); $n = isset( $bycat[ $cid ] ) ? count( $bycat[ $cid ] ) : 0; ?><a href="<?php echo esc_url( home_url( '/shop/' . $cid . '/' ) ); ?>"><span class="ci"><?php if ( ! empty( $c['image'] ) ) : ?><img src="<?php echo esc_url( $c['image'] ); ?>" alt="" loading="lazy"><?php endif; ?></span><span><b><?php echo esc_html( $c['name'] ); ?></b><small><?php echo (int) $n; ?> <?php echo 1 === $n ? 'product' : 'products'; ?></small></span></a><?php endforeach; ?><a class="dd-all" href="<?php echo self::menu_url( $m ); // phpcs:ignore ?>">View all <?php echo esc_html( strtolower( $m['label'] ) ); ?> →</a></div>
 <div class="dd-top"><h4>Popular</h4><div class="dd-grid"><?php foreach ( $top as $pr ) : ?><a href="<?php echo esc_url( $pr['url'] ); ?>"><span class="pi"><?php if ( $pr['images'] ) : ?><img src="<?php echo esc_url( $pr['images'][0] ); ?>" alt="" loading="lazy"><?php endif; ?></span><b><?php echo esc_html( $pr['name'] ); ?></b><small><?php echo esc_html( $pr['runs'] ); ?></small><em><?php echo esc_html( soko_money( $pr['price'] ) ); ?></em></a><?php endforeach; ?></div></div>
 <div class="mega-promo"><?php if ( isset( $m['promo'] ) && 'planner' === $m['promo'] ) : ?><h3>Not sure what size you need?</h3><p>Choose the appliances you want to run and see the right system, priced with installation.</p><a class="btn b-sun" href="<?php echo esc_url( home_url( '/planner/' ) ); ?>">Calculate my system</a><?php else : ?><h3>Need it installed?</h3><p>Our EPRA-licensed technicians supply, install and commission, with aftercare visits.</p><a class="btn b-sun" href="<?php echo Soko_Sections::link( $h['cta_link'] ); // phpcs:ignore ?>">Request a quote</a><?php endif; ?></div>
 </div></div>
@@ -500,9 +548,9 @@ $chev = '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none
 <nav class="mnav" data-mnav aria-label="Mobile"><div class="mtop"><img src="<?php echo esc_url( $logo ); ?>" alt="" height="40"><span class="mtools"><button class="theme" data-theme-toggle aria-label="Switch light or dark mode"><svg class="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></button><button class="ico" data-close-mnav aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
 <form action="<?php echo esc_url( home_url( '/shop/' ) ); ?>" class="msearch"><input name="q" placeholder="Search panels, inverters, batteries…" aria-label="Search products"></form>
 <p class="mlab">Shop by category</p><div class="mcats">
-<?php foreach ( (array) $h['menu'] as $m ) : if ( empty( $m['cats'] ) ) { continue; } $first = soko_category( trim( explode( ',', $m['cats'] )[0] ) ); ?><a href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>"><span><?php if ( ! empty( $first['image'] ) ) : ?><img src="<?php echo esc_url( $first['image'] ); ?>" alt="" loading="lazy"><?php endif; ?></span><b><?php echo esc_html( $m['label'] ); ?></b></a><?php endforeach; ?>
+<?php foreach ( (array) $h['menu'] as $m ) : if ( empty( $m['cats'] ) ) { continue; } $first = soko_category( trim( explode( ',', $m['cats'] )[0] ) ); ?><a href="<?php echo self::menu_url( $m ); // phpcs:ignore ?>"><span><?php if ( ! empty( $first['image'] ) ) : ?><img src="<?php echo esc_url( $first['image'] ); ?>" alt="" loading="lazy"><?php endif; ?></span><b><?php echo esc_html( $m['label'] ); ?></b></a><?php endforeach; ?>
 </div>
-<div class="mlinks"><?php foreach ( (array) $h['menu'] as $m ) : if ( ! empty( $m['cats'] ) ) { continue; } ?><a href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $m['label'] ); ?></a><?php endforeach; ?><a href="<?php echo esc_url( home_url( '/planner/' ) ); ?>">Solar calculator</a><?php foreach ( (array) ( isset( $h['utility'] ) ? $h['utility'] : array() ) as $u ) : ?><a href="<?php echo Soko_Sections::link( $u['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $u['label'] ); ?></a><?php endforeach; ?><a href="<?php echo esc_url( home_url( '/track/' ) ); ?>">Track order</a></div>
+<div class="mlinks"><?php foreach ( (array) $h['menu'] as $m ) : if ( ! empty( $m['cats'] ) ) { continue; } ?><a href="<?php echo Soko_Sections::link( $m['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $m['label'] ); ?></a><?php endforeach; ?><a href="<?php echo esc_url( home_url( '/planner/' ) ); ?>">Calculate my system</a><?php foreach ( (array) ( isset( $h['utility'] ) ? $h['utility'] : array() ) as $u ) : ?><a href="<?php echo Soko_Sections::link( $u['link'] ); // phpcs:ignore ?>"><?php echo esc_html( $u['label'] ); ?></a><?php endforeach; ?><a href="<?php echo esc_url( home_url( '/track/' ) ); ?>">Track order</a></div>
 <div class="mcta"><?php if ( ! empty( $h['cta_label'] ) ) : ?><a class="btn b-sun" href="<?php echo Soko_Sections::link( $h['cta_link'] ); // phpcs:ignore ?>"><?php echo esc_html( $h['cta_label'] ); ?></a><?php endif; ?><a class="btn b-line" href="tel:+<?php echo esc_attr( soko_phone( $s['phone'] ) ); ?>">Call <?php echo esc_html( $s['phone'] ); ?></a></div></nav>
 <main id="main"><?php echo $body; // phpcs:ignore ?></main>
 <footer class="foot"><div class="wrap fband"><a href="tel:+<?php echo esc_attr( soko_phone( $s['phone'] ) ); ?>"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></i><span><b>Call an engineer</b><?php echo esc_html( $s['phone'] ); ?></span></a><a href="<?php echo esc_url( $wa ); ?>" target="_blank" rel="noopener"><i class="g"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l1.6-4.6A8.5 8.5 0 1 1 8 20z"/></svg></i><span><b>WhatsApp us</b>Quick answers on products and sizing</span></a><a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>"><i class="o"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></i><span><b>Visit or book a survey</b><?php echo esc_html( $s['hours'] ); ?></span></a></div><div class="wrap fcols">

@@ -218,29 +218,29 @@ final class Soko_Sections {
 			array( 'icon' => 'panel', 'title' => 'Installation', 'text' => 'EPRA-licensed technicians install, test and hand over, usually in one to two days.' ),
 			array( 'icon' => 'shield', 'title' => 'Aftercare', 'text' => 'Monitoring, cleaning and maintenance keep your system at full output.' ),
 		);
-		$cta = array( 'title' => 'Not sure which system you need?', 'text' => 'Book a free consultation. An engineer visits, assesses your site and gives you a fixed quote with installation.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Calculate my system', 'cta2_link' => '/planner/', 'color' => 'sun' );
+		$cta = array( 'title' => 'Not sure which system you need?', 'text' => 'Talk to an engineer at no cost. If a site visit is needed, the survey fee is deducted from your system when you go ahead, and you get a fixed quote with installation.', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/', 'cta2_label' => 'Calculate my system', 'cta2_link' => '/planner/', 'color' => 'sun' );
 		return array(
 			'brand'    => array( 'primary' => '#1b4f9e', 'accent' => '#f7941d', 'deep' => '#1d2156', 'head_font' => 'Poppins', 'body_font' => 'Inter', 'logo' => 'soko:img/dss-logo.png', 'radius' => 18 ),
 			'header'   => array(
-				'announce'    => 'Free site survey in Nairobi and Kiambu this month',
+				'announce'    => 'Free sizing advice by phone or WhatsApp',
 				'announce_on' => 1,
 				'menu'        => array(
-					array( 'label' => 'Solar Kits', 'link' => '/shop/kits/', 'cats' => 'kits', 'promo' => 'planner' ),
-					array( 'label' => 'Solar Panels', 'link' => '/shop/panels/', 'cats' => 'panels', 'promo' => 'planner' ),
+					array( 'label' => 'Solar kits', 'link' => '/shop/kits/', 'cats' => 'kits', 'promo' => 'planner' ),
+					array( 'label' => 'Solar panels', 'link' => '/shop/panels/', 'cats' => 'panels', 'promo' => 'planner' ),
 					array( 'label' => 'Inverters', 'link' => '/shop/hybrid/', 'cats' => 'hybrid,gridtie', 'promo' => 'planner' ),
 					array( 'label' => 'Batteries', 'link' => '/shop/lithium/', 'cats' => 'lithium,gel,stations,car', 'promo' => 'planner' ),
-					array( 'label' => 'Water Heating & Pumps', 'link' => '/shop/heaters/', 'cats' => 'heaters,pumps', 'promo' => 'install' ),
+					array( 'label' => 'Water heating & pumps', 'link' => '/shop/heaters/', 'cats' => 'heaters,pumps', 'promo' => 'install' ),
 					array( 'label' => 'Lighting & CCTV', 'link' => '/shop/flood/', 'cats' => 'flood,street,cctv', 'promo' => 'install' ),
 					array( 'label' => 'Accessories', 'link' => '/shop/acc/', 'cats' => 'acc', 'promo' => 'install' ),
 					array( 'label' => 'Services', 'link' => '/services/' ),
 				),
 				'utility'     => array(
-					array( 'label' => 'About Us', 'link' => '/about/' ),
+					array( 'label' => 'About us', 'link' => '/about/' ),
 					array( 'label' => 'Projects', 'link' => '/projects/' ),
 					array( 'label' => 'Blog', 'link' => '/blog/' ),
 					array( 'label' => 'Contact', 'link' => '/contact/' ),
 				),
-				'cta_label'   => 'Request a Quote',
+				'cta_label'   => 'Request a quote',
 				'cta_link'    => '/contact/',
 			),
 			'footer'   => array(
@@ -591,7 +591,7 @@ final class Soko_Sections {
 				. '<a href="tel:+' . esc_attr( soko_phone( $st['phone'] ) ) . '"><i>' . $ico( 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2' ) . '</i><b>Call us</b><span>' . self::e( $st['phone'] ) . '</span></a>'
 				. '<a href="' . esc_url( $wa ) . '" target="_blank" rel="noopener" class="wa2"><i>' . $ico( 'M3 21l1.6-4.6A8.5 8.5 0 1 1 8 20z' ) . '</i><b>WhatsApp</b><span>Chat with an engineer</span></a>'
 				. '<a href="mailto:' . esc_attr( $st['email'] ) . '"><i>' . $ico( 'M3 5h18v14H3zM3 7l9 6 9-6' ) . '</i><b>Email</b><span>' . self::e( $st['email'] ) . '</span></a>'
-				. '<a href="#quote"><i>' . $ico( 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' ) . '</i><b>Quote form</b><span>Reply with advice and a price</span></a>'
+				. '<a href="#quote-form"><i>' . $ico( 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' ) . '</i><b>Quote form</b><span>Reply with advice and a price</span></a>'
 				. '</div></div></section>';
 		}
 		$scene = ! empty( $p['scene'] ) && 'sky' === $style ? self::scene( $p['scene'], 'p' ) : '';
@@ -735,9 +735,9 @@ final class Soko_Sections {
 			. '<label class="sv-lab" for="svBill">Your monthly electricity bill</label><div class="sv-bill"><b data-sv-bill>KES 8,000</b><span>a month</span></div>'
 			. '<input type="range" id="svBill" min="2000" max="150000" step="500" value="8000" data-sv-range>'
 			. '<div class="sv-ticks"><span>KES 2,000</span><span>KES 150,000</span></div>'
-			. '<p class="fine">Estimates from typical Kenyan sun hours and tariffs. An engineer confirms the exact size and price on a free site survey.</p></div>'
+			. '<p class="fine">Estimates from typical Kenyan sun hours and tariffs. An engineer confirms the exact size and price on a site survey.</p></div>'
 			. '<div class="sv-out"><div class="sv-pic">' . $img . '</div><div class="sv-card"><div class="sv-kpis"><div><small>Suggested system</small><b data-sv-size>3 kW</b><em data-sv-batt>5 kWh battery</em></div><div><small>You could save</small><b data-sv-save>KES 5,000</b><em>a month</em></div><div><small>Pays for itself in</small><b data-sv-pay>4 years</b><em>then the savings are yours</em></div></div>'
-			. '<div class="sv-bars"><div><span>Bill today</span><i style="--w:100%"><b data-sv-now>KES 8,000</b></i></div><div><span>With solar</span><i class="g" data-sv-barafter style="--w:40%"><b data-sv-after>KES 3,000</b></i></div></div>'
+			. '<div class="sv-bars"><div><span>Bill today</span><i style="--w:100%"><b data-sv-now>KES 8,000</b></i></div><div><span>With solar</span><i class="g out" data-sv-barafter style="--w:40%"><b data-sv-after>KES 3,000</b></i></div></div>'
 			. '<div class="row"><a class="btn b-sun" href="' . esc_url( home_url( '/shop/kits/' ) ) . '" data-sv-kit>See matching kits</a><a class="btn b-line" href="' . esc_url( home_url( '/planner/' ) ) . '">Size it appliance by appliance</a></div></div></div></div></section>';
 	}
 
@@ -815,7 +815,7 @@ final class Soko_Sections {
 
 	private static function r_cta_band( $p ) {
 		$img  = ! empty( $p['image'] ) ? $p['image'] : '';
-		$form = ! empty( $p['callback'] ) ? '<form class="cb" data-lead-form data-source="Call-me-back request" novalidate><input class="hp" name="website" tabindex="-1" autocomplete="off"><input name="name" placeholder="Your name" autocomplete="name" required aria-label="Your name"><input name="phone" placeholder="Phone number" inputmode="tel" autocomplete="tel" required aria-label="Phone"><input type="hidden" name="interest" value="Call me back"><button class="btn b-sun" type="submit">Call me back</button></form>' : '';
+		$form = ! empty( $p['callback'] ) ? '<form class="cb" data-lead-form data-source="Call-me-back request" novalidate><input class="hp" name="website" tabindex="-1" autocomplete="off"><div class="f"><input name="name" placeholder="Your name" autocomplete="name" required aria-label="Your name"></div><div class="f"><input name="phone" placeholder="Phone number" inputmode="tel" autocomplete="tel" required aria-label="Phone"></div><input type="hidden" name="interest" value="Call me back"><button class="btn b-sun" type="submit">Call me back</button><p class="formmsg" role="status"></p></form>' : '';
 		return '<section class="cta band' . ( $img ? ' has-img' : '' ) . '"><div class="wrap"><div class="cta-copy hd"><span class="kick">' . self::e( ! empty( $p['kicker'] ) ? $p['kicker'] : 'Free consultation' ) . '</span><h2>' . self::e( $p['title'] ) . '</h2><p>' . self::e( $p['text'] ) . '</p>' . $form . '<div class="row">' . self::btn( $p['cta_label'], $p['cta_link'], $form ? 'b-line' : 'b-sun' ) . self::btn( isset( $p['cta2_label'] ) ? $p['cta2_label'] : '', isset( $p['cta2_link'] ) ? $p['cta2_link'] : '', 'b-line' ) . '</div></div>' . ( $img ? '<div class="cta-pic"><img src="' . esc_url( $img ) . '" alt="" loading="lazy"><span class="cta-badge"><b>EPRA</b>licensed engineers</span></div>' : '' ) . '</div></section>';
 	}
 
@@ -827,7 +827,7 @@ final class Soko_Sections {
 		$wa  = 'https://wa.me/' . soko_phone( $s['whatsapp'] );
 		$map = ! empty( $p['map'] ) && false !== strpos( $p['map'], 'google.com/maps' ) ? '<iframe class="map" src="' . esc_url( $p['map'] ) . '" loading="lazy" title="Map"></iframe>' : '';
 		return '<section class="band" id="quote"><div class="wrap contact">' . self::head( $p ) . '<div class="cinfo">'
-			. '<div class="nexts"><h3>What happens next</h3><ol><li><b>We call you back</b><span>An engineer calls within working hours to understand what you want to power.</span></li><li><b>Free site survey</b><span>We check your roof, wiring and usage, in person or by video call.</span></li><li><b>Fixed quote</b><span>You get an itemised quote with installation, valid for 14 days.</span></li></ol></div>'
+			. '<div class="nexts"><h3>What happens next</h3><ol><li><b>We call you back</b><span>An engineer calls within working hours to understand what you want to power.</span></li><li><b>Site survey</b><span>We check your roof, wiring and usage, in person or by video call. The fee comes off your system price.</span></li><li><b>Fixed quote</b><span>You get an itemised quote with installation, valid for 14 days.</span></li></ol></div>'
 			. '<div>' . $ico( 'M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5' ) . '<span><b>Address</b>' . self::e( $s['address'] ) . '</span></div>'
 			. '<div>' . $ico( 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2' ) . '<span><b>Hours</b>' . self::e( $s['hours'] ) . '</span></div>' . $map
 			. '</div>' . Soko_Store::quote_form() . '</div></section>';

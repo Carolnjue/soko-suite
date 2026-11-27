@@ -171,10 +171,14 @@ final class Soko_API {
 			return new WP_Error( 'soko', 'Please check your email address, for example name@gmail.com.', array( 'status' => 400 ) );
 		}
 		$lines = array();
+		$goods = false;
 		foreach ( (array) ( isset( $b['items'] ) ? $b['items'] : array() ) as $it ) {
 			$p = Soko_Ledger::product( (int) $it['id'] );
 			if ( ! $p || ! $p['visible'] ) {
 				continue;
+			}
+			if ( 'product' === $p['kind'] ) {
+				$goods = true;
 			}
 			$qty     = max( 1, min( 500, (int) $it['qty'] ) );
 			$lines[] = array( 'product_id' => $p['id'], 'qty' => $qty );
@@ -187,15 +191,15 @@ final class Soko_API {
 		}
 		$del = soko_setting( 'delivery' );
 		$di  = isset( $b['delivery'] ) ? (int) $b['delivery'] : 0;
-		if ( isset( $del[ $di ] ) && (float) $del[ $di ]['fee'] > 0 ) {
+		if ( $goods && isset( $del[ $di ] ) && (float) $del[ $di ]['fee'] > 0 ) {
 			$lines[] = array( 'description' => 'Delivery: ' . $del[ $di ]['label'], 'qty' => 1, 'price' => (float) $del[ $di ]['fee'], 'vatable' => 1 );
 		}
 		$notes = array();
-		if ( isset( $del[ $di ] ) ) {
+		if ( $goods && isset( $del[ $di ] ) ) {
 			$notes[] = 'Delivery: ' . $del[ $di ]['label'];
 		}
 		if ( ! empty( $b['install_date'] ) ) {
-			$notes[] = 'Preferred installation date: ' . sanitize_text_field( $b['install_date'] );
+			$notes[] = ( $goods ? 'Preferred installation date: ' : 'Preferred visit date: ' ) . sanitize_text_field( $b['install_date'] );
 		}
 		if ( ! empty( $b['notes'] ) ) {
 			$notes[] = sanitize_textarea_field( $b['notes'] );

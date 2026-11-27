@@ -72,6 +72,29 @@ final class Soko_Install {
 					}
 				}
 			}
+			if ( version_compare( (string) get_option( 'soko_db_version' ), '10', '<' ) ) {
+				// Sentence case for menu labels and buttons; surveys are not described as free.
+				$site = get_option( 'soko_site' );
+				if ( is_array( $site ) ) {
+					$map  = array(
+						'"label":"Solar Kits"'            => '"label":"Solar kits"',
+						'"label":"Solar Panels"'          => '"label":"Solar panels"',
+						'"label":"Water Heating & Pumps"' => '"label":"Water heating & pumps"',
+						'"label":"About Us"'              => '"label":"About us"',
+						'"cta_label":"Request a Quote"'   => '"cta_label":"Request a quote"',
+						'Book a free consultation. An engineer visits, assesses your site and gives you a fixed quote with installation.' => 'Talk to an engineer at no cost. If a site visit is needed, the survey fee is deducted from your system when you go ahead, and you get a fixed quote with installation.',
+						'Free site survey in Nairobi and Kiambu this month' => 'Free sizing advice by phone or WhatsApp',
+					);
+					$json = wp_json_encode( $site, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+					$new  = str_replace( array_keys( $map ), array_values( $map ), $json );
+					if ( $new !== $json ) {
+						$dec = json_decode( $new, true );
+						if ( is_array( $dec ) ) {
+							update_option( 'soko_site', $dec, false );
+						}
+					}
+				}
+			}
 			self::activate();
 		}
 		if ( get_option( 'soko_flush' ) ) {

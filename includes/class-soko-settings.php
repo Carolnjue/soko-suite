@@ -59,6 +59,13 @@ final class Soko_Settings {
 				'token'     => wp_generate_password( 24, false ),
 				'stk'       => 1,
 			),
+			'smtp'            => array(
+				'host'   => '',
+				'port'   => 587,
+				'secure' => 'tls',
+				'user'   => '',
+				'pass'   => '',
+			),
 			'etims'           => array(
 				'mode'   => 'off',
 				'env'    => 'sandbox',
@@ -124,11 +131,12 @@ final class Soko_Settings {
 	public static function public_view( $full = false ) {
 		$s = self::all();
 		if ( ! $full ) {
-			unset( $s['mpesa']['secret'], $s['mpesa']['passkey'], $s['mpesa']['key'] );
+			unset( $s['mpesa']['secret'], $s['mpesa']['passkey'], $s['mpesa']['key'], $s['smtp'] );
 		} else {
 			foreach ( array( 'secret', 'passkey', 'key' ) as $k ) {
 				$s['mpesa'][ $k ] = $s['mpesa'][ $k ] ? '••••••' . substr( $s['mpesa'][ $k ], -4 ) : '';
 			}
+			$s['smtp']['pass'] = $s['smtp']['pass'] ? '••••••••' : '';
 		}
 		return $s;
 	}

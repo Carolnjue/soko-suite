@@ -12,6 +12,7 @@ final class Soko_Demo {
 
 	public static function load() {
 		global $wpdb;
+		$GLOBALS['soko_no_mail'] = true;
 		self::remove();
 		update_option( 'soko_demo_numbers', array_intersect_key( Soko_Settings::all(), array_flip( array( 'next_quote', 'next_invoice', 'next_receipt', 'next_po' ) ) ), false );
 		$now = strtotime( soko_today() );

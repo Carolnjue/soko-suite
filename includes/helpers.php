@@ -183,3 +183,37 @@ function soko_abs( $v ) {
 	}
 	return str_replace( array( 'soko:', 'site:/' ), array( SOKO_URL . 'assets/', home_url( '/' ) ), $v );
 }
+
+/** Send email without ever breaking a sale: hosts that disable mail() throw, so failures are logged, not fatal. */
+function soko_mail( $to, $subject, $body, $headers = array(), $files = array() ) {
+	if ( ! empty( $GLOBALS['soko_no_mail'] ) || ! $to ) {
+		return false;
+	}
+	try {
+		return wp_mail( $to, $subject, $body, $headers, $files );
+	} catch ( \Throwable $e ) {
+		update_option( 'soko_mail_error', substr( $e->getMessage(), 0, 300 ), false );
+		return false;
+	}
+}
+
+/** Use the SMTP account from Settings, when one is filled in. */
+add_action(
+	'phpmailer_init',
+	function ( $m ) {
+		$c = soko_setting( 'smtp' );
+		if ( empty( $c['host'] ) ) {
+			return;
+		}
+		$m->isSMTP();
+		$m->Host       = $c['host'];
+		$m->Port       = (int) ( $c['port'] ? $c['port'] : 587 );
+		$m->SMTPAuth   = ! empty( $c['user'] );
+		$m->Username   = $c['user'];
+		$m->Password   = $c['pass'];
+		$m->SMTPSecure = 'ssl' === $c['secure'] ? 'ssl' : ( 'none' === $c['secure'] ? '' : 'tls' );
+		if ( ! empty( $c['user'] ) && is_email( $c['user'] ) ) {
+			$m->setFrom( $c['user'], soko_setting( 'business' ), false );
+		}
+	}
+);

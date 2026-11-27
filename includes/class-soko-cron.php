@@ -44,7 +44,7 @@ final class Soko_Cron {
 	public static function notify( $subject, $body ) {
 		$to = soko_setting( 'notify_email' );
 		if ( $to ) {
-			wp_mail( $to, '[' . soko_setting( 'business' ) . '] ' . $subject, $body );
+			soko_mail( $to, '[' . soko_setting( 'business' ) . '] ' . $subject, $body );
 		}
 	}
 
@@ -75,7 +75,7 @@ final class Soko_Cron {
 				count( $d['low'] ),
 				home_url( '/desk/' )
 			);
-			wp_mail( self::to( 'daily' ), $biz . ': daily summary', $body );
+			soko_mail( self::to( 'daily' ), $biz . ': daily summary', $body );
 		}
 
 		if ( self::on( 'weekly' ) && '1' === current_time( 'N' ) ) {
@@ -83,7 +83,7 @@ final class Soko_Cron {
 			list( $bin, , $name ) = Soko_Reports::export( 'sales', $from, $yday, 'xlsx' );
 			$f = self::attach( $bin, $name );
 			$n = Soko_Reports::pl_numbers( $from, $yday );
-			wp_mail( self::to( 'weekly' ), $biz . ': weekly sales report', sprintf( "Last week's sales excl. VAT: %s\nGross profit: %s (%d%%)\n\nThe full report is attached as an Excel file.", soko_money( $n['sales'] ), soko_money( $n['gross'] ), $n['margin'] ), array(), array( $f ) );
+			soko_mail( self::to( 'weekly' ), $biz . ': weekly sales report', sprintf( "Last week's sales excl. VAT: %s\nGross profit: %s (%d%%)\n\nThe full report is attached as an Excel file.", soko_money( $n['sales'] ), soko_money( $n['gross'] ), $n['margin'] ), array(), array( $f ) );
 			wp_delete_file( $f );
 		}
 
@@ -95,7 +95,7 @@ final class Soko_Cron {
 				list( $bin, , $name ) = Soko_Reports::export( $type, $from, $to, $fmt );
 				$files[] = self::attach( $bin, $name );
 			}
-			wp_mail( self::to( 'monthly' ), $biz . ': month-end reports for ' . date_i18n( 'F Y', strtotime( $from ) ), "Attached: profit and loss, VAT summary and money owed for last month.\n\nThe VAT return is due by the 20th.", array(), $files );
+			soko_mail( self::to( 'monthly' ), $biz . ': month-end reports for ' . date_i18n( 'F Y', strtotime( $from ) ), "Attached: profit and loss, VAT summary and money owed for last month.\n\nThe VAT return is due by the 20th.", array(), $files );
 			foreach ( $files as $f ) {
 				wp_delete_file( $f );
 			}
@@ -104,7 +104,7 @@ final class Soko_Cron {
 		if ( self::on( 'lowstock' ) ) {
 			$low = $wpdb->get_results( 'SELECT name, stock, reorder FROM ' . soko_t( 'products' ) . " WHERE kind = 'product' AND visible = 1 AND stock <= reorder ORDER BY stock", ARRAY_A ); // phpcs:ignore
 			if ( $low ) {
-				wp_mail( self::to( 'lowstock' ), $biz . ': ' . count( $low ) . ' items to reorder', "These items are at or below their reorder level:\n\n" . implode( "\n", array_map( function ( $l ) { return '• ' . $l['name'] . ': ' . ( $l['stock'] + 0 ) . ' left (reorder at ' . ( $l['reorder'] + 0 ) . ')'; }, $low ) ) );
+				soko_mail( self::to( 'lowstock' ), $biz . ': ' . count( $low ) . ' items to reorder', "These items are at or below their reorder level:\n\n" . implode( "\n", array_map( function ( $l ) { return '• ' . $l['name'] . ': ' . ( $l['stock'] + 0 ) . ' left (reorder at ' . ( $l['reorder'] + 0 ) . ')'; }, $low ) ) );
 			}
 		}
 
@@ -124,7 +124,7 @@ final class Soko_Cron {
 			foreach ( array( 60, 30, 7 ) as $days ) {
 				$on = gmdate( 'Y-m-d', strtotime( $today . " +$days days" ) );
 				foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $L WHERE expires = %s", $on ), ARRAY_A ) as $l ) { // phpcs:ignore
-					wp_mail( self::to( 'licences' ), $biz . ': ' . $l['name'] . ' expires in ' . $days . ' days', sprintf( "%s%s expires on %s.\n\nRenew it, then update the date in Dynamic Desk → Tax and compliance.", $l['name'], $l['holder'] ? ' (' . $l['holder'] . ')' : '', date_i18n( 'j F Y', strtotime( $l['expires'] ) ) ) );
+					soko_mail( self::to( 'licences' ), $biz . ': ' . $l['name'] . ' expires in ' . $days . ' days', sprintf( "%s%s expires on %s.\n\nRenew it, then update the date in Dynamic Desk → Tax and compliance.", $l['name'], $l['holder'] ? ' (' . $l['holder'] . ')' : '', date_i18n( 'j F Y', strtotime( $l['expires'] ) ) ) );
 				}
 			}
 		}
@@ -155,7 +155,7 @@ final class Soko_Cron {
 			$wpdb->update( $E, array( 'reminded' => 1 ), array( 'id' => $e['id'] ) );
 		}
 		foreach ( $sent as $to => $lines ) {
-			wp_mail( $to, 'Tomorrow: ' . count( $lines ) . ' scheduled ' . _n( 'item', 'items', count( $lines ) ), "Tomorrow's schedule:\n\n" . implode( "\n", $lines ) . "\n\n" . home_url( '/desk/#schedule' ) );
+			soko_mail( $to, 'Tomorrow: ' . count( $lines ) . ' scheduled ' . _n( 'item', 'items', count( $lines ) ), "Tomorrow's schedule:\n\n" . implode( "\n", $lines ) . "\n\n" . home_url( '/desk/#schedule' ) );
 		}
 	}
 }

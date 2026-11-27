@@ -910,6 +910,9 @@ final class Soko_API {
 			$b['mpesa']['token'] = $cur['mpesa']['token'];
 			delete_transient( 'soko_mpesa_token' );
 		}
+		if ( isset( $b['smtp']['pass'] ) && 0 === strpos( (string) $b['smtp']['pass'], '••••' ) ) {
+			$b['smtp']['pass'] = $cur['smtp']['pass'];
+		}
 		Soko_Settings::save( $b );
 		Soko_Cron::schedule();
 		soko_log( 'Changed settings', 'settings', '' );
@@ -1003,7 +1006,7 @@ final class Soko_API {
 		}
 		update_user_meta( $uid, 'soko_phone', sanitize_text_field( isset( $b['phone'] ) ? $b['phone'] : '' ) );
 		update_user_meta( $uid, 'show_admin_bar_front', 'false' );
-		$sent = wp_mail(
+		$sent = soko_mail(
 			$email,
 			'Your Dynamic Desk account',
 			sprintf( "Hello %s,\n\nAn account has been created for you on Dynamic Desk.\n\nSign in: %s\nEmail: %s\nPassword: %s\n\nPlease change your password after signing in.\n\n%s", sanitize_text_field( $b['name'] ), home_url( '/desk/' ), $email, $pass, soko_setting( 'business' ) )
@@ -1014,8 +1017,8 @@ final class Soko_API {
 
 	public static function test_email() {
 		$to = soko_setting( 'notify_email' );
-		$ok = wp_mail( $to, 'Dynamic Desk test email', 'Email from Dynamic Desk is working.' );
-		return array( 'ok' => $ok, 'message' => $ok ? 'Test email sent to ' . $to . '.' : 'Sending failed. Set up SMTP on the hosting or an SMTP plugin.' );
+		$ok = soko_mail( $to, 'Dynamic Desk test email', 'Email from Dynamic Desk is working.' );
+		return array( 'ok' => $ok, 'message' => $ok ? 'Test email sent to ' . $to . '.' : 'Sending failed. Fill in Outgoing email below with your hosting mailbox, save, then try again.' );
 	}
 
 	public static function demo( $req ) {

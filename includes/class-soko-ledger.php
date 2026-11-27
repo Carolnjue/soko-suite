@@ -585,7 +585,7 @@ final class Soko_Ledger {
 			$name,
 			soko_setting( 'phone' )
 		);
-		$ok = wp_mail( $to, $subj, $body, array(), $file ? array( $file ) : array() );
+		$ok = soko_mail( $to, $subj, $body, array(), $file ? array( $file ) : array() );
 		if ( $file ) {
 			wp_delete_file( $file );
 		}

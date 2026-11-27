@@ -804,3 +804,26 @@ html[data-theme=dark] .savings::before{display:none}html[data-theme=dark] .savin
 @keyframes tick{40%{transform:translateY(-4px);color:var(--sun)}}
 .price.big b{display:inline-block}
 .cartpage .line img,.cartpage .thumb{width:84px;height:84px;border-radius:14px;object-fit:cover}
+.nexts{background:var(--alt);border:1px solid var(--line);border-radius:18px;padding:20px 20px 8px;margin-bottom:8px}
+.nexts h3{font-size:18px;color:var(--head);margin-bottom:12px}
+.nexts ol{list-style:none;padding:0;margin:0;counter-reset:n}
+.nexts li{counter-increment:n;position:relative;padding:0 0 16px 46px}
+.nexts li::before{content:counter(n);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:var(--sun);color:#1b1100;font-weight:700;display:grid;place-items:center}
+.nexts li:not(:last-child)::after{content:"";position:absolute;left:15px;top:36px;bottom:4px;width:2px;background:var(--line2)}
+.nexts b{display:block;color:var(--head)}.nexts span{font-size:14.5px;color:var(--soft)}
+.flowcard{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:0 30px 60px -40px rgba(29,33,86,.5);overflow:hidden}
+.flowcard .flowv{border:0;box-shadow:none;border-radius:0;background:transparent;align-items:flex-start;padding:26px 22px 14px}
+.flowv figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:8px}
+.flowv figcaption{font-size:13px;font-weight:600;color:var(--head);white-space:nowrap}
+.flowv figure svg{transition:transform .4s cubic-bezier(.3,1.6,.5,1)}
+.flowv i{margin-top:30px}
+.flowv figure:nth-of-type(1) svg{animation:glow 3.2s ease-in-out infinite}
+.flowv figure:nth-of-type(2) svg{animation:glow 3.2s ease-in-out .8s infinite}
+.flowv figure:nth-of-type(3) svg{animation:glow 3.2s ease-in-out 1.6s infinite}
+.flowv figure:nth-of-type(4) svg{animation:glow 3.2s ease-in-out 2.4s infinite}
+@keyframes glow{0%,70%,100%{transform:none}35%{transform:translateY(-4px) scale(1.06)}}
+.flowfacts{list-style:none;margin:0;padding:14px 22px 18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;border-top:1px solid var(--line);background:var(--alt)}
+.flowfacts b{display:block;font:700 20px var(--hf),Poppins;color:var(--head)}.flowfacts span{font-size:13px;color:var(--soft)}
+@media(max-width:600px){.flowv figcaption{font-size:11px}.flowfacts b{font-size:16px}}
+@media(prefers-reduced-motion:reduce){.flowv figure svg{animation:none}}
+.cinfo>.nexts{display:block!important;padding:20px 20px 8px!important;border-bottom:0!important}

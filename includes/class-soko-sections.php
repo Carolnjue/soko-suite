@@ -827,9 +827,7 @@ final class Soko_Sections {
 		$wa  = 'https://wa.me/' . preg_replace( '/\D/', '', $s['whatsapp'] );
 		$map = ! empty( $p['map'] ) && false !== strpos( $p['map'], 'google.com/maps' ) ? '<iframe class="map" src="' . esc_url( $p['map'] ) . '" loading="lazy" title="Map"></iframe>' : '';
 		return '<section class="band" id="quote"><div class="wrap contact">' . self::head( $p ) . '<div class="cinfo">'
-			. '<a href="tel:' . esc_attr( soko_phone( $s['phone'] ) ) . '">' . $ico( 'M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 6a2 2 0 0 1 2-2' ) . '<span><b>Call</b>' . self::e( $s['phone'] . ( $s['phone2'] ? ' · ' . $s['phone2'] : '' ) ) . '</span></a>'
-			. '<a href="' . esc_url( $wa ) . '" target="_blank" rel="noopener">' . $ico( 'M3 21l1.6-4.6A8.5 8.5 0 1 1 8 20z' ) . '<span><b>WhatsApp</b>Chat with an engineer</span></a>'
-			. '<a href="mailto:' . esc_attr( $s['email'] ) . '">' . $ico( 'M3 5h18v14H3zM3 7l9 6 9-6' ) . '<span><b>Email</b>' . self::e( $s['email'] ) . '</span></a>'
+			. '<div class="nexts"><h3>What happens next</h3><ol><li><b>We call you back</b><span>An engineer calls within working hours to understand what you want to power.</span></li><li><b>Free site survey</b><span>We check your roof, wiring and usage, in person or by video call.</span></li><li><b>Fixed quote</b><span>You get an itemised quote with installation, valid for 14 days.</span></li></ol></div>'
 			. '<div>' . $ico( 'M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5' ) . '<span><b>Address</b>' . self::e( $s['address'] ) . '</span></div>'
 			. '<div>' . $ico( 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2' ) . '<span><b>Hours</b>' . self::e( $s['hours'] ) . '</span></div>' . $map
 			. '</div>' . Soko_Store::quote_form() . '</div></section>';

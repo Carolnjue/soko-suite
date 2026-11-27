@@ -224,6 +224,11 @@ function soko_mail( $to, $subject, $body, $headers = array(), $files = array() )
 	if ( ! empty( $GLOBALS['soko_no_mail'] ) || ! $to ) {
 		return false;
 	}
+	$reply = soko_setting( 'email' );
+	if ( $reply && is_email( $reply ) && ! preg_grep( '/^reply-to:/i', (array) $headers ) ) {
+		$headers   = (array) $headers;
+		$headers[] = 'Reply-To: ' . soko_setting( 'business' ) . ' <' . $reply . '>';
+	}
 	try {
 		return wp_mail( $to, $subject, $body, $headers, $files );
 	} catch ( \Throwable $e ) {

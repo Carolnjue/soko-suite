@@ -99,7 +99,7 @@ final class Soko_Ledger {
 			$syn   = preg_match( '/repair|fault|fix|broken|service|not working/i', $args['q'] );
 			$cats  = soko_categories();
 			$stop  = array( 'and', 'for', 'the', 'with', 'of', 'a', 'an', 'in', 'to', 'solar' );
-			$words = array_values( array_filter( preg_split( '/[\s,\/]+/', strtolower( $args['q'] ) ), function ( $w ) { return '' !== $w; } ) );
+			$words = array_values( array_filter( preg_split( '/[\s,\/&+]+/', strtolower( $args['q'] ) ), function ( $w ) { return '' !== $w && preg_match( '/[a-z0-9]/', $w ); } ) );
 			if ( count( $words ) > 1 ) {
 				$words = array_values( array_diff( $words, $stop ) ) ?: $words; // "solar kit" still finds kits
 			}
@@ -121,7 +121,7 @@ final class Soko_Ledger {
 				}
 				$cm = array();
 				foreach ( $cats as $c ) {
-					if ( false !== stripos( $c['name'], $stem ) || false !== stripos( $c['id'], $stem ) ) {
+					if ( false !== stripos( $c['name'], $stem ) || false !== stripos( $c['id'], $stem ) || false !== stripos( $c['name'], $w ) || ( strlen( $stem ) > 4 && false !== stripos( $c['name'], substr( $stem, 0, -1 ) ) ) ) {
 						$cm[] = $c['id'];
 					}
 				}
@@ -271,7 +271,7 @@ final class Soko_Ledger {
 						continue;
 					}
 					if ( ! empty( $d[ $k ] ) && ( 'email' !== $k || is_email( $d[ $k ] ) ) ) {
-						$upd[ $k ] = sanitize_text_field( $d[ $k ] );
+						$upd[ $k ] = 'kra' === $k ? strtoupper( trim( sanitize_text_field( $d[ $k ] ) ) ) : sanitize_text_field( $d[ $k ] );
 					}
 				}
 				if ( $upd ) {
@@ -356,6 +356,9 @@ final class Soko_Ledger {
 				if ( array_key_exists( 'contact_email', $d['meta'] ) ) {
 					$d['customer']['email'] = $d['meta']['contact_email'];
 				}
+				if ( array_key_exists( 'contact_kra', $d['meta'] ) ) {
+					$d['customer']['kra'] = $d['meta']['contact_kra'];
+				}
 				if ( array_key_exists( 'contact_address', $d['meta'] ) ) {
 					$d['customer']['address'] = $d['meta']['contact_address'];
 					$d['customer']['county']  = '';
@@ -424,6 +427,7 @@ final class Soko_Ledger {
 					array(
 						'contact'         => $typed,
 						'contact_email'   => isset( $d['customer']['email'] ) && is_email( $d['customer']['email'] ) ? sanitize_email( $d['customer']['email'] ) : '',
+						'contact_kra'     => strtoupper( trim( sanitize_text_field( isset( $d['customer']['kra'] ) ? $d['customer']['kra'] : '' ) ) ),
 						'contact_address' => trim( sanitize_text_field( ( isset( $d['customer']['address'] ) ? $d['customer']['address'] : '' ) . ( ! empty( $d['customer']['county'] ) ? ', ' . $d['customer']['county'] : '' ) ), ', ' ),
 					)
 				);
@@ -613,7 +617,7 @@ final class Soko_Ledger {
 	public static function payment_exists( $code ) {
 		global $wpdb;
 		$t = soko_t( 'payments' );
-		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $t WHERE code = %s", strtoupper( sanitize_text_field( $code ) ) ) );
+		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $t WHERE code = %s AND status <> 'void'", strtoupper( sanitize_text_field( $code ) ) ) );
 	}
 
 	public static function record_payment( $p ) {
@@ -644,9 +648,8 @@ final class Soko_Ledger {
 		$wpdb->insert( $t, $row );
 		$pid    = (int) $wpdb->insert_id;
 		$doc_id = ! empty( $p['doc_id'] ) ? (int) $p['doc_id'] : self::match_invoice( $row['account_ref'], $row['phone'], $row['amount'] );
-		if ( $doc_id ) {
-			self::apply_payment( $pid, $doc_id );
-		} else {
+		$ap = $doc_id ? self::apply_payment( $pid, $doc_id, ! empty( $p['doc_id'] ) ) : null;
+		if ( ! $doc_id || is_wp_error( $ap ) ) {
 			soko_log( 'Unmatched payment ' . $code . ' ' . soko_money( $row['amount'] ), 'payment', $code );
 			Soko_Cron::notify( 'Unmatched payment ' . $code, sprintf( "A payment of %s from %s (%s), reference \"%s\", could not be matched to an invoice.\n\nOpen Dynamic Desk → Payments to match it.", soko_money( $row['amount'] ), $row['payer'], soko_phone_display( $row['phone'] ), $row['account_ref'] ) );
 		}
@@ -654,7 +657,7 @@ final class Soko_Ledger {
 	}
 
 	/** Apply a stored payment to an invoice and issue a receipt. */
-	public static function apply_payment( $payment_id, $doc_id ) {
+	public static function apply_payment( $payment_id, $doc_id, $allow_over = false ) {
 		global $wpdb;
 		$pt  = soko_t( 'payments' );
 		$pay = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $pt WHERE id = %d", $payment_id ), ARRAY_A );
@@ -668,6 +671,13 @@ final class Soko_Ledger {
 		$lk = Soko_Accounts::locked( substr( $pay['received'], 0, 10 ) );
 		if ( $lk ) {
 			return $lk;
+		}
+		if ( substr( $pay['received'], 0, 10 ) < substr( (string) $inv['date'], 0, 10 ) ) {
+			return new WP_Error( 'soko', 'This payment is dated before ' . $inv['number'] . ' was raised. Check the invoice.', array( 'status' => 400 ) );
+		}
+		$owing = round( (float) $inv['total'] - (float) $inv['paid'], 2 );
+		if ( ! $allow_over && (float) $pay['amount'] > $owing + 0.5 ) {
+			return new WP_Error( 'soko_over', $owing > 0.005 ? sprintf( '%s only owes %s, and this payment is %s. Match it anyway and keep the extra as the customer\'s credit?', $inv['number'], soko_money_exact( $owing ), soko_money_exact( $pay['amount'] ) ) : sprintf( '%s is already fully paid. Match this payment anyway and keep it as the customer\'s credit?', $inv['number'] ), array( 'status' => 409 ) );
 		}
 		$was_paid = 'paid' === $inv['state'];
 		$paid     = (float) $inv['paid'] + (float) $pay['amount'];
@@ -703,6 +713,7 @@ final class Soko_Ledger {
 			// Paying in full confirms a waiting order; it never moves a packed or sent order backwards.
 			if ( 'web' === $inv['source'] && in_array( (string) $inv['fulfil'], array( '', 'awaiting_payment' ), true ) ) {
 				$wpdb->update( soko_t( 'docs' ), array( 'fulfil' => 'to_pack' ), array( 'id' => $inv['id'] ) );
+				self::notify_customer( self::doc( $inv['id'] ), 'confirmed' );
 			}
 		}
 		soko_log( 'Payment ' . $pay['code'] . ' matched to ' . $inv['number'], 'payment', $pay['code'] );
@@ -713,7 +724,7 @@ final class Soko_Ledger {
 	/** The person an order was placed under on a shared phone, to carry onto its receipts, credit notes and jobs. */
 	public static function contact_meta( $doc ) {
 		$m = isset( $doc['meta'] ) && is_array( $doc['meta'] ) ? $doc['meta'] : array();
-		return array_intersect_key( $m, array_flip( array( 'contact', 'contact_email', 'contact_address' ) ) );
+		return array_intersect_key( $m, array_flip( array( 'contact', 'contact_email', 'contact_address', 'contact_kra' ) ) );
 	}
 
 	/** Take sold items out of stock once, when an invoice is fully paid or delivered. */
@@ -784,7 +795,8 @@ final class Soko_Ledger {
 		$file = Soko_PDF::doc_file( $doc );
 		$name = soko_setting( 'business' );
 		$kind = array( 'quote' => 'Quotation', 'invoice' => 'Invoice', 'receipt' => 'Receipt', 'credit' => 'Credit note' );
-		$subj = $kind[ $doc['type'] ] . ' ' . $doc['number'] . ' from ' . $name;
+		$pend = 'invoice' === $doc['type'] && 'web' === $doc['source'] && (float) $doc['paid'] <= 0 && ! in_array( (string) $doc['fulfil'], array( 'to_pack', 'packed', 'dispatched', 'delivered' ), true );
+		$subj = ( $pend ? 'Order confirmation' : $kind[ $doc['type'] ] ) . ' ' . $doc['number'] . ' from ' . $name;
 		if ( ! $message ) {
 			$parts = array( 'Hello ' . ( $doc['customer'] ? $doc['customer']['name'] : '' ) . ',', 'Please find your ' . strtolower( $kind[ $doc['type'] ] ) . ' ' . $doc['number'] . ' attached.' );
 			if ( 'invoice' === $doc['type'] ) {

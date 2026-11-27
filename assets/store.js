@@ -36,6 +36,17 @@
     toastT = setTimeout(function () { t.classList.remove('on'); }, 3200);
   }
   window.SokoToast = toast;
+  /* mega menu: aria-expanded follows it; Escape shuts it until the pointer or focus leaves */
+  $$('.menu .has').forEach(function (li) {
+    var a0 = li.querySelector('a'); if (!a0 || !li.querySelector('.mega')) return;
+    a0.setAttribute('aria-haspopup', 'true'); a0.setAttribute('aria-expanded', 'false');
+    var on = function () { if (!li.classList.contains('shut')) a0.setAttribute('aria-expanded', 'true'); };
+    var off = function () { a0.setAttribute('aria-expanded', 'false'); };
+    li.addEventListener('mouseenter', function () { $$('.menu .has').forEach(function (x) { if (x !== li && x.contains(document.activeElement)) x.classList.add('shut'); }); on(); });
+    li.addEventListener('focusin', function () { li.classList.remove('shut'); on(); });
+    li.addEventListener('mouseleave', function () { li.classList.remove('shut'); off(); });
+    li.addEventListener('focusout', function (e) { if (!li.contains(e.relatedTarget)) { li.classList.remove('shut'); off(); } });
+  });
   /* keep keyboard focus inside whatever dialog is open */
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Tab') return;
@@ -50,7 +61,9 @@
 
   /* ---------------- cart ---------------- */
   var cart = [];
-  try { cart = JSON.parse(localStorage.getItem('soko_cart') || '[]').filter(function (c) { return byId[c.id]; }); } catch (e) { cart = []; }
+  var gone = [];
+  try { cart = JSON.parse(localStorage.getItem('soko_cart') || '[]').filter(function (c) { if (byId[c.id]) return true; gone.push(c.name || 'An item'); return false; }); } catch (e) { cart = []; }
+  if (gone.length) { try { localStorage.setItem('soko_cart', JSON.stringify(cart)); } catch (e) {} setTimeout(function () { toast((gone.length > 1 ? gone.length + ' items in your cart are' : gone[0] + ' is') + ' no longer available, so we took ' + (gone.length > 1 ? 'them' : 'it') + ' out of your cart.'); var co = document.querySelector('[data-co-form]'); if (co) { var fm = co.querySelector('.formmsg'); if (fm) { fm.textContent = 'Something in your cart is no longer available and was taken out. Please check your order.'; } } }, 400); }
   function saveCart(bump) {
     try { localStorage.setItem('soko_cart', JSON.stringify(cart)); } catch (e) {}
     var n = cart.reduce(function (a, c) { return a + c.qty; }, 0);
@@ -65,7 +78,7 @@
     var cap = maxQty(id), have = cart.filter(function (c) { return c.id === id; }).reduce(function (a, c) { return a + c.qty; }, 0);
     qty = Math.max(1, qty || 1);
     if (have + qty > cap) { qty = cap - have; if (qty <= 0) { toast(capMsg(id, cap)); return; } toast((backorder(id) ? 'Up to ' + cap + ' can be ordered in online, so ' : 'Only ' + cap + ' available, so ') + qty + ' added.'); silent = true; }
-    if (l) l.qty += qty; else cart.push({ id: id, qty: qty, install: install ? 1 : 0 });
+    if (l) l.qty += qty; else cart.push({ id: id, qty: qty, install: install ? 1 : 0, name: byId[id] ? byId[id].name : '' });
     saveCart(true);
     if (!silent) toast('Added to cart: ' + byId[id].name, ['View cart', S.home + 'cart/']);
   }
@@ -201,16 +214,17 @@
   }
   function renderPlanner(onlyResult) {
     var fa = document.activeElement, fApp = fa && fa.closest && fa.closest('[data-app]') ? fa.closest('[data-app]').dataset.app : null, fHrs = fa && fa.dataset && fa.dataset.hrs != null ? fa.dataset.hrs : null;
+    var fInc = fa && fa.dataset ? (fa.dataset.inc != null ? '[data-inc="' + fa.dataset.inc + '"]' : fa.dataset.dec != null ? '[data-dec="' + fa.dataset.dec + '"]' : null) : null;
     if (!onlyResult) $$('[data-planner-apps]').forEach(function (el) { el.innerHTML = APPS.map(appBtn).join(''); });
-    if (!onlyResult && (fApp != null || fHrs != null)) { var back = fHrs != null ? document.querySelector('[data-hrs="' + fHrs + '"]') : document.querySelector('[data-app="' + fApp + '"]'); if (back) back.focus({ preventScroll: true }); }
+    if (!onlyResult && (fApp != null || fHrs != null || fInc)) { var back = (fInc && document.querySelector(fInc)) || (fHrs != null ? document.querySelector('[data-hrs="' + fHrs + '"]') : document.querySelector('[data-app="' + fApp + '"]')); if (back) back.focus({ preventScroll: true }); }
     var r = size();
     $$('[data-planner-result]').forEach(function (el) {
       if (!r) { el.innerHTML = '<h3>Your recommended system</h3><p class="empty">Choose at least one appliance to see your system and price.</p>'; return; }
       el.innerHTML = '<h3>Your recommended system</h3><div class="meter"><div><b>' + r.kwh.toFixed(1) + ' kWh</b><small>used per day</small></div><div><b>' + (r.inv ? Math.round(r.inv.watts / 100) / 10 + ' kW' : '—') + '</b><small>inverter</small></div><div><b>' + (r.batt ? Math.round(r.batt.kwh * r.bq) + ' kWh' : '—') + '</b><small>battery</small></div></div>' +
         '<ul class="bom">' + r.items.map(function (x) { return '<li><span>' + (x[1] > 1 ? x[1] + ' × ' : '') + esc(x[0].name) + '</span><span>' + money(x[0].price * x[1]) + '</span></li>'; }).join('') + '<li><span>Installation and commissioning</span><span>' + money(r.inst) + '</span></li></ul>' +
-        '<div class="total"><span>Estimated total</span><b>' + money(r.goods + r.inst) + '</b></div>' +
+        (r.big ? '' : '<div class="total"><span>Estimated total</span><b>' + money(r.goods + r.inst) + '</b></div>') +
         (r.big ? '<p class="notice warnbox">These appliances together need about ' + (Math.ceil(r.need / 500) / 2) + ' kW, more than our largest single inverter. This calls for a larger or three-phase system: book a site survey and an engineer will design it.</p>' : '') +
-        '<div class="row">' + (r.big ? '' : '<button class="btn b-sun" data-plan="cart">Add system to cart</button>') + '<button class="btn b-line" data-plan="survey">Book a site survey</button></div><p class="fine">Peak load about ' + Math.round(r.peak).toLocaleString() + ' W. An engineer confirms the final size after a site survey.</p>';
+        '<div class="row">' + (r.big ? '' : '<button class="btn b-sun" data-plan="cart">Add system to cart</button>') + '<button class="btn b-line" data-plan="survey">Book a site survey</button></div><p class="fine">Running load about ' + Math.round(r.peak).toLocaleString() + ' W' + (r.need > r.peak * 1.25 ? ', more when motors start' : '') + '. An engineer confirms the final size after a site survey.</p>';
     });
     savePlan();
   }
@@ -311,7 +325,7 @@
       else if (v && i.name === 'phone' && !validPhone(v)) err = FMSG.phone;
       else if (v && i.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) err = FMSG.email;
       else if (v && i.type === 'date' && i.min && v < i.min) err = 'Choose a date from ' + new Date(i.min + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' onwards.';
-      else if (v && i.name === 'name' && v.length < 2) err = 'Please enter your name.';
+      else if (v && i.name === 'name' && !/\p{L}.*\p{L}/u.test(v)) err = 'Please enter your name.';
       else if (v && i.name === 'kra' && !/^[AP]\d{9}[A-Z]$/i.test(v)) err = 'Check the KRA PIN. It looks like P051234567Q.';
       fieldErr(i, err);
       if (err && !bad) bad = i;
@@ -447,8 +461,10 @@
         var docRow = function (r, neg) { return '<div class="line" style="grid-template-columns:minmax(0,1fr) auto auto"><span>' + esc(r.number) + ' · ' + esc(r.day || r.date) + '</span><b>' + (neg ? '−' : '') + money(r.total) + '</b><a class="btn b-line" style="min-height:38px" target="_blank" rel="noopener" href="' + esc(r.pdf) + '">PDF</a></div>'; };
         if (rc && (s.receipts.length || (s.credits || []).length)) rc.innerHTML = (s.receipts.length ? '<h3 style="margin-top:20px">Receipts</h3>' + s.receipts.map(function (r) { return docRow(r); }).join('') : '') + ((s.credits || []).length ? '<h3 style="margin-top:20px">Credit notes</h3>' + s.credits.map(function (r) { return docRow(r, 1); }).join('') : '');
         if (s.void) { pp.innerHTML = '<div class="payflow"><h3>Order cancelled</h3><p class="muted">This order was cancelled and nothing is due. Call us if you would like to order again.</p><a class="btn b-sun wide" href="tel:+' + esc(String(S.phone || '').replace(/^\+/, '')) + '">Call us</a></div>'; return; }
+        if (s.credited > 0 && s.credited >= s.total - 0.5) { pp.innerHTML = '<div class="payflow"><h3>Fully credited</h3><p class="muted">Nothing is due on this order. If a refund is owed to you, we will be in touch.</p></div>'; return; }
         if (s.balance <= 0) {
           var nx = { install: ['We will call you to book the installation.', 'Our team is on the way to install your system.', 'Your system is installed. Thank you for choosing us.'], service: ['We will call you to book the visit.', 'Our technician is on the way.', 'The visit is done. Thank you for choosing us.'], pickup: ['We will call you when your order is ready to collect.', 'Your order is ready to collect.', 'Your order has been collected. Thank you.'], delivery: ['We will call you to arrange delivery.', 'Your order is on its way.', 'Your order has been delivered. Thank you.'] }[s.kind || 'delivery'];
+          if (s.job_date && (s.kind === 'install' || s.kind === 'service')) nx[0] = 'Your ' + (s.kind === 'install' ? 'installation' : 'visit') + ' is booked for ' + s.job_date + '.';
           var ph = s.fulfil === 'delivered' ? 2 : (s.fulfil === 'dispatched' || (s.kind === 'pickup' && s.fulfil === 'packed')) ? 1 : 0;
           pp.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Fully paid</h3><p class="muted">' + nx[ph] + '</p></div>'; return;
         }
@@ -563,7 +579,7 @@
     }
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { closeDrawer(); var m = $('[data-mnav]'); if (m && m.classList.contains('on')) mnav(false); var mo = document.querySelector('.menu > li.open, .menu > li.hover'); if (mo) mo.classList.remove('open', 'hover'); if (document.activeElement && document.activeElement.closest && document.activeElement.closest('.menu .mega, .menu .dd')) { var top = document.activeElement.closest('.menu > li'); if (top && top.firstElementChild) top.firstElementChild.focus(); } }
+    if (e.key === 'Escape') { closeDrawer(); var m = $('[data-mnav]'); if (m && m.classList.contains('on')) mnav(false); $$('.menu .has').forEach(function (li) { if (li.matches(':hover') || li.contains(document.activeElement)) { var a0 = li.querySelector('a'); if (a0 && li.contains(document.activeElement)) a0.focus(); li.classList.add('shut'); if (a0) a0.setAttribute('aria-expanded', 'false'); } }); }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-app]')) { e.preventDefault(); e.target.click(); }
   });
   document.addEventListener('input', function (e) {
@@ -599,7 +615,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   $$('[data-ptabs]').forEach(function (t) {
     var grid = t.parentNode.querySelector('[data-tabgrid]'); if (!grid) return;
     var lim = +grid.dataset.limit || 8;
-    var show = function (cats) {
+    var show = function (cats, href) {
       var list = cats ? cats.split(',') : null, n = 0;
       /* fill whole rows: 3 columns on tablets, 2 on phones, 4 on desktop */
       var cols = getComputedStyle(grid).gridTemplateColumns.split(' ').length || 4;
@@ -610,7 +626,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
       if (!more) { more = document.createElement('a'); more.className = 'card seeall'; grid.appendChild(more); }
       var gap = list ? (cols - (cap % cols)) % cols : 0;
       more.hidden = !(list && (gap > 0 || avail > cap));
-      if (list) { more.href = (window.SOKO && SOKO.home ? SOKO.home : '/') + 'shop/' + encodeURIComponent(list[0]) + '/'; more.innerHTML = '<span><b>See all</b><small>' + avail + ' product' + (avail === 1 ? '' : 's') + ' in this range</small></span><i aria-hidden="true">→</i>'; }
+      if (list) { more.href = href || ((window.SOKO && SOKO.home ? SOKO.home : '/') + 'shop/' + encodeURIComponent(list[0]) + '/'); more.innerHTML = '<span><b>See all</b><small>' + avail + ' product' + (avail === 1 ? '' : 's') + ' in this range</small></span><i aria-hidden="true">→</i>'; }
       $$('.card:not(.seeall)', grid).forEach(function (c) {
         var ok = !list || list.indexOf(c.dataset.cat) > -1;
         ok = ok && n < cap; if (ok) n++;
@@ -620,10 +636,10 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
     t.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       $$('button', t).forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
-      show(b.dataset.c);
+      show(b.dataset.c, b.dataset.href);
     });
     var on0 = t.querySelector('button.on');
-    if ((getComputedStyle(grid).gridTemplateColumns.split(' ').length || 4) !== 4) show(on0 ? on0.dataset.c : null);
+    if ((getComputedStyle(grid).gridTemplateColumns.split(' ').length || 4) !== 4) show(on0 ? on0.dataset.c : null, on0 ? on0.dataset.href : null);
   });
 
   /* savings calculator */
@@ -775,7 +791,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   function draw() {
     sel = sel.filter(function (s) { return s && s.id; });
     document.querySelectorAll('[data-cmp]').forEach(function (b) { var on = sel.some(function (s) { return String(s.id) === b.dataset.cmp; }); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.lastChild.textContent = on ? 'Comparing' : 'Compare'; });
-    tray.hidden = !sel.length;
+    tray.hidden = !sel.length; document.body.classList.toggle('has-cmp', !!sel.length);
     tray.innerHTML = '<span>' + sel.map(function (s) { return '<b>' + esc(s.name) + '</b>'; }).join('') + '</span><button class="btn b-sun" data-cmpgo' + (sel.length < 2 ? ' disabled' : '') + '>' + (sel.length < 2 ? 'Pick one more to compare' : 'Compare ' + sel.length) + '</button><button class="cmpx" data-cmpclear aria-label="Clear comparison">Clear</button>';
   }
   cards.forEach(function (c) {
@@ -794,7 +810,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
       var id = b.dataset.cmp, i = sel.findIndex(function (s) { return String(s.id) === id; });
       var tst = window.SokoToast || function () {};
       if (i > -1) sel.splice(i, 1);
-      else if (sel.length && data[id] && sel[0].cat !== data[id].cat && !sel.some(function (x) { return data[x.id]; })) { sel = [data[id]]; tst('Started a new comparison. Compare items of the same kind side by side.'); }
+      else if (sel.length && data[id] && (sel[0].grp || sel[0].cat) !== (data[id].grp || data[id].cat)) { sel = [data[id]]; tst('Started a new comparison. Compare items of the same kind side by side.'); }
       else { if (sel.length >= 3) { var gone = sel.shift(); tst('You can compare up to 3. ' + (gone && gone.name ? gone.name + ' was taken off.' : '')); } sel.push(data[id]); }
       save(); draw(); return;
     }

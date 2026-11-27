@@ -725,7 +725,7 @@ final class Soko_Sections {
 			$tabs  = '<div class="ptabs" role="tablist" data-ptabs><button class="on" data-c="" role="tab">All</button>';
 			foreach ( (array) $site['header']['menu'] as $m ) {
 				if ( ! empty( $m['cats'] ) ) {
-					$tabs .= '<button data-c="' . esc_attr( $m['cats'] ) . '" role="tab">' . self::e( $m['label'] ) . '</button>';
+					$tabs .= '<button data-c="' . esc_attr( $m['cats'] ) . '"' . ( ! empty( $m['link'] ) ? ' data-href="' . self::link( $m['link'] ) . '"' : '' ) . ' role="tab">' . self::e( $m['label'] ) . '</button>';
 				}
 			}
 			$tabs .= '</div>';

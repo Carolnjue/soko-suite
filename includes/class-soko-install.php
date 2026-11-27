@@ -438,7 +438,8 @@ final class Soko_Install {
 	public static function roles() {
 		foreach ( soko_roles() as $role => $def ) {
 			remove_role( $role );
-			$caps = array( 'read' => true, 'upload_files' => true );
+			// Uploading photos is for roles that add them: website, expenses (receipts) and installations.
+			$caps = array( 'read' => true, 'upload_files' => (bool) array_intersect( (array) $def[1], array( 'soko_site', 'soko_expenses', 'soko_jobs' ) ) );
 			foreach ( $def[1] as $cap ) {
 				$caps[ $cap ] = true;
 			}

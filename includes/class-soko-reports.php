@@ -434,7 +434,7 @@ final class Soko_Reports {
 				break;
 
 			case 'payments':
-				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT p.*, d.number FROM $P p LEFT JOIN $D d ON d.id = p.doc_id WHERE p.received BETWEEN %s AND %s ORDER BY p.received DESC", $from . ' 00:00:00', $to . ' 23:59:59' ), ARRAY_A ); // phpcs:ignore
+				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT p.*, d.number FROM $P p LEFT JOIN $D d ON d.id = p.doc_id WHERE p.status <> 'void' AND p.received BETWEEN %s AND %s ORDER BY p.received DESC", $from . ' 00:00:00', $to . ' 23:59:59' ), ARRAY_A ); // phpcs:ignore
 				$out['kpis'] = array( array( 'Received', soko_money( array_sum( wp_list_pluck( $rows, 'amount' ) ) ) ), array( 'Payments', count( $rows ) ), array( 'Unmatched', count( array_filter( $rows, function ( $r ) { return 'matched' !== $r['status']; } ) ) ) );
 				$out['sections'][] = array( 'title' => 'Payments', 'head' => array( 'Date', 'Code', 'Method', 'From', 'Invoice', 'Amount' ), 'rows' => array_map( function ( $r ) { return array( substr( $r['received'], 0, 16 ), $r['code'], 'mpesa' === $r['method'] ? 'M-Pesa' : ucfirst( $r['method'] ), $r['payer'], $r['number'] ? $r['number'] : 'Unmatched', round( $r['amount'] ) ); }, $rows ), 'widths' => array( 30, 28, 20, 50, 25, 27 ) );
 				break;
@@ -735,7 +735,7 @@ final class Soko_Reports {
 		$coll   = $wpdb->get_row( $wpdb->prepare( "SELECT SUM(amount) a, COUNT(*) n FROM $P WHERE status = 'matched' AND received BETWEEN %s AND %s", $m0 . ' 00:00:00', $m1 . ' 23:59:59' ), ARRAY_A ); // phpcs:ignore
 		$owed   = (float) $wpdb->get_var( "SELECT SUM(total - paid) FROM $D WHERE type='invoice' AND status <> 'void' AND paid < total AND " . Soko_Accounts::confirmed_sql( $D ) ); // phpcs:ignore
 		$over   = $wpdb->get_results( $wpdb->prepare( "SELECT d.id, d.number, d.total - d.paid bal, d.due, c.name FROM $D d LEFT JOIN " . soko_t( 'customers' ) . " c ON c.id = d.customer_id WHERE d.type='invoice' AND d.status <> 'void' AND d.paid < d.total - 0.5 AND d.due < %s ORDER BY d.due LIMIT 8", soko_today() ), ARRAY_A ); // phpcs:ignore
-		$unm    = $wpdb->get_results( "SELECT id, code, amount, payer FROM $P WHERE status <> 'matched' ORDER BY received DESC LIMIT 5", ARRAY_A ); // phpcs:ignore
+		$unm    = $wpdb->get_results( "SELECT id, code, amount, payer FROM $P WHERE status = 'unmatched' ORDER BY received DESC LIMIT 5", ARRAY_A ); // phpcs:ignore
 		$held   = Soko_Ledger::held();
 		$low    = array();
 		foreach ( $wpdb->get_results( 'SELECT id, name, stock, reorder FROM ' . soko_t( 'products' ) . " WHERE kind = 'product'", ARRAY_A ) as $lp ) { // phpcs:ignore
@@ -769,7 +769,7 @@ final class Soko_Reports {
 		}
 		$weeks = array_values( $wk );
 		$cats = self::run( 'sales', $m0, $m1 );
-		$recent = $wpdb->get_results( "SELECT p.code, p.amount, p.payer, p.received, p.status, d.number FROM $P p LEFT JOIN $D d ON d.id = p.doc_id ORDER BY p.received DESC LIMIT 6", ARRAY_A ); // phpcs:ignore
+		$recent = $wpdb->get_results( "SELECT p.code, p.amount, p.payer, p.received, p.status, d.number FROM $P p LEFT JOIN $D d ON d.id = p.doc_id WHERE p.status <> 'void' ORDER BY p.received DESC LIMIT 6", ARRAY_A ); // phpcs:ignore
 		$newleads = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . soko_t( 'leads' ) . " WHERE stage = 'New'" ); // phpcs:ignore
 		$topack   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $D WHERE type='invoice' AND fulfil = 'to_pack'" ); // phpcs:ignore
 		$neworders = $wpdb->get_results( $wpdb->prepare( "SELECT d.id, d.number, d.total, d.paid, c.name FROM $D d LEFT JOIN " . soko_t( 'customers' ) . " c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.source = 'web' AND d.status <> 'void' AND d.paid < d.total AND d.date >= %s ORDER BY d.id DESC LIMIT 5", gmdate( 'Y-m-d', strtotime( soko_today() . ' -14 days' ) ) ), ARRAY_A ); // phpcs:ignore

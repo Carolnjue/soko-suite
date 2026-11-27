@@ -42,15 +42,17 @@
       body: o.body ? JSON.stringify(o.body) : undefined,
       credentials: 'same-origin'
     }).then(function (r) {
-      if (r.status === 401 || r.status === 403 && /nonce|sign in/i.test(r.statusText)) { }
+      if (r.status === 401) { K.signedOut(); }
       return r.text().then(function (t) {
         var j; try { j = JSON.parse(t); } catch (e) { j = { message: 'Something went wrong. Please try again.' }; }
+        if (!r.ok && j && (j.code === 'rest_cookie_invalid_nonce' || j.code === 'rest_not_logged_in')) { K.signedOut(); var se = new Error('You have been signed out.'); se.status = 401; throw se; }
         if (!r.ok) { var err = new Error(j && j.message ? j.message : 'Something went wrong.'); err.status = r.status; err.code = j && j.code; throw err; }
         return j;
       });
     });
   };
-  K.fail = function (e) { K.toast(e && e.message ? e.message : 'Something went wrong.', true); if (e && e.status === 401) setTimeout(function () { location.href = D.site + 'desk/login/'; }, 1500); };
+  K.signedOut = function () { if (K._out) return; K._out = 1; K.toast('You have been signed out. Taking you to the sign-in page…', true); setTimeout(function () { location.href = D.site + 'desk/login/'; }, 1600); };
+  K.fail = function (e) { if (K._out) return; K.toast(e && e.message ? e.message : 'Something went wrong.', true); if (e && e.status === 401) K.signedOut(); };
   /* text search that also finds phone numbers typed as 07…, +254… or 7… */
   K.qmatch = function (q, hay, phone) {
     q = String(q || '').trim().toLowerCase(); if (!q) return true;
@@ -68,6 +70,8 @@
   K.url = function (path) { return D.api + path + (path.indexOf('?') > -1 ? '&' : '?') + '_wpnonce=' + D.nonce; };
   /* A website order counts as a sale once the team confirms it or it is paid. */
   K.searchHint = function () { var w = [['sales', 'invoices'], ['crm', 'customers'], ['payments', 'payments'], ['stock', 'products'], ['jobs', 'jobs'], ['purchases', 'orders']].filter(function (x) { return K.can(x[0]); }).map(function (x) { return x[1]; }).slice(0, 4); return w.length ? 'Search ' + (w.length > 1 ? w.slice(0, -1).join(', ') + ' and ' + w[w.length - 1] : w[0]) : 'Search'; };
+  K.canProducts = function () { return K.can('settings') || (K.can('stock') && (K.can('studio') || K.can('purchases'))); };
+  K.canBill = function () { return K.can('sales') && (K.can('crm') || K.can('payments') || K.can('reports') || K.can('settings')); };
   K.confirmed = function (r) { return !r || r.source !== 'web' || +r.paid > 0 || ['to_pack', 'packed', 'dispatched', 'delivered'].indexOf(r.fulfil) > -1; };
   K.withBanks = function (o) { return o.concat(((window.DESK && DESK.banks) || []).map(function (b) { return [b[0], b[1]]; })); };
   K.open = function (path) { window.open(K.url(path), '_blank', 'noopener'); };
@@ -301,6 +305,7 @@
     try { K.V[m](v, arg); } catch (e) { v.innerHTML = '<div class="empty"><b>This screen hit a problem</b>' + esc(e.message) + '</div>'; if (window.console) console.error(e); }
     window.scrollTo(0, 0);
   };
+  document.addEventListener('click', function (e) { var jd = e.target.closest && e.target.closest('[data-jdoc]'); if (jd && K.openDoc) { e.preventDefault(); if (K.closeModal) K.closeModal(); K.openDoc(+jd.dataset.jdoc); } });
   /* A link to a screen this person cannot open explains why, instead of landing somewhere else. */
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href^="#"]');

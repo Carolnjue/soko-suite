@@ -1107,3 +1107,12 @@ html[data-theme=dark] .warnbox{background:#2e2414;color:#f3c98a;border-color:#5a
 .co.co-empty{grid-template-columns:minmax(0,1fr);max-width:640px;margin-inline:auto}
 html.locked,html.locked body{overflow:hidden}
 .rv:focus-within{opacity:1;transform:none}
+/* Desktop: compare pill sits above the quick-view bar, never on it */
+@media(hover:hover) and (min-width:601px){.media .cmpbtn{bottom:60px}}
+/* Delivery option titles wrap; price stays on its own */
+.opts label>span b{white-space:normal}
+/* Calculator big-load: no misleading total */
+.planner-big .total,.planner-big .bom{opacity:.55}
+body:has([data-checkout]) .totop,body:has([data-cart-page]) .totop{display:none}
+.menu .has.shut .mega{opacity:0!important;visibility:hidden!important}
+body.has-cmp{padding-bottom:90px}

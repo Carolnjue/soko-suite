@@ -415,3 +415,8 @@ body{background:#fff!important;color:#000!important}
 html[data-theme=dark] body{--bg:#fff;--card:#fff;--ink:#000;--soft:#444;--line:#ccc}
 }
 @media print{body.printing-recon .head p,body.printing-recon .kpis,body.printing-recon .lockbar{display:none!important}}
+/* Dark mode links readable on dark cards */
+html[data-theme=dark] .drawer a:not(.btn),html[data-theme=dark] .notice a,html[data-theme=dark] .box a:not(.btn),html[data-theme=dark] .kv a{color:#8fb8ff}
+/* Phone: list search uses the full width of its card */
+@media(max-width:640px){.toolbar input[type=search],.toolbar [data-q]{width:100%;max-width:none;flex:1 1 100%}}
+.list li .st.void{margin-left:6px}

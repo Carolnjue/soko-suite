@@ -206,6 +206,7 @@ final class Soko_Store {
 			'img'     => $p['images'] ? $p['images'][0] : '',
 			'icon'    => $p['icon'],
 			'cat'     => $p['cat_name'],
+			'grp'     => self::menu_group( $p['cat'] ),
 			'runs'    => $p['runs'],
 			'specs'   => $p['specs'],
 			'warranty' => $p['warranty'],
@@ -450,6 +451,21 @@ final class Soko_Store {
 			<aside class="panel summary"><h3>Order summary</h3><div data-co-lines></div><div class="sum" data-co-sum></div><ul class="cotrust"><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>' . ( Soko_Mpesa::ready() ? 'You only pay when the M-Pesa prompt arrives on your own phone.' : 'Nothing is charged until we confirm your order with you.' ) . '</span></li><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Your order number is your payment reference. Your receipt is issued as soon as payment is confirmed.</span></li><li class="inst-only" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Installed by EPRA-licensed technicians, with warranty and aftercare.</span></li></ul></aside></div></section>'; // phpcs:ignore
 	}
 
+	/** The shop menu heading a category sits under (Batteries, Inverters…), so like is compared with like. */
+	public static function menu_group( $cat ) {
+		static $map = null;
+		if ( null === $map ) {
+			$map  = array();
+			$site = Soko_Sections::current();
+			foreach ( (array) ( isset( $site['header']['menu'] ) ? $site['header']['menu'] : array() ) as $m ) {
+				foreach ( array_filter( array_map( 'trim', explode( ',', isset( $m['cats'] ) ? $m['cats'] : '' ) ) ) as $c ) {
+					$map[ $c ] = $m['label'];
+				}
+			}
+		}
+		return isset( $map[ $cat ] ) ? $map[ $cat ] : soko_category( $cat )['group'];
+	}
+
 	/** What kind of order this is, for wording: install, service, pickup or delivery. */
 	public static function order_kind( $d ) {
 		$goods = false;
@@ -479,7 +495,7 @@ final class Soko_Store {
 		$tok = isset( $_GET['t'] ) ? sanitize_text_field( wp_unslash( $_GET['t'] ) ) : ''; // phpcs:ignore
 		$d   = $num ? Soko_Ledger::doc( $num ) : null;
 		if ( ! $d || ! $tok || ! hash_equals( (string) $d['token'], $tok ) || 'invoice' !== $d['type'] ) {
-			echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Order tracking</span><h1>Track your order</h1><p>Use the link in your email or SMS, or enter your order number and phone.</p></div></div></section><section class="band"><div class="wrap co trackf"><form class="panel" data-find-form novalidate><div class="f2"><div class="f"><label for="tNum">Order or invoice number</label><input id="tNum" name="number" placeholder="INV-1001" required></div><div class="f"><label for="tPhone">Phone used</label><input id="tPhone" name="phone" inputmode="tel" required></div></div><button class="btn b-sun">Find my order</button><p class="formmsg" role="status"></p></form><aside class="tsteps"><h3>What happens after you order</h3><ol><li><b>Placed</b><span>We confirm your order and payment.</span></li><li><b>Paid</b><span>Your receipt is issued straight away.</span></li><li><b>Packed</b><span>Items are checked and packed at our store.</span></li><li><b>On the way</b><span>Delivery or our installation team is on its way.</span></li><li><b>Delivered</b><span>Installed, tested and handed over.</span></li></ol></aside></div></section>';
+			echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Order tracking</span><h1>Track your order</h1><p>' . ( $num ? 'That tracking link is old or incomplete. Enter your order number and phone instead.' : 'Use the link in your email or SMS, or enter your order number and phone.' ) . '</p></div></div></section><section class="band"><div class="wrap co trackf"><form class="panel" data-find-form novalidate><div class="f2"><div class="f"><label for="tNum">Order or invoice number</label><input id="tNum" name="number" placeholder="INV-1001" required></div><div class="f"><label for="tPhone">Phone used</label><input id="tPhone" name="phone" inputmode="tel" required></div></div><button class="btn b-sun">Find my order</button><p class="formmsg" role="status"></p></form><aside class="tsteps"><h3>What happens after you order</h3><ol><li><b>Placed</b><span>We receive your order.</span></li><li><b>Confirmed</b><span>We call to confirm the details.</span></li><li><b>Paid</b><span>Your receipt is issued straight away.</span></li><li><b>Packed</b><span>Items are checked and packed at our store.</span></li><li><b>On the way</b><span>Delivery or our installation team is on its way.</span></li><li><b>Delivered</b><span>Installed, tested and handed over.</span></li></ol></aside></div></section>';
 			return;
 		}
 		// Steps depend on the kind of order: goods delivered, goods collected, or a service visit.
@@ -504,7 +520,8 @@ final class Soko_Store {
 		$f      = (string) $d['fulfil'];
 		$moved  = in_array( $f, array( 'to_pack', 'packed', 'dispatched', 'delivered' ), true );
 		$conf   = $moved || (float) $d['paid'] > 0;
-		$isp    = 'paid' === $d['state'];
+		$cred0  = isset( $d['credited'] ) ? (float) $d['credited'] : 0;
+		$isp    = 'paid' === $d['state'] && (float) $d['paid'] - $cred0 > 0.005;
 		$booked = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . soko_t( 'jobs' ) . ' WHERE doc_id = %d AND date IS NOT NULL', $d['id'] ) ) > 0; // phpcs:ignore
 		$sent   = in_array( $f, array( 'dispatched', 'delivered' ), true );
 		$done   = 'delivered' === $f;
@@ -524,7 +541,9 @@ final class Soko_Store {
 		$paid_net = max( 0, round( (float) $d['paid'] - $credited, 2 ) );
 		echo '<section class="phero sky slim"><div class="wrap"><div class="pcopy"><span class="kick">Order tracking</span><h1>Order ' . esc_html( $d['number'] ) . '</h1><p>' . esc_html( $d['customer'] ? 'For ' . $d['customer']['name'] : '' ) . ' · ' . esc_html( date_i18n( 'j M Y', strtotime( $d['date'] ) ) ) . '</p></div></div></section>';
 		echo '<section class="band"><div class="wrap co" data-track="' . esc_attr( wp_json_encode( array( 'doc' => $d['number'], 't' => $d['token'], 'balance' => $d['balance'], 'phone' => $d['customer'] ? soko_phone_display( $d['customer']['phone'] ) : '' ) ) ) . '"><div class="panel">';
-		if ( $void ) {
+		if ( ! $void && $cred0 >= (float) $d['total'] - 0.5 ) {
+			echo '<p class="notice">This order has been fully credited, so nothing is due. If a refund is owed to you, we will be in touch.</p>';
+		} elseif ( $void ) {
 			echo '<p class="notice">This order has been cancelled. If you did not ask for this, please call us.</p>';
 		} elseif ( 'web' === $d['source'] ) {
 			echo '<ol class="track">';

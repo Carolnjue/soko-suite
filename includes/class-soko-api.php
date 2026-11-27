@@ -18,7 +18,7 @@ final class Soko_API {
 			'leads'     => array( 'leads', 'soko_crm', array( 'name', 'phone', 'email', 'source', 'stage', 'value', 'interest', 'county', 'notes', 'owner_id', 'customer_id', 'next_action' ), array( 'name', 'phone', 'interest' ), array() ),
 			'jobs'      => array( 'jobs', 'soko_jobs', array( 'title', 'customer_id', 'doc_id', 'stage', 'techs', 'date', 'location', 'size', 'checklist', 'notes' ), array( 'title', 'location', 'techs' ), array( 'soko_schedule' ) ),
 			'events'    => array( 'events', 'soko_schedule', array( 'title', 'kind', 'start', 'who', 'location', 'job_id', 'remind', 'done' ), array( 'title', 'who', 'location' ), array( 'soko_jobs' ) ),
-			'suppliers' => array( 'suppliers', 'soko_purchases', array( 'name', 'contact', 'phone', 'email', 'kra', 'notes' ), array( 'name', 'phone' ), array( 'soko_expenses', 'soko_stock' ) ),
+			'suppliers' => array( 'suppliers', 'soko_purchases', array( 'name', 'contact', 'phone', 'email', 'kra', 'notes' ), array( 'name', 'phone' ), array( 'soko_expenses' ) ),
 			'expenses'  => array( 'expenses', 'soko_expenses', array( 'date', 'category', 'description', 'amount', 'vat', 'method', 'reference', 'supplier', 'supplier_pin', 'receipt' ), array( 'description', 'category', 'reference', 'supplier' ), array() ),
 			'licences'  => array( 'licences', 'soko_compliance', array( 'name', 'holder', 'number', 'expires', 'notes' ), array( 'name', 'holder', 'number' ), array() ),
 		);
@@ -129,6 +129,7 @@ final class Soko_API {
 	public static function init() {
 		add_action( 'rest_api_init', array( __CLASS__, 'routes' ) );
 		add_filter( 'rest_post_dispatch', array( __CLASS__, 'scrub_cost' ), 10, 3 );
+		add_filter( 'rest_pre_dispatch', array( __CLASS__, 'guard_wp_users' ), 10, 3 );
 	}
 
 	private static function perm( $cap, $also = array() ) {
@@ -287,9 +288,14 @@ final class Soko_API {
 
 	/* name starts with the words > name contains them > category matches > other (description, SKU) */
 	public static function rank_search( $rows, $q ) {
-		$q = strtolower( $q );
+		$q = strtolower( trim( $q ) );
+		// The same reading of the words as the search itself: plurals, and "5kw" as "5 kw".
+		$q = preg_replace( '/\b(\d+(?:\.\d+)?)\s*(kw|kva|kwh|w|ah|v)\b/', '$1 $2', $q );
+		$q = preg_replace( array( '/ies\b/', '/(ch|sh|x|s)es\b/', '/(?<![s])s\b/' ), array( 'y', '$1', '' ), $q );
+		$q = trim( preg_replace( '/\b(solar|and|for|the)\b/', '', $q ) ) ?: $q;
 		$score = function ( $p ) use ( $q ) {
-			$n = strtolower( $p['name'] );
+			$n = preg_replace( '/\b(\d+(?:\.\d+)?)\s*(kw|kva|kwh|w|ah|v)\b/', '$1 $2', strtolower( $p['name'] ) );
+			$n = preg_replace( array( '/ies\b/', '/(ch|sh|x|s)es\b/', '/(?<![s])s\b/' ), array( 'y', '$1', '' ), $n );
 			if ( 0 === strpos( $n, $q ) ) {
 				return 0;
 			}
@@ -319,7 +325,7 @@ final class Soko_API {
 			return new WP_Error( 'soko', 'Sorry, something went wrong.', array( 'status' => 400 ) );
 		}
 		$c = isset( $b['customer'] ) ? (array) $b['customer'] : array();
-		if ( mb_strlen( trim( (string) ( isset( $c['name'] ) ? $c['name'] : '' ) ) ) < 2 || strlen( soko_phone( isset( $c['phone'] ) ? $c['phone'] : '' ) ) !== 12 ) {
+		if ( ! preg_match( '/\p{L}.*\p{L}/u', (string) ( isset( $c['name'] ) ? $c['name'] : '' ) ) || strlen( soko_phone( isset( $c['phone'] ) ? $c['phone'] : '' ) ) !== 12 ) {
 			return new WP_Error( 'soko', 'Please enter your name and a valid phone number.', array( 'status' => 400 ) );
 		}
 		if ( ! empty( $c['kra'] ) && ! preg_match( '/^[AP]\d{9}[A-Z]$/i', trim( $c['kra'] ) ) ) {
@@ -327,7 +333,10 @@ final class Soko_API {
 		}
 		if ( ! empty( $b['install_date'] ) ) {
 			$id8 = (string) $b['install_date'];
-			if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $id8, $mm ) || ! checkdate( (int) $mm[2], (int) $mm[3], (int) $mm[1] ) || $id8 < gmdate( 'Y-m-d', strtotime( soko_today() . ' +1 day' ) ) ) {
+			if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $id8, $mm ) || ! checkdate( (int) $mm[2], (int) $mm[3], (int) $mm[1] ) ) {
+				return new WP_Error( 'soko', 'That date does not exist. Please pick it from the calendar.', array( 'status' => 400 ) );
+			}
+			if ( $id8 < gmdate( 'Y-m-d', strtotime( soko_today() . ' +1 day' ) ) ) {
 				return new WP_Error( 'soko', 'Please choose a date from tomorrow onwards.', array( 'status' => 400 ) );
 			}
 		}
@@ -350,7 +359,7 @@ final class Soko_API {
 				return new WP_Error( 'soko', sprintf( '%s is ordered in for you. For more than 20, please call us so we can confirm the delivery date.', $p['name'] ), array( 'status' => 409 ) );
 			}
 			if ( 'product' === $p['kind'] && $p['available'] > 0 && $qty > $p['available'] ) {
-				return new WP_Error( 'soko', sprintf( 'Only %d × %s are available right now. Please lower the quantity, or call us to order more.', (int) $p['available'], $p['name'] ), array( 'status' => 409 ) );
+				return new WP_Error( 'soko', sprintf( 1 === (int) $p['available'] ? 'Only %d × %s is available right now.' : 'Only %d × %s are available right now. Please lower the quantity, or call us to order more.', (int) $p['available'], $p['name'] ), array( 'status' => 409 ) );
 			}
 			$lines[] = array( 'product_id' => $p['id'], 'qty' => $qty );
 			if ( ! empty( $it['install'] ) && $p['install_fee'] > 0 ) {
@@ -377,10 +386,16 @@ final class Soko_API {
 			$notes[] = 'Delivery: ' . $del[ $di ]['label'] . ( preg_match( '/pick\s?-?up|collect/i', $del[ $di ]['label'] ) && soko_setting( 'pickup_address' ) ? ' at ' . soko_setting( 'pickup_address' ) : '' );
 		}
 		if ( ! empty( $b['install_date'] ) ) {
-			$notes[] = ( $goods ? 'Preferred installation date: ' : 'Preferred visit date: ' ) . sanitize_text_field( $b['install_date'] );
+			$notes[] = ( $goods ? 'Preferred installation date: ' : 'Preferred visit date: ' ) . date_i18n( 'j M Y', strtotime( sanitize_text_field( $b['install_date'] ) ) );
 		}
 		if ( ! empty( $b['notes'] ) ) {
 			$notes[] = sanitize_textarea_field( $b['notes'] );
+		}
+		if ( ! empty( $c['kra'] ) ) {
+			$c['kra'] = strtoupper( trim( $c['kra'] ) );
+		}
+		if ( $goods && ! $installing && ! isset( $del[ $di ] ) ) {
+			return new WP_Error( 'soko', 'Please choose delivery or pick up.', array( 'status' => 400 ) );
 		}
 		$c['type'] = ! empty( $c['kra'] ) ? 'Business' : 'Home';
 		$doc = Soko_Ledger::save_doc(
@@ -462,6 +477,7 @@ final class Soko_API {
 			'credited' => $credited,
 			'credits'  => $credits,
 			'kind'     => Soko_Store::order_kind( $d ),
+			'job_date' => ( $jdv = $wpdb->get_var( $wpdb->prepare( 'SELECT MIN(date) FROM ' . soko_t( 'jobs' ) . ' WHERE doc_id = %d AND date IS NOT NULL', $d['id'] ) ) ) ? date_i18n( 'j M Y', strtotime( $jdv ) ) : '', // phpcs:ignore
 			'confirmed' => in_array( (string) $d['fulfil'], array( 'to_pack', 'packed', 'dispatched', 'delivered' ), true ) || (float) $d['paid'] > 0,
 			'balance'  => 'void' === $d['state'] ? 0 : $d['balance'],
 			'void'     => 'void' === $d['state'],
@@ -495,7 +511,7 @@ final class Soko_API {
 		if ( ! empty( $b['website'] ) ) {
 			return array( 'ok' => true );
 		}
-		if ( empty( $b['name'] ) || strlen( soko_phone( isset( $b['phone'] ) ? $b['phone'] : '' ) ) !== 12 ) {
+		if ( ! preg_match( '/\p{L}.*\p{L}/u', (string) ( isset( $b['name'] ) ? $b['name'] : '' ) ) || strlen( soko_phone( isset( $b['phone'] ) ? $b['phone'] : '' ) ) !== 12 ) {
 			return new WP_Error( 'soko', 'Please enter your name and a valid phone number.', array( 'status' => 400 ) );
 		}
 		if ( ! empty( $b['email'] ) && ! is_email( $b['email'] ) ) {
@@ -533,6 +549,17 @@ final class Soko_API {
 		}
 		$b = $req->get_json_params();
 		$num = strtoupper( preg_replace( '/[\s#]+/', '', sanitize_text_field( isset( $b['number'] ) ? $b['number'] : '' ) ) );
+		$rp  = strtoupper( preg_replace( '/[^A-Z]/i', '', (string) soko_setting( 'prefix_receipt', 'RCT-' ) ) );
+		$cp  = strtoupper( preg_replace( '/[^A-Z]/i', '', (string) soko_setting( 'prefix_credit', 'CN-' ) ) );
+		if ( preg_match( '/^(' . preg_quote( $rp, '/' ) . '|' . preg_quote( $cp, '/' ) . ')-?\d+$/', $num ) ) {
+			$sub = Soko_Ledger::doc( preg_replace( '/^([A-Z]+)-?(\d+)$/', '$1-$2', $num ) );
+			if ( $sub && $sub['parent_id'] ) {
+				$par = Soko_Ledger::doc( (int) $sub['parent_id'] );
+				if ( $par ) {
+					$num = $par['number'];
+				}
+			}
+		}
 		if ( preg_match( '/^\d+$/', $num ) ) {
 			$num = soko_setting( 'prefix_invoice', 'INV-' ) . $num; // "1057" means INV-1057
 		} elseif ( preg_match( '/^([A-Z]+)(\d+)$/', $num, $m ) ) {
@@ -661,6 +688,11 @@ final class Soko_API {
 		$order = array( 'events' => 'start ASC', 'expenses' => 'date DESC, id DESC', 'licences' => 'expires ASC', 'jobs' => 'date ASC, id DESC' );
 		$sql   = "SELECT * FROM $t WHERE " . implode( ' AND ', $where ) . ' ORDER BY ' . ( isset( $order[ $name ] ) ? $order[ $name ] : 'id DESC' ) . ' LIMIT 1000';
 		$rows  = $vals ? $wpdb->get_results( $wpdb->prepare( $sql, $vals ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A ); // phpcs:ignore
+		if ( 'customers' === $name && ! self::office() && ! soko_can( 'soko_crm' ) ) {
+			// Technicians see only the customers on jobs they are on.
+			$mine = array_map( 'intval', wp_list_pluck( self::my_job_ids(), 'customer_id' ) );
+			$rows = array_values( array_filter( $rows, function ( $r ) use ( $mine ) { return in_array( (int) $r['id'], $mine, true ); } ) );
+		}
 		if ( 'customers' === $name ) {
 			$D = soko_t( 'docs' );
 			$agg = $wpdb->get_results( "SELECT customer_id, SUM(total) t, SUM(paid) p, COUNT(*) n, SUM(CASE WHEN total > paid THEN total - paid ELSE 0 END) o, SUM(CASE WHEN paid > total THEN paid - total ELSE 0 END) cr FROM $D d WHERE type = 'invoice' AND status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ) . ' GROUP BY customer_id', OBJECT_K ); // phpcs:ignore
@@ -725,6 +757,9 @@ final class Soko_API {
 				$row[ $f ] = $v;
 			}
 		}
+		if ( 'jobs' === $name && ! self::office() ) {
+			unset( $row['doc_id'], $row['customer_id'] ); // the office links jobs to orders and customers
+		}
 		$bad = self::check_entity( $name, $b, $row, $id );
 		if ( is_wp_error( $bad ) ) {
 			return $bad;
@@ -742,6 +777,15 @@ final class Soko_API {
 			$old = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'expenses' ) . ' WHERE id = %d', $id ), ARRAY_A ); // phpcs:ignore
 			if ( $old && $old['date'] && ( $lk = Soko_Accounts::locked( $old['date'] ) ) ) { // phpcs:ignore
 				return $lk;
+			}
+			$billpaid = $old ? (float) ( Soko_Accounts::po_paid_asat( '2999-12-31' )[ 'EXP-' . $id ] ?? 0 ) : 0;
+			if ( $billpaid > 0.005 ) {
+				if ( isset( $b['amount'] ) && (float) $b['amount'] + 0.005 < $billpaid ) {
+					return new WP_Error( 'soko', sprintf( '%s has already been paid on this bill, so the amount cannot go below that.', soko_money_exact( $billpaid ) ), array( 'status' => 400 ) );
+				}
+				if ( isset( $b['method'] ) && ! Soko_Accounts::is_unpaid_method( $b['method'] ) ) {
+					return new WP_Error( 'soko', 'Payments have been recorded on this bill, so it stays a bill. Pay the rest from the bill itself.', array( 'status' => 400 ) );
+				}
 			}
 			if ( $old && Soko_Accounts::is_reconciled( 'expense', $id ) ) {
 				foreach ( array( 'amount', 'date', 'method', 'vat' ) as $kf ) {
@@ -772,6 +816,23 @@ final class Soko_API {
 			}
 			if ( isset( $b['amount'] ) && (float) $b['amount'] <= 0 ) {
 				return new WP_Error( 'soko', 'Enter an amount above zero.', array( 'status' => 400 ) );
+			}
+			if ( ! empty( $b['category'] ) ) {
+				$cats = array_merge( (array) soko_setting( 'expense_cats' ), array( 'Equipment or vehicle bought (kept as an asset)' ) );
+				$known = $id ? $wpdb->get_var( $wpdb->prepare( 'SELECT category FROM ' . soko_t( 'expenses' ) . ' WHERE id = %d', $id ) ) : null; // phpcs:ignore
+				if ( ! in_array( $b['category'], $cats, true ) && $b['category'] !== $known ) {
+					return new WP_Error( 'soko', 'Choose a category from the list. The owner can add categories in Settings.', array( 'status' => 400 ) );
+				}
+			}
+			$em = isset( $b['method'] ) ? $b['method'] : ( $id ? $wpdb->get_var( $wpdb->prepare( 'SELECT method FROM ' . soko_t( 'expenses' ) . ' WHERE id = %d', $id ) ) : '' ); // phpcs:ignore
+			$ea = Soko_Accounts::is_unpaid_method( $em ) ? '' : Soko_Accounts::money_account( $em );
+			if ( in_array( $ea, array( '1000', '1010' ), true ) && isset( $b['amount'] ) ) {
+				$ed   = ! empty( $b['date'] ) ? $b['date'] : soko_today();
+				$prev = $id ? (float) $wpdb->get_var( $wpdb->prepare( 'SELECT amount FROM ' . soko_t( 'expenses' ) . ' WHERE id = %d', $id ) ) : 0; // phpcs:ignore
+				$have = (float) Soko_Accounts::sum( $ea, null, $ed ) + $prev;
+				if ( (float) $b['amount'] > $have + 0.005 ) {
+					return new WP_Error( 'soko', sprintf( '%s only had %s on that date. Check the amount, or choose how it was really paid.', Soko_Accounts::chart()[ $ea ]['name'], soko_money_exact( $have ) ), array( 'status' => 400 ) );
+				}
 			}
 			if ( ! empty( $b['method'] ) && Soko_Accounts::is_unpaid_method( $b['method'] ) && empty( $b['supplier'] ) ) {
 				return new WP_Error( 'soko', 'Add the supplier, so you know who the bill is owed to.', array( 'status' => 400 ) );
@@ -896,6 +957,9 @@ final class Soko_API {
 			if ( Soko_Accounts::is_reconciled( 'expense', $id ) ) {
 				return new WP_Error( 'soko', 'This expense is ticked in a bank reconciliation. Untick it there first.', array( 'status' => 400 ) );
 			}
+			if ( (float) ( Soko_Accounts::po_paid_asat( '2999-12-31' )[ 'EXP-' . $id ] ?? 0 ) > 0.005 ) {
+				return new WP_Error( 'soko', 'Payments have been recorded on this bill, so it cannot be deleted.', array( 'status' => 400 ) );
+			}
 		}
 		$refs = array(
 			'customers' => array( array( 'docs', 'customer_id', 'sales documents' ), array( 'jobs', 'customer_id', 'jobs' ) ),
@@ -930,7 +994,10 @@ final class Soko_API {
 	/** Cancel an invoice: only with no payments or credits, and goods already delivered go back into stock. */
 	public static function void_invoice( $d ) {
 		global $wpdb;
-		if ( 'invoice' !== $d['type'] || 'void' === $d['status'] ) {
+		if ( 'invoice' !== $d['type'] ) {
+			return new WP_Error( 'soko', 'quote' === $d['type'] ? 'Mark the quotation declined instead.' : 'Use Cancel on receipts and credit notes instead.', array( 'status' => 400 ) );
+		}
+		if ( 'void' === $d['status'] ) {
 			return new WP_Error( 'soko', 'This invoice is already cancelled.', array( 'status' => 400 ) );
 		}
 		if ( $d['paid'] > 0 ) {
@@ -972,9 +1039,45 @@ final class Soko_API {
 		return soko_can( 'soko_sales' ) && ( soko_can( 'soko_crm' ) || soko_can( 'soko_payments' ) || soko_can( 'soko_reports' ) );
 	}
 
-	/** May change products, prices and categories (not technicians). */
+	/** May change products, prices and categories: the stores team, the website editor and the owner. */
 	public static function can_edit_products() {
-		return soko_can( 'soko_site' ) || soko_can( 'soko_purchases' ) || soko_can( 'soko_reports' );
+		return soko_can( 'soko_settings' ) || ( soko_can( 'soko_stock' ) && ( soko_can( 'soko_site' ) || soko_can( 'soko_purchases' ) ) );
+	}
+
+	/** Office roles see every sales document; a technician only those behind jobs they are named on. */
+	public static function office() {
+		return soko_can( 'soko_sales' ) || soko_can( 'soko_payments' ) || soko_can( 'soko_reports' );
+	}
+
+	public static function my_job_ids() {
+		global $wpdb;
+		$u     = wp_get_current_user();
+		$names = array_filter( array_unique( array( strtolower( trim( $u->display_name ) ), strtolower( trim( $u->first_name ) ), strtolower( $u->user_login ) ) ) );
+		$out   = array();
+		foreach ( $wpdb->get_results( 'SELECT id, doc_id, customer_id, techs FROM ' . soko_t( 'jobs' ), ARRAY_A ) as $j ) { // phpcs:ignore
+			$t = array_map( 'trim', explode( ',', strtolower( (string) $j['techs'] ) ) );
+			if ( array_intersect( $names, $t ) ) {
+				$out[ (int) $j['id'] ] = $j;
+			}
+		}
+		return $out;
+	}
+
+	public static function tech_can_doc( $doc_id ) {
+		foreach ( self::my_job_ids() as $j ) {
+			if ( (int) $j['doc_id'] === (int) $doc_id ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Staff manage their account inside the Desk only, where the current password is checked. */
+	public static function guard_wp_users( $result, $server, $req ) {
+		if ( 0 === strpos( $req->get_route(), '/wp/v2/users' ) && 'GET' !== $req->get_method() && ! current_user_can( 'manage_options' ) && soko_is_staff() ) {
+			return new WP_Error( 'soko_forbidden', 'Change your details from the account menu in Dynamic Desk.', array( 'status' => 403 ) );
+		}
+		return $result;
 	}
 
 	/** Remove cost figures from every Desk response for people who should not see them. */
@@ -1035,6 +1138,13 @@ final class Soko_API {
 			}
 		}
 		$before = ! empty( $req['id'] ) ? Soko_Ledger::product( (int) $req['id'] ) : null;
+		if ( $before && isset( $b['kind'] ) && $b['kind'] !== $before['kind'] ) {
+			global $wpdb;
+			$hist = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . soko_t( 'moves' ) . ' WHERE product_id = %d', $before['id'] ) ); // phpcs:ignore
+			if ( abs( (float) $before['stock'] ) > 0.0001 || $hist ) {
+				return new WP_Error( 'soko', 'This item has stock or stock history, so it cannot change between a product and a service. Add a new item instead.', array( 'status' => 400 ) );
+			}
+		}
 		if ( $before && isset( $b['cost'] ) && '' !== $b['cost'] && abs( (float) $b['cost'] - (float) $before['cost'] ) > 0.004 && (float) $before['stock'] > 0 && 'product' === $before['kind'] ) {
 			// Revaluing stock on hand changes the books too, so the stock report and the accounts keep agreeing.
 			$rev = round( (float) $before['stock'] * ( (float) $b['cost'] - (float) $before['cost'] ), 2 );
@@ -1096,6 +1206,13 @@ final class Soko_API {
 		}
 		$b['reason'] = $reason;
 		$tech_use = 'Used on a job' === $reason && $q < 0 && soko_can( 'soko_jobs' );
+		if ( $tech_use && ! self::sees_cost() ) {
+			$jid = (int) preg_replace( '/\D/', '', isset( $b['ref'] ) ? (string) $b['ref'] : '' );
+			if ( ! $jid || ! isset( self::my_job_ids()[ $jid ] ) ) {
+				return new WP_Error( 'soko', 'Type the number of the job you used it on (a job you are on), for example 35.', array( 'status' => 400 ) );
+			}
+			$b['ref'] = 'Job ' . $jid;
+		}
 		if ( ! self::sees_cost() && ! $tech_use ) {
 			return new WP_Error( 'soko_forbidden', 'Stock changes affect the books, so the owner or the stores team records them. Ask them to adjust it.', array( 'status' => 403 ) );
 		}
@@ -1196,9 +1313,8 @@ final class Soko_API {
 		}
 		if ( ! soko_can( 'soko_sales' ) && ! soko_can( 'soko_payments' ) && ! soko_can( 'soko_reports' ) ) {
 			// Technicians see only the orders behind their jobs, and only what they need on site.
-			$linked = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . soko_t( 'jobs' ) . ' WHERE doc_id = %d', $d['id'] ) ); // phpcs:ignore
-			if ( ! $linked || ! soko_can( 'soko_jobs' ) ) {
-				return new WP_Error( 'soko_forbidden', 'You can only open orders linked to your jobs.', array( 'status' => 403 ) );
+			if ( ! soko_can( 'soko_jobs' ) || ! self::tech_can_doc( $d['id'] ) ) {
+				return new WP_Error( 'soko_forbidden', 'You can only open orders for jobs you are on.', array( 'status' => 403 ) );
 			}
 			return array(
 				'id'       => $d['id'],
@@ -1212,7 +1328,7 @@ final class Soko_API {
 			);
 		}
 		$d['payments'] = $wpdb->get_results( $wpdb->prepare( 'SELECT p.*, r.number AS receipt FROM ' . soko_t( 'payments' ) . ' p LEFT JOIN ' . soko_t( 'docs' ) . ' r ON r.id = p.receipt_id WHERE p.doc_id = %d ORDER BY p.received', $d['id'] ), ARRAY_A ); // phpcs:ignore
-		$d['children'] = $wpdb->get_results( $wpdb->prepare( 'SELECT id, type, number, total FROM ' . soko_t( 'docs' ) . ' WHERE parent_id = %d', $d['id'] ), ARRAY_A ); // phpcs:ignore
+		$d['children'] = $wpdb->get_results( $wpdb->prepare( 'SELECT id, type, number, total, status FROM ' . soko_t( 'docs' ) . ' WHERE parent_id = %d', $d['id'] ), ARRAY_A ); // phpcs:ignore
 		if ( $d['parent_id'] ) {
 			$d['parent'] = $wpdb->get_row( $wpdb->prepare( 'SELECT id, type, number FROM ' . soko_t( 'docs' ) . ' WHERE id = %d', $d['parent_id'] ), ARRAY_A ); // phpcs:ignore
 		}
@@ -1255,6 +1371,33 @@ final class Soko_API {
 		if ( empty( $b['lines'] ) ) {
 			return new WP_Error( 'soko', 'Add at least one item.', array( 'status' => 400 ) );
 		}
+		$gross = 0;
+		foreach ( (array) $b['lines'] as $ln ) {
+			$pr0 = isset( $ln['price'] ) && '' !== $ln['price'] ? (float) $ln['price'] : ( ! empty( $ln['product_id'] ) && ( $pp0 = Soko_Ledger::product( (int) $ln['product_id'] ) ) ? (float) $pp0['price'] : 0 ); // phpcs:ignore
+			$gross += (float) ( isset( $ln['qty'] ) ? $ln['qty'] : 0 ) * $pr0;
+		}
+		if ( $gross <= 0 ) {
+			return new WP_Error( 'soko', 'The total must be above zero. Use a credit note to give money back.', array( 'status' => 400 ) );
+		}
+		if ( ! $id && empty( $b['customer_id'] ) && ( empty( $b['customer'] ) || '' === trim( (string) ( isset( $b['customer']['name'] ) ? $b['customer']['name'] : '' ) ) ) ) {
+			return new WP_Error( 'soko', 'Choose or type the customer.', array( 'status' => 400 ) );
+		}
+		foreach ( (array) $b['lines'] as $ln ) {
+			$q = (float) ( isset( $ln['qty'] ) ? $ln['qty'] : 0 );
+			$pr = (float) ( isset( $ln['price'] ) ? $ln['price'] : 0 );
+			if ( $q <= 0 || $q > 100000 ) {
+				return new WP_Error( 'soko', 'Each line needs a quantity between 1 and 100,000.', array( 'status' => 400 ) );
+			}
+			if ( abs( $pr ) > 1000000000 ) {
+				return new WP_Error( 'soko', 'Check the prices: one looks too large.', array( 'status' => 400 ) );
+			}
+			if ( ! empty( $ln['product_id'] ) && abs( $q - round( $q ) ) > 0.0001 ) {
+				$lp = Soko_Ledger::product( (int) $ln['product_id'] );
+				if ( $lp && in_array( strtolower( (string) $lp['unit'] ), array( 'pc', 'pcs', 'piece', 'unit', 'set', 'kit' ), true ) ) {
+					return new WP_Error( 'soko', $lp['name'] . ' is sold in whole pieces. Use a whole number.', array( 'status' => 400 ) );
+				}
+			}
+		}
 		// Only quotations and invoices are made here: credit notes, receipts and payments have their own steps.
 		if ( ! $id && ! in_array( isset( $b['type'] ) ? $b['type'] : 'invoice', array( 'quote', 'invoice' ), true ) ) {
 			return new WP_Error( 'soko', 'Use the Credit note button on an invoice to issue a credit note.', array( 'status' => 400 ) );
@@ -1280,7 +1423,7 @@ final class Soko_API {
 			}
 		}
 		if ( $id && 'invoice' === $cur['type'] && $cur['paid'] > 0 ) {
-			$new = Soko_Ledger::totals( $b['lines'] );
+			$new = Soko_Ledger::totals( array_map( function ( $l ) { $l['price'] = isset( $l['price'] ) ? $l['price'] : 0; $l['qty'] = isset( $l['qty'] ) ? $l['qty'] : 0; return $l; }, (array) $b['lines'] ) );
 			if ( $new['total'] + 0.005 < (float) $cur['paid'] ) {
 				return new WP_Error( 'soko', sprintf( 'The new total (%s) is less than what has already been paid or credited (%s). Issue a credit note or refund instead.', soko_money_exact( $new['total'] ), soko_money_exact( $cur['paid'] ) ), array( 'status' => 400 ) );
 			}
@@ -1292,6 +1435,9 @@ final class Soko_API {
 			if ( ! $ok && 'quote' === $d['type'] && 'sent' === $d['status'] ) {
 				Soko_Ledger::set_status( $d['id'], 'draft' );
 				$d['status'] = 'draft';
+			} elseif ( $ok && 'quote' === $d['type'] && 'draft' === $d['status'] ) {
+				Soko_Ledger::set_status( $d['id'], 'sent' );
+				$d['status'] = 'sent';
 			}
 		}
 		return $d;
@@ -1319,6 +1465,9 @@ final class Soko_API {
 		}
 		switch ( $b['action'] ) {
 			case 'convert':
+				if ( 'quote' !== $d['type'] ) {
+					return new WP_Error( 'soko', 'Only quotations can be turned into invoices.', array( 'status' => 400 ) );
+				}
 				if ( $lk = Soko_Accounts::locked( $when ) ) { // phpcs:ignore
 					return $lk;
 				}
@@ -1340,6 +1489,8 @@ final class Soko_API {
 					return self::void_invoice( $d );
 				} elseif ( 'invoice' === $d['type'] ) {
 					return new WP_Error( 'soko', 'Invoices change status through payments, delivery and cancelling.', array( 'status' => 400 ) );
+				} elseif ( 'quote' === $d['type'] && ! in_array( $to, array( 'draft', 'sent', 'accepted', 'declined' ), true ) ) {
+					return new WP_Error( 'soko', 'Choose draft, sent, accepted or declined.', array( 'status' => 400 ) );
 				}
 				$lk = Soko_Accounts::locked( $d['date'] );
 				if ( $lk ) {
@@ -1349,6 +1500,18 @@ final class Soko_API {
 					global $wpdb;
 					if ( 'void' === $d['status'] ) {
 						return new WP_Error( 'soko', $d['number'] . ' is already cancelled.', array( 'status' => 400 ) );
+					}
+					if ( 'credit' === $d['type'] && $d['parent_id'] && empty( $b['confirm'] ) ) {
+						$pinv = Soko_Ledger::doc( (int) $d['parent_id'] );
+						$used = 0;
+						foreach ( array( 'refunds', 'credit_moved' ) as $mk ) {
+							foreach ( (array) ( isset( $pinv['meta'][ $mk ] ) ? $pinv['meta'][ $mk ] : array() ) as $x ) {
+								$used += (float) ( isset( $x['amount'] ) ? $x['amount'] : 0 );
+							}
+						}
+						if ( $pinv && $used > 0.005 && (float) $pinv['paid'] - (float) $d['total'] < (float) $pinv['total'] - 0.005 ) {
+							return new WP_Error( 'soko_confirm', sprintf( 'Credit of %s on %s has already been refunded or used on another invoice. Cancelling this credit note makes the customer owe %s again on %s. Cancel it anyway?', soko_money_exact( $used ), $pinv['number'], soko_money_exact( min( $d['total'], $pinv['total'] - ( $pinv['paid'] - $d['total'] ) ) ), $pinv['number'] ), array( 'status' => 409 ) );
+						}
 					}
 					if ( 'credit' === $d['type'] ) {
 						// Undo the credit on its invoice, and take back out of stock anything this note returned.
@@ -1369,13 +1532,19 @@ final class Soko_API {
 							if ( $lk ) {
 								return $lk;
 							}
-							$wpdb->update( soko_t( 'payments' ), array( 'status' => 'void' ), array( 'id' => $pay['id'] ) );
+							if ( ! empty( $pay['raw'] ) && 'null' !== $pay['raw'] ) {
+								// Money that really arrived (statement, SMS or M-Pesa): back to the list to match again.
+								$wpdb->update( soko_t( 'payments' ), array( 'status' => 'unmatched', 'doc_id' => 0, 'receipt_id' => 0 ), array( 'id' => $pay['id'] ) );
+							} else {
+								// A payment entered by mistake: cancelled, and its code freed so it can be entered again correctly.
+								$wpdb->update( soko_t( 'payments' ), array( 'status' => 'void', 'code' => substr( $pay['code'] . '-X' . $pay['id'], 0, 60 ) ), array( 'id' => $pay['id'] ) );
+							}
 						}
 						if ( $d['parent_id'] ) {
 							$pp = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT paid FROM ' . soko_t( 'docs' ) . ' WHERE id = %d', (int) $d['parent_id'] ) ); // phpcs:ignore
 							$wpdb->update( soko_t( 'docs' ), array( 'paid' => max( 0, round( $pp - (float) $d['total'], 2 ) ), 'updated' => soko_now() ), array( 'id' => (int) $d['parent_id'] ) );
 						}
-						$msg = 'Payment ' . $d['number'] . ' cancelled and taken off the invoice.';
+						$msg = 'Payment ' . $d['number'] . ' cancelled and taken off the invoice.' . ( $pay && ! empty( $pay['raw'] ) && 'null' !== $pay['raw'] ? ' The money is back under Payments, waiting to be matched.' : '' );
 					}
 					soko_log( 'Cancelled ' . $d['number'], $d['type'], $d['number'] );
 					return array( 'doc' => Soko_Ledger::set_status( $id, 'void' ), 'message' => $msg );
@@ -1400,6 +1569,9 @@ final class Soko_API {
 				return $r;
 			case 'deliver':
 				global $wpdb;
+				if ( 'invoice' !== $d['type'] || 'void' === $d['status'] ) {
+					return new WP_Error( 'soko', 'Only open invoices can be marked delivered.', array( 'status' => 400 ) );
+				}
 				Soko_Ledger::fulfil_stock( $d, $when );
 				$wpdb->update( soko_t( 'docs' ), array( 'fulfil' => 'delivered' ), array( 'id' => $id ) );
 				if ( 'delivered' !== $d['fulfil'] ) {
@@ -1415,6 +1587,24 @@ final class Soko_API {
 				}
 				if ( 'invoice' !== $d['type'] || 'void' === $d['status'] ) {
 					return new WP_Error( 'soko', 'Only open invoices have delivery steps.', array( 'status' => 400 ) );
+				}
+				if ( 'delivered' === $d['fulfil'] ) {
+					return new WP_Error( 'soko', $d['number'] . ' has already been delivered.', array( 'status' => 400 ) );
+				}
+				if ( in_array( $to, array( 'packed', 'dispatched' ), true ) && empty( $b['confirm'] ) ) {
+					$short = array();
+					foreach ( $d['lines'] as $ln ) {
+						$lp = $ln['product_id'] ? Soko_Ledger::product( (int) $ln['product_id'] ) : null;
+						if ( $lp && 'product' === $lp['kind'] && (float) $lp['stock'] < ( empty( $d['meta']['stock_done'] ) ? (float) $ln['qty'] : 0 ) - 0.0001 + ( empty( $d['meta']['stock_done'] ) ? 0 : 0 ) ) {
+							$short[] = $lp['name'];
+						}
+						if ( $lp && 'product' === $lp['kind'] && ! empty( $d['meta']['stock_done'] ) && (float) $lp['stock'] < -0.0001 ) {
+							$short[] = $lp['name'];
+						}
+					}
+					if ( $short ) {
+						return new WP_Error( 'soko_confirm', 'Not in stock yet: ' . implode( ', ', array_unique( $short ) ) . '. The customer will be told the order is ' . ( 'packed' === $to ? 'packed' : 'on its way' ) . '. Continue anyway?', array( 'status' => 409 ) );
+					}
 				}
 				$wpdb->update( soko_t( 'docs' ), array( 'fulfil' => $to ), array( 'id' => $id ) );
 				$nd = Soko_Ledger::doc( $id );
@@ -1432,6 +1622,12 @@ final class Soko_API {
 				soko_log( 'Order ' . $d['number'] . ' moved to ' . $to, 'invoice', $d['number'] );
 				return array( 'doc' => Soko_Ledger::doc( $id ), 'message' => 'Updated.' );
 			case 'etims':
+				if ( 'invoice' !== $d['type'] || 'void' === $d['status'] ) {
+					return new WP_Error( 'soko', 'eTIMS numbers go on issued invoices only.', array( 'status' => 400 ) );
+				}
+				if ( ! self::can_bill() && ! soko_can( 'soko_reports' ) ) {
+					return new WP_Error( 'soko_forbidden', 'The sales or accounts team records eTIMS numbers.', array( 'status' => 403 ) );
+				}
 				$ref = strtoupper( trim( sanitize_text_field( isset( $b['ref'] ) ? $b['ref'] : '' ) ) );
 				if ( ! $ref ) {
 					return new WP_Error( 'soko', 'Type the eTIMS invoice number shown on KRA after signing.', array( 'status' => 400 ) );
@@ -1457,9 +1653,9 @@ final class Soko_API {
 					$take = min( $need, round( (float) $src['paid'] - (float) $src['total'], 2 ) );
 					$sm   = soko_json( $wpdb->get_var( $wpdb->prepare( "SELECT meta FROM $D WHERE id = %d", $src['id'] ) ) ); // phpcs:ignore
 					$sm   = is_array( $sm ) ? $sm : array();
-					$sm['credit_moved'][] = array( 'to' => $d['number'], 'amount' => $take, 'date' => soko_today() );
+					$sm['credit_moved'][] = array( 'to' => $d['number'], 'amount' => $take, 'date' => $when );
 					$wpdb->update( $D, array( 'paid' => (float) $src['paid'] - $take, 'meta' => wp_json_encode( $sm ) ), array( 'id' => (int) $src['id'] ) );
-					$from_list[] = array( 'from' => $src['number'], 'amount' => $take, 'date' => soko_today() );
+					$from_list[] = array( 'from' => $src['number'], 'amount' => $take, 'date' => $when );
 					$need -= $take;
 					$used += $take;
 				}
@@ -1482,6 +1678,9 @@ final class Soko_API {
 					return new WP_Error( 'soko', 'Credit notes can only be issued against an invoice.', array( 'status' => 400 ) );
 				}
 				$amt  = round( (float) ( isset( $b['amount'] ) ? $b['amount'] : 0 ), 2 );
+				if ( $when < substr( (string) $d['date'], 0, 10 ) ) {
+					return new WP_Error( 'soko', 'A credit note cannot be dated before its invoice (' . date_i18n( 'j M Y', strtotime( $d['date'] ) ) . ').', array( 'status' => 400 ) );
+				}
 				$done = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(total) FROM ' . soko_t( 'docs' ) . " WHERE type = 'credit' AND parent_id = %d AND status <> 'void'", $d['id'] ) ); // phpcs:ignore
 				$max  = round( (float) $d['total'] - $done, 2 );
 				if ( $amt <= 0 || $amt > $max + 0.005 ) {
@@ -1533,7 +1732,9 @@ final class Soko_API {
 						}
 					}
 					$gone = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(SUM(m.qty),0) FROM ' . soko_t( 'moves' ) . ' m JOIN ' . soko_t( 'docs' ) . " c ON c.number = m.ref WHERE m.reason = 'Returned' AND m.product_id = %d AND c.parent_id = %d", $pid, $d['id'] ) ); // phpcs:ignore
-					$q    = min( $q, $sold - $gone );
+					// Only goods that actually left stock can come back.
+					$out  = - (float) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(SUM(qty),0) FROM ' . soko_t( 'moves' ) . " WHERE reason = 'Sold' AND product_id = %d AND ref = %s", $pid, $d['number'] ) ); // phpcs:ignore
+					$q    = min( $q, $sold - $gone, max( 0, $out - $gone ) );
 					if ( $q > 0 ) {
 						Soko_Ledger::move( $pid, $q, 'Returned', $cn, true, $lc, $when );
 						$back[] = $q + 0;
@@ -1555,7 +1756,14 @@ final class Soko_API {
 				if ( $amt <= 0 || $amt > $have + 0.005 ) {
 					return new WP_Error( 'soko', sprintf( 'Enter an amount between 1 and %s.', soko_money_exact( $have ) ), array( 'status' => 400 ) );
 				}
-				$acc  = Soko_Accounts::money_account( isset( $b['method'] ) ? $b['method'] : 'mpesa' );
+				$rm   = (string) ( isset( $b['method'] ) ? $b['method'] : 'mpesa' );
+				if ( ! in_array( strtolower( str_replace( array( '-', ' ' ), '', $rm ) ), array( 'mpesa', 'cash', 'bank', 'banktransfer', 'cheque' ), true ) && ! in_array( $rm, Soko_Accounts::money_codes(), true ) ) {
+					return new WP_Error( 'soko', 'Choose how the refund was paid from the list.', array( 'status' => 400 ) );
+				}
+				$acc  = Soko_Accounts::money_account( $rm );
+				if ( in_array( $acc, array( '1000', '1010' ), true ) && $amt > (float) Soko_Accounts::sum( $acc, null, $when ) + 0.005 ) {
+					return new WP_Error( 'soko', 'There is not enough in ' . Soko_Accounts::chart()[ $acc ]['name'] . ' on that date to pay this refund. Check the date or pay it from another account.', array( 'status' => 400 ) );
+				}
 				$code = sanitize_text_field( isset( $b['code'] ) ? $b['code'] : '' );
 				$j    = Soko_Accounts::journal( $when, 'Refund to ' . ( $d['customer'] ? $d['customer']['name'] : 'customer' ) . ' for ' . $d['number'] . ( $code ? ' (' . $code . ')' : '' ), array( array( '1100', $amt, 0 ), array( $acc, 0, $amt ) ), 'refund', $d['number'] );
 				if ( is_wp_error( $j ) ) {
@@ -1570,10 +1778,16 @@ final class Soko_API {
 			case 'void':
 				return self::void_invoice( $d );
 			case 'duplicate':
+				if ( ! in_array( $d['type'], array( 'quote', 'invoice' ), true ) ) {
+					return new WP_Error( 'soko', 'Only quotations and invoices can be copied.', array( 'status' => 400 ) );
+				}
 				$n = Soko_Ledger::save_doc( array( 'type' => $d['type'], 'customer_id' => $d['customer_id'], 'lines' => $d['lines'], 'notes' => $d['notes'], 'status' => 'quote' === $d['type'] ? 'draft' : 'issued' ) );
 				return array( 'doc' => $n, 'message' => $n['number'] . ' created as a copy.' );
 			case 'job':
 				global $wpdb;
+				if ( 'invoice' !== $d['type'] || 'void' === $d['status'] ) {
+					return new WP_Error( 'soko', 'Book installations from an open invoice.', array( 'status' => 400 ) );
+				}
 				$existing = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . soko_t( 'jobs' ) . ' WHERE doc_id = %d ORDER BY id LIMIT 1', $d['id'] ) ); // phpcs:ignore
 				if ( $existing ) {
 					return array( 'message' => 'This order already has an installation job. Opening it.', 'job_id' => $existing );
@@ -1610,6 +1824,9 @@ final class Soko_API {
 		$d = Soko_Ledger::doc( (int) $req['id'] );
 		if ( ! $d ) {
 			return new WP_Error( 'soko', 'Not found', array( 'status' => 404 ) );
+		}
+		if ( ! self::office() && ! self::tech_can_doc( $d['id'] ) ) {
+			return new WP_Error( 'soko_forbidden', 'You can only open orders for jobs you are on.', array( 'status' => 403 ) );
 		}
 		self::send_file( Soko_PDF::doc( $d ), 'application/pdf', $d['number'] . '.pdf', ! empty( $req['download'] ) );
 	}
@@ -1656,8 +1873,19 @@ final class Soko_API {
 		}
 		$doc = ! empty( $b['doc_id'] ) ? Soko_Ledger::doc( (int) $b['doc_id'] ) : null;
 		if ( ! empty( $b['doc_id'] ) && ( ! $doc || 'invoice' !== $doc['type'] ) ) {
+			if ( $doc && 'quote' === $doc['type'] && ! empty( $doc['meta']['invoice_id'] ) && ( $iv = Soko_Ledger::doc( (int) $doc['meta']['invoice_id'] ) ) ) { // phpcs:ignore
+				return new WP_Error( 'soko', 'This quotation became ' . $iv['number'] . '. Record the payment there.', array( 'status' => 400 ) );
+			}
 			return new WP_Error( 'soko', 'Payments go on invoices. Convert the quotation to an invoice first, then record the payment on it.', array( 'status' => 400 ) );
 		}
+		if ( $doc && isset( $pd ) && is_string( $pd ) && $pd < substr( (string) $doc['date'], 0, 10 ) ) {
+			return new WP_Error( 'soko', 'The payment date is before ' . $doc['number'] . ' was raised (' . date_i18n( 'j M Y', strtotime( $doc['date'] ) ) . ').', array( 'status' => 400 ) );
+		}
+		$meth = strtolower( str_replace( array( '-', ' ' ), '', (string) ( isset( $b['method'] ) ? $b['method'] : 'mpesa' ) ) );
+		if ( ! in_array( $meth, array( 'mpesa', 'cash', 'bank', 'banktransfer', 'card', 'cheque' ), true ) && ! in_array( (string) $b['method'], Soko_Accounts::money_codes(), true ) ) {
+			return new WP_Error( 'soko', 'Choose how it was paid from the list.', array( 'status' => 400 ) );
+		}
+		$b['amount'] = round( (float) $b['amount'], 2 );
 		$code = strtoupper( trim( sanitize_text_field( isset( $b['code'] ) ? $b['code'] : '' ) ) );
 		if ( $code ) {
 			global $wpdb;
@@ -1692,7 +1920,7 @@ final class Soko_API {
 
 	public static function match_payment( $req ) {
 		$b = $req->get_json_params();
-		$r = Soko_Ledger::apply_payment( (int) $req['id'], (int) $b['doc_id'] );
+		$r = Soko_Ledger::apply_payment( (int) $req['id'], (int) $b['doc_id'], ! empty( $b['allow_over'] ) );
 		if ( is_wp_error( $r ) ) {
 			return $r;
 		}
@@ -2305,6 +2533,17 @@ final class Soko_API {
 				return new WP_Error( 'soko_control', $chart[ $code ]['name'] . ' is kept by invoices, bills and stock. A journal here will not show against any customer, supplier or product. Use the matching screen instead, or confirm to post it anyway.', array( 'status' => 409 ) );
 			}
 		}
+		foreach ( array( '1000', '1010' ) as $mc ) {
+			$out = 0;
+			foreach ( (array) ( isset( $b['lines'] ) ? $b['lines'] : array() ) as $jl ) {
+				if ( (string) ( isset( $jl['code'] ) ? $jl['code'] : '' ) === $mc ) {
+					$out += (float) ( isset( $jl['credit'] ) ? $jl['credit'] : 0 ) - (float) ( isset( $jl['debit'] ) ? $jl['debit'] : 0 );
+				}
+			}
+			if ( $out > 0.005 && $out > (float) Soko_Accounts::sum( $mc, null, $jd ) + 0.005 ) {
+				return new WP_Error( 'soko', Soko_Accounts::chart()[ $mc ]['name'] . ' does not have that much on that date. Check the amount or the account.', array( 'status' => 400 ) );
+			}
+		}
 		$id = Soko_Accounts::journal( $jd, $b['memo'], isset( $b['lines'] ) ? $b['lines'] : array(), 'manual', isset( $b['ref'] ) ? $b['ref'] : '' );
 		if ( is_wp_error( $id ) ) {
 			return $id;
@@ -2446,14 +2685,16 @@ final class Soko_API {
 			return self::recon( $req );
 		}
 		$keys = isset( $b['keys'] ) ? array_map( 'strval', (array) $b['keys'] ) : array();
-		if ( empty( $b['on'] ) ) {
-			$hist = (array) get_option( 'soko_recon_hist', array() );
-			$last = ! empty( $hist[ $code ] ) ? end( $hist[ $code ] ) : null;
-			if ( $last ) {
-				foreach ( Soko_Accounts::postings() as $p ) {
-					if ( (string) $p[1] === $code && in_array( Soko_Accounts::recon_key( $p ), $keys, true ) && substr( $p[0], 0, 10 ) <= $last['date'] ) {
-						return new WP_Error( 'soko', 'This item is part of the reconciliation finished on ' . date_i18n( 'j M Y', strtotime( $last['date'] ) ) . ', so it stays ticked.', array( 'status' => 400 ) );
-					}
+		$hist = (array) get_option( 'soko_recon_hist', array() );
+		$last = ! empty( $hist[ $code ] ) ? end( $hist[ $code ] ) : null;
+		if ( $last && empty( $b['on'] ) ) {
+			// Items ticked in a finished reconciliation stay ticked. Older items still outstanding
+			// (a cheque that cleared late, say) can be ticked and unticked in the next one.
+			$done   = Soko_Accounts::reconciled( $code );
+			$closed = (string) ( isset( $last['at'] ) ? $last['at'] : $last['date'] . ' 23:59:59' );
+			foreach ( $keys as $k ) {
+				if ( isset( $done[ $k ] ) && (string) $done[ $k ] <= $closed ) {
+					return new WP_Error( 'soko', 'This item is part of the reconciliation finished on ' . date_i18n( 'j M Y', strtotime( $last['date'] ) ) . ', so it stays ticked.', array( 'status' => 400 ) );
 				}
 			}
 		}
@@ -2516,6 +2757,21 @@ final class Soko_API {
 				soko_log( 'Books closed up to ' . $ld, 'accounts', $ld );
 			}
 		}
+		if ( isset( $b['delivery'] ) && is_array( $b['delivery'] ) ) {
+			foreach ( $b['delivery'] as $dv ) {
+				if ( isset( $dv['fee'] ) && (float) $dv['fee'] < 0 ) {
+					return new WP_Error( 'soko', 'Delivery fees cannot be below zero.', array( 'status' => 400 ) );
+				}
+			}
+		}
+		$pfx = array();
+		foreach ( array( 'quote', 'invoice', 'receipt', 'credit', 'po' ) as $pk ) {
+			$v = strtoupper( trim( (string) ( isset( $b[ 'prefix_' . $pk ] ) ? $b[ 'prefix_' . $pk ] : ( isset( $cur[ 'prefix_' . $pk ] ) ? $cur[ 'prefix_' . $pk ] : '' ) ) ) );
+			if ( '' !== $v && in_array( $v, $pfx, true ) ) {
+				return new WP_Error( 'soko', 'Each kind of document needs its own number prefix, so numbers never clash.', array( 'status' => 400 ) );
+			}
+			$pfx[] = $v;
+		}
 		if ( isset( $b['deposit_percent'] ) && ( ! is_numeric( $b['deposit_percent'] ) || $b['deposit_percent'] < 0 || $b['deposit_percent'] > 100 ) ) {
 			return new WP_Error( 'soko', 'Enter a deposit between 0 and 100%.', array( 'status' => 400 ) );
 		}
@@ -2568,7 +2824,7 @@ final class Soko_API {
 				'login'    => $u->user_login,
 				'role'     => $role,
 				'label'    => 'administrator' === $role ? 'Owner (full access)' : soko_roles()[ $role ][0],
-				'last'     => $last ? date_i18n( 'j M, H:i', $last ) : 'Never',
+				'last'     => $last ? wp_date( 'j M, H:i', is_numeric( $last ) ? (int) $last : strtotime( $last ) ) : 'Never',
 				'phone'    => get_user_meta( $u->ID, 'soko_phone', true ),
 				'disabled' => (bool) get_user_meta( $u->ID, 'soko_disabled', true ),
 			);
@@ -2631,13 +2887,13 @@ final class Soko_API {
 					return new WP_Error( 'soko', 'This is the only owner. Add another owner first.', array( 'status' => 400 ) );
 				}
 			}
-			wp_update_user( array( 'ID' => $id, 'display_name' => sanitize_text_field( $b['name'] ), 'first_name' => sanitize_text_field( $b['name'] ), 'user_email' => sanitize_email( $b['email'] ) ) );
-			// Change the sign-in username (WordPress has no built-in way to rename one).
 			$nu = isset( $b['username'] ) ? sanitize_user( strtolower( trim( (string) $b['username'] ) ), true ) : '';
+			if ( $nu && $nu !== $u->user_login && username_exists( $nu ) ) {
+				return new WP_Error( 'soko', 'That username is already taken.', array( 'status' => 400 ) );
+			}
+			wp_update_user( array( 'ID' => $id, 'display_name' => sanitize_text_field( $b['name'] ), 'first_name' => sanitize_text_field( strtok( $b['name'], ' ' ) ), 'user_email' => isset( $b['email'] ) ? sanitize_email( $b['email'] ) : $u->user_email ) );
+			// Change the sign-in username (WordPress has no built-in way to rename one).
 			if ( $nu && $nu !== $u->user_login ) {
-				if ( username_exists( $nu ) ) {
-					return new WP_Error( 'soko', 'That username is already taken.', array( 'status' => 400 ) );
-				}
 				global $wpdb;
 				$wpdb->update( $wpdb->users, array( 'user_login' => $nu, 'user_nicename' => sanitize_title( $nu ) ), array( 'ID' => $id ) );
 				clean_user_cache( $id );
@@ -2645,7 +2901,9 @@ final class Soko_API {
 			}
 			$u = new WP_User( $id );
 			$u->set_role( $role );
-			update_user_meta( $id, 'soko_phone', sanitize_text_field( isset( $b['phone'] ) ? $b['phone'] : '' ) );
+			if ( isset( $b['phone'] ) ) {
+				update_user_meta( $id, 'soko_phone', sanitize_text_field( $b['phone'] ) );
+			}
 			update_user_meta( $id, 'soko_disabled', ! empty( $b['disabled'] ) ? 1 : 0 );
 			if ( ! empty( $b['disabled'] ) && class_exists( 'WP_Session_Tokens' ) ) {
 				WP_Session_Tokens::get_instance( $id )->destroy_all();
@@ -2745,6 +3003,7 @@ final class Soko_API {
 		}
 		wp_set_password( $pw, $uid );
 		wp_set_current_user( $uid );
+		add_action( 'set_logged_in_cookie', function ( $c ) { $_COOKIE[ LOGGED_IN_COOKIE ] = $c; } );
 		wp_set_auth_cookie( $uid, true, is_ssl() );
 		soko_log( 'Changed own password', 'user', $uid );
 		return array( 'message' => 'Password saved. Next time, sign in with ' . $me->user_login . ' and this password.', 'nonce' => wp_create_nonce( 'wp_rest' ) );

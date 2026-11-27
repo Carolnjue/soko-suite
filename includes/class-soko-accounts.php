@@ -301,13 +301,39 @@ class Soko_Accounts {
 				}
 			}
 		}
-		foreach ( $wpdb->get_results( 'SELECT p.*, s.name AS supplier FROM ' . soko_t( 'purchases' ) . ' p LEFT JOIN ' . soko_t( 'suppliers' ) . ' s ON s.id = p.supplier_id', ARRAY_A ) as $po ) { // phpcs:ignore
+		$pos     = $wpdb->get_results( 'SELECT p.*, s.name AS supplier FROM ' . soko_t( 'purchases' ) . ' p LEFT JOIN ' . soko_t( 'suppliers' ) . ' s ON s.id = p.supplier_id ORDER BY p.id', ARRAY_A ); // phpcs:ignore
+		// Money paid on an order that was later split stays on the original payment record; the rest-of order draws on it.
+		$carried = array();
+		$parent  = array();
+		foreach ( $pos as $po ) {
+			$over = ( isset( $paidby[ $po['number'] ] ) ? $paidby[ $po['number'] ] : 0 ) - (float) $po['paid'];
+			if ( $over > 0.005 ) {
+				$carried[ $po['number'] ] = $over;
+			}
+			if ( preg_match( '/Rest of ([A-Z0-9-]+)\./i', (string) $po['notes'], $pm ) ) {
+				$parent[ $po['number'] ] = $pm[1];
+			}
+		}
+		$root = function ( $n ) use ( $parent ) {
+			$i = 0;
+			while ( isset( $parent[ $n ] ) && $i++ < 20 ) {
+				$n = $parent[ $n ];
+			}
+			return $n;
+		};
+		foreach ( $pos as $po ) {
 			$when = $po['received'] ? $po['received'] : $po['date'];
 			if ( 'received' === $po['status'] ) {
 				self::add( $out, $when, 'Bill ' . $po['number'] . ( $po['supplier'] ? ', ' . $po['supplier'] : '' ), $po['number'], 'bill', $po['id'], array( array( '1200', $po['total'] - $po['vat'] ), array( '1300', $po['vat'] ), array( '2000', -$po['total'] ) ) );
 			}
 			// Payments made before the supplier-payment record existed.
 			$rest = (float) $po['paid'] - ( isset( $paidby[ $po['number'] ] ) ? $paidby[ $po['number'] ] : 0 );
+			$rt = $root( $po['number'] );
+			if ( $rest > 0.005 && $rt !== $po['number'] && ! empty( $carried[ $rt ] ) ) {
+				$take = min( $rest, $carried[ $rt ] );
+				$carried[ $rt ] -= $take;
+				$rest -= $take;
+			}
 			if ( $rest > 0.005 ) {
 				self::add( $out, $when, 'Paid supplier, ' . $po['number'], $po['number'], 'supplier_paid', $po['id'], array( array( '2000', $rest ), array( '1020', -$rest ) ) );
 			}
@@ -630,7 +656,7 @@ class Soko_Accounts {
 		$cur = isset( $r[ $code ] ) ? $r[ $code ] : array();
 		foreach ( (array) $keys as $k ) {
 			if ( $on ) {
-				$cur[ $k ] = soko_today();
+				$cur[ $k ] = soko_now();
 			} else {
 				unset( $cur[ $k ] );
 			}

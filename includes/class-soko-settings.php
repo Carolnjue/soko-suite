@@ -145,6 +145,10 @@ final class Soko_Settings {
 			// Staff without Settings access get only what their screens use.
 			$keep = array( 'business', 'kra_pin', 'tagline', 'phone', 'email', 'currency', 'vat_registered', 'vat_rate', 'prices_incl_vat', 'quote_valid', 'invoice_due', 'deposit_percent', 'expense_cats', 'lead_stages', 'job_stages', 'checklist', 'etims', 'mpesa', 'delivery', 'pickup_address', 'bank', 'lock_date', 'notify_email', 'reports', 'prefix_quote', 'prefix_invoice', 'prefix_receipt' );
 			$s    = array_intersect_key( $s, array_flip( $keep ) );
+			// Payment, tax and report settings only for the office roles that use them.
+			if ( ! soko_can( 'soko_sales' ) && ! soko_can( 'soko_payments' ) && ! soko_can( 'soko_reports' ) ) {
+				unset( $s['bank'], $s['etims'], $s['mpesa'], $s['notify_email'], $s['reports'] );
+			}
 			if ( isset( $s['mpesa'] ) && is_array( $s['mpesa'] ) ) {
 				$s['mpesa'] = array_intersect_key( $s['mpesa'], array_flip( array( 'env', 'type', 'shortcode', 'till', 'stk' ) ) );
 			}

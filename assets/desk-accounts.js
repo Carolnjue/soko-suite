@@ -22,15 +22,14 @@
       var acc = r.accounts, by = {}; acc.forEach(function (a) { by[a.code] = a; });
       var bal = function (c) { return by[c] ? by[c].balance : 0; };
       var cash = bal('1000') + bal('1010') + bal('1020');
-      var vat = bal('2100') - bal('1300');
       var pr = period(st.p);
       v.innerHTML = K.head('Accounts', 'Your books are kept automatically from invoices, payments, expenses and purchases. Add opening balances and manual entries here, reconcile your money accounts, and download the full accounts pack.',
-        '<select data-pp style="width:auto">' + PERIODS.map(function (o) { return '<option value="' + o[0] + '"' + (st.p === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><button class="btn sun" data-pack="pdf">' + ic(I.dl) + 'Accounts pack (PDF)</button><button class="btn" data-pack="xlsx">Excel</button>') +
+        '<label class="tiny" for="accpp" style="align-self:center">Pack period</label><select id="accpp" data-pp style="width:auto">' + PERIODS.map(function (o) { return '<option value="' + o[0] + '"' + (st.p === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><button class="btn sun" data-pack="pdf">' + ic(I.dl) + 'Accounts pack (PDF)</button><button class="btn" data-pack="xlsx">Excel</button>') +
         '<div class="kpis">' +
         '<div class="kpi link" data-acc-tab="recon"><small>Cash, M-Pesa and bank</small><b>' + money(cash) + '</b><i class="mut">Reconcile</i></div>' +
-        '<div class="kpi link" data-go="#sales" data-set=\'{"sales": {"tab": "invoice", "state": "owed", "q": ""}}\'><small>Owed by customers</small><b>' + money(bal('1100')) + '</b></div>' +
+        '<div class="kpi link" data-go="#sales" data-set=\'{"sales": {"tab": "invoice", "state": "owed", "q": ""}}\'><small>Owed by customers</small><b>' + money(r.owed) + '</b></div>' +
         '<div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "payables"}}\'><small>Owed to suppliers</small><b>' + money(bal('2000')) + '</b></div>' +
-        '<div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "vat", "p": "month"}}\'><small>' + (vat >= 0 ? 'VAT due to KRA' : 'VAT to reclaim') + '</small><b>' + money(Math.abs(vat)) + '</b></div></div>' +
+        '<div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "vat", "p": "month"}}\'><small>' + (r.vat_month >= 0 ? 'VAT due for this month' : 'VAT to reclaim this month') + '</small><b>' + money(Math.abs(r.vat_month)) + '</b></div></div>' +
         '<div class="kpis"><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "bs"}}\'><small>Balance sheet</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "pl", "p": "year"}}\'><small>Profit and loss</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "tb"}}\'><small>Trial balance</small><b style="font-size:16px">Open</b></div><div class="kpi link" data-go="#reports" data-set=\'{"rep": {"type": "gl", "p": "month"}}\'><small>General ledger</small><b style="font-size:16px">Open</b></div></div>' +
         K.tabs('acc', [['chart', 'Chart of accounts'], ['journal', 'Journal entries'], ['opening', 'Opening balances'], ['recon', 'Reconcile']], st.tab) + '<div data-ab></div>';
       $('[data-pp]', v).onchange = function (e) { st.p = e.target.value; };
@@ -46,26 +45,37 @@
   };
 
   function chart(host, acc) {
-    host.innerHTML = TYPES.map(function (t) {
+    host.innerHTML = '<div class="toolbar" style="margin-bottom:10px"><span class="sub" style="margin:0">Click an account to see its entries. Add your own accounts for things like equipment, loans or prepayments.</span><button class="btn sun" data-na style="margin-left:auto">' + ic(I.plus) + 'Add account</button></div>' + TYPES.map(function (t) {
       var list = acc.filter(function (a) { return a.type === t[0]; });
       var tot = list.reduce(function (s, a) { return s + a.balance; }, 0);
       return '<div class="box"><h3>' + esc(t[1]) + '</h3>' + K.table([
         { k: 'code', label: 'Code', f: function (a) { return '<span class="mono">' + esc(a.code) + '</span>'; } },
-        { k: 'name', label: 'Account', f: function (a) { return esc(a.name) + (a.money ? ' <button class="btn sm ghost" data-rec="' + a.code + '">Reconcile</button>' : ''); } },
+        { k: 'name', label: 'Account', f: function (a) { return esc(a.name) + (a.money ? ' <button class="btn sm ghost" data-rec="' + a.code + '">Reconcile</button>' : '') + (a.custom && !a.balance ? ' <button class="btn sm ghost" data-rma="' + a.code + '" aria-label="Remove account">' + ic(I.trash) + '</button>' : ''); } },
         { k: 'balance', label: 'Balance today', n: 1, f: function (a) { return a.balance ? K.moneyx(a.balance, 1) : '<span class="mut">—</span>'; } }
-      ], list, { click: 1, id: 'code', stack: false }) + '<div class="tot"><div class="g"><span>Total</span><span>' + money(tot) + '</span></div></div></div>';
+      ], list, { click: 1, id: 'code' }) + '<div class="tot"><div class="g"><span>Total</span><span>' + money(tot) + '</span></div></div></div>';
     }).join('');
-    $$('[data-row]', host).forEach(function (tr) { tr.addEventListener('click', function (e) { if (e.target.closest('button')) return; ledger(tr.dataset.row); }); });
+    $$('[data-row]', host).forEach(function (tr) { tr.addEventListener('click', function (e) { if (e.target.closest('button')) return; ledger(tr.dataset.row, acc.filter(function (a) { return a.code === tr.dataset.row; })[0]); }); });
     $$('[data-rec]', host).forEach(function (b) { b.onclick = function () { st.tab = 'recon'; st.rc = b.dataset.rec; K.route(); }; });
+    $('[data-na]', host).onclick = function () {
+      var m = K.modal('Add an account', '<div class="grid3">' + K.field('Type', 'type', 'asset', 'select', { options: [['asset', 'Asset (owned)'], ['liability', 'Liability (owed)'], ['equity', "Owner's equity"], ['income', 'Income'], ['expense', 'Expense']] }) + K.field('Code', 'code', '', 'text', { ph: 'e.g. 1510', hint: 'Four digits: assets 1…, liabilities 2…, equity 3…, income 4…, expenses 5–7…' }) + K.field('Name', 'name', '', 'text', { ph: 'e.g. Delivery van' }) + '</div>', '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-sa>Add account</button>');
+      $('[data-sa]', m).onclick = function () { K.api('accounts', { body: K.read(m) }).then(function (r) { K.closeModal(); K.toast(r.message); K.route(); }).catch(K.fail); };
+    };
+    $$('[data-rma]', host).forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); K.confirm('Remove account ' + esc(b.dataset.rma) + '?', 'Remove', true).then(function (y) { if (y) K.api('accounts/' + b.dataset.rma, { method: 'DELETE' }).then(function (r) { K.toast(r.message); K.route(); }).catch(K.fail); }); }; });
   }
 
   /* One account's entries this year, with a running balance. */
-  function ledger(code) {
-    var y = new Date().getFullYear();
+  function ledger(code, a) {
+    var y = new Date().getFullYear(), flip = a && ['liability', 'equity', 'income'].indexOf(a.type) > -1 ? -1 : 1;
     K.api('reports/gl?from=' + y + '-01-01&to=' + K.today()).then(function (r) {
       var sec = (r.sections || []).filter(function (s) { return s.code === code; })[0];
-      var rows = sec ? sec.rows.map(function (row) { return Object.keys(row).filter(function (k) { return k !== '_b'; }).map(function (k) { return row[k]; }); }) : [];
-      K.modal(esc(sec ? sec.title : code), rows.length ? '<div class="scroll"><table class="lines"><thead><tr><th>Date</th><th>Details</th><th class="n">Debit</th><th class="n">Credit</th><th class="n">Balance</th></tr></thead><tbody>' + rows.map(function (x) { var b = !x[0]; return '<tr' + (b ? ' style="font-weight:700"' : '') + '><td class="nw">' + (x[0] ? K.d(x[0]) : '') + '</td><td>' + esc(x[1]) + '</td><td class="n">' + (x[2] !== '' ? K.moneyx(x[2], 1) : '') + '</td><td class="n">' + (x[3] !== '' ? K.moneyx(x[3], 1) : '') + '</td><td class="n">' + K.moneyx(x[4], 1) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty"><b>No entries this year</b>Entries appear when invoices, payments, expenses or journals use this account.</div>', '<button class="btn" data-mx>Close</button>', true);
+      var rows = sec ? sec.rows.map(function (row) { var v = Object.keys(row).filter(function (k) { return k !== '_b'; }).map(function (k) { return row[k]; }); return { date: v[0], memo: v[1], dr: v[2], cr: v[3], bal: v[4] * flip, b: !v[0] }; }) : [];
+      K.modal(esc(sec ? sec.title : code), (rows.length ? K.table([
+        { k: 'date', label: 'Date', f: function (x) { return x.date ? K.d(x.date) : ''; } },
+        { k: 'memo', label: 'Details', f: function (x) { return x.b ? '<b>' + esc(x.memo) + '</b>' : esc(x.memo); } },
+        { k: 'dr', label: 'Debit', n: 1, f: function (x) { return x.dr !== '' ? K.moneyx(x.dr, 1) : ''; } },
+        { k: 'cr', label: 'Credit', n: 1, f: function (x) { return x.cr !== '' ? K.moneyx(x.cr, 1) : ''; } },
+        { k: 'bal', label: 'Balance', n: 1, f: function (x) { return x.b ? '<b>' + K.moneyx(x.bal, 1) + '</b>' : K.moneyx(x.bal, 1); } }
+      ], rows) : '<div class="empty"><b>No entries this year</b>Entries appear when invoices, payments, expenses or journals use this account.</div>'), '<button class="btn" data-mx>Close</button>', true);
     }).catch(K.fail);
   }
 
@@ -107,8 +117,8 @@
 
   function opening(host, acc, op) {
     var a = (op && op.amounts) || {};
-    var list = acc.filter(function (x) { return ['asset', 'liability', 'equity'].indexOf(x.type) > -1 && ['3050', '1100', '2000'].indexOf(x.code) < 0; });
-    host.innerHTML = '<div class="box"><h3>Opening balances</h3><p class="sub">What the business had and owed on the day you started using Dynamic Desk. Enter amounts as positive numbers; the difference is kept in the Opening balances equity account. Customer and supplier balances come from invoices and supplier bills, so record those as documents instead.</p>' +
+    var list = acc.filter(function (x) { return ['asset', 'liability', 'equity'].indexOf(x.type) > -1 && x.code !== '3050'; });
+    host.innerHTML = '<div class="box"><h3>Opening balances</h3><p class="sub">What the business had and owed on the day you started using Dynamic Desk. Enter amounts as positive numbers; the difference is kept in the Opening balances equity account. For customers and suppliers, enter only what was owed before you started; new invoices and supplier bills are added automatically.</p>' +
       '<div class="grid3">' + K.field('Balances as at', 'date', op && op.date ? op.date : (new Date().getFullYear()) + '-01-01', 'date') + '</div>' +
       '<div class="grid3">' + list.map(function (x) { return K.field(x.code + '  ' + x.name, 'a' + x.code, a[x.code] || '', 'number'); }).join('') + '</div>' +
       '<div class="acts" style="margin-top:12px"><button class="btn pri" data-os>Save opening balances</button></div></div>';
@@ -133,7 +143,7 @@
           { k: 'memo', label: 'Details', f: function (x) { return esc(x.memo) + (x.ref ? ' <span class="mono tiny">' + esc(x.ref) + '</span>' : ''); } },
           { k: 'amount', label: 'In', n: 1, f: function (x) { return x.amount > 0 ? K.moneyx(x.amount, 1) : ''; } },
           { k: 'out', label: 'Out', n: 1, f: function (x) { return x.amount < 0 ? K.moneyx(-x.amount, 1) : ''; } }
-        ], r.rows, { empty: 'Nothing in this account yet', stack: false }) + '</div>';
+        ], r.rows, { empty: 'Nothing in this account yet' }) + '</div>';
       $('[data-ra]', host).onchange = function (e) { st.rc = e.target.value; st.stmt = ''; recon(host, acc); };
       $('[data-rs]', host).onchange = function (e) { st.stmt = e.target.value; recon(host, acc); };
       $$('[data-rk]', host).forEach(function (c) { c.onchange = function () { K.api('accounts/' + st.rc + '/recon', { body: { keys: [c.dataset.rk], on: c.checked ? 1 : 0 } }).then(function () { recon(host, acc); }).catch(K.fail); }; });

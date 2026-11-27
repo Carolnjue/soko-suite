@@ -422,7 +422,7 @@ final class Soko_Store {
 			<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 			<h3>Payment</h3><div class="paybox"><p>' . ( Soko_Mpesa::ready() ? 'When you tap pay, a payment request appears on your phone. Enter your PIN to complete.' : 'Place your order and we will call to confirm it. You can then pay by mobile money, bank transfer or card, using your order number as the reference.' ) . '</p></div>
 			<button class="btn b-sun wide" type="submit" data-pay>' . ( Soko_Mpesa::ready() ? 'Pay with M-Pesa' : 'Place order' ) . '</button><p class="formmsg" role="status"></p></form>
-			<aside class="panel summary"><h3>Order summary</h3><div data-co-lines></div><div class="sum" data-co-sum></div><ul class="cotrust"><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>' . ( Soko_Mpesa::ready() ? 'You only pay when the M-Pesa prompt arrives on your own phone.' : 'Nothing is charged until we confirm your order with you.' ) . '</span></li><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Your receipt and invoice are issued the moment payment is confirmed.</span></li><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Installed by EPRA-licensed technicians, with warranty and aftercare.</span></li></ul></aside></div></section>'; // phpcs:ignore
+			<aside class="panel summary"><h3>Order summary</h3><div data-co-lines></div><div class="sum" data-co-sum></div><ul class="cotrust"><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>' . ( Soko_Mpesa::ready() ? 'You only pay when the M-Pesa prompt arrives on your own phone.' : 'Nothing is charged until we confirm your order with you.' ) . '</span></li><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Your order number is your payment reference. Your receipt is issued as soon as payment is confirmed.</span></li><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Installed by EPRA-licensed technicians, with warranty and aftercare.</span></li></ul></aside></div></section>'; // phpcs:ignore
 	}
 
 	private static function track() {
@@ -444,7 +444,16 @@ final class Soko_Store {
 		$dl0  = soko_setting( 'delivery' );
 		$di0  = isset( $d['meta']['delivery'] ) ? (int) $d['meta']['delivery'] : -1;
 		$pick = isset( $dl0[ $di0 ] ) && preg_match( '/pick\s?-?up|collect/i', $dl0[ $di0 ]['label'] );
-		if ( ! $goods ) {
+		$inst = ! empty( $d['meta']['install'] );
+		foreach ( (array) $d['lines'] as $l ) {
+			if ( 0 === strpos( (string) $l['description'], 'Installation' ) ) {
+				$inst = true;
+			}
+		}
+		if ( $goods && $inst ) {
+			$steps = array( 'awaiting_payment' => 'Placed', 'to_pack' => 'Paid', 'packed' => 'Installation booked', 'dispatched' => 'Team on the way', 'delivered' => 'Installed' );
+			$pick  = false;
+		} elseif ( ! $goods ) {
 			$steps = array( 'awaiting_payment' => 'Booked', 'to_pack' => 'Paid', 'packed' => 'Visit scheduled', 'dispatched' => 'Technician on the way', 'delivered' => 'Done' );
 		} elseif ( $pick ) {
 			$steps = array( 'awaiting_payment' => 'Placed', 'to_pack' => 'Paid', 'packed' => 'Ready to collect', 'dispatched' => 'Ready to collect', 'delivered' => 'Collected' );
@@ -468,7 +477,7 @@ final class Soko_Store {
 			echo '</ol>';
 			$dl = soko_setting( 'delivery' );
 			$di = isset( $d['meta']['delivery'] ) ? (int) $d['meta']['delivery'] : -1;
-			if ( $goods && isset( $dl[ $di ] ) && preg_match( '/pick\s?-?up|collect/i', $dl[ $di ]['label'] ) ) {
+			if ( $goods && ! $inst && isset( $dl[ $di ] ) && preg_match( '/pick\s?-?up|collect/i', $dl[ $di ]['label'] ) ) {
 				$pa = soko_setting( 'pickup_address' );
 				echo '<p class="pickup">' . soko_icon( 'kit', 18 ) . '<span><b>Pickup</b> ' . esc_html( $pa ? $pa : 'We will confirm the pickup point when we call you.' ) . '</span></p>'; // phpcs:ignore
 			}

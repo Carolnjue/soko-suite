@@ -106,7 +106,7 @@ final class Soko_PDF {
 		$c = $d['customer'] ? $d['customer'] : array( 'name' => 'Customer' );
 		$pdf->SetFont( 'Helvetica', 'B', 9 );
 		self::color( $pdf, self::SOFT );
-		$pdf->Cell( 90, 5, 'receipt' === $d['type'] ? 'RECEIVED FROM' : 'BILL TO', 0, 1 );
+		$pdf->Cell( 90, 5, 'receipt' === $d['type'] ? 'RECEIVED FROM' : ( 'credit' === $d['type'] ? 'CREDIT TO' : 'BILL TO' ), 0, 1 );
 		self::color( $pdf, self::INK );
 		$pdf->SetFont( 'Helvetica', 'B', 11 );
 		$pdf->Cell( 90, 6, self::t( $c['name'] ), 0, 1 );
@@ -242,7 +242,7 @@ final class Soko_PDF {
 			self::color( $pdf, self::SOFT );
 			$pdf->Cell( 0, 5, self::t( 'KRA eTIMS invoice: ' . $d['etims_ref'] ), 0, 1 );
 		}
-		$note = trim( $d['notes'] . ( 'receipt' !== $d['type'] ? "\n" . $s['invoice_note'] : '' ) );
+		$note = trim( $d['notes'] . ( ! in_array( $d['type'], array( 'receipt', 'credit' ), true ) ? "\n" . $s['invoice_note'] : '' ) );
 		if ( $note ) {
 			$pdf->Ln( 2 );
 			$pdf->SetFont( 'Helvetica', '', 8.5 );

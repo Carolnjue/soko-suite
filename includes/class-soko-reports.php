@@ -39,7 +39,7 @@ final class Soko_Reports {
 		$d = soko_t( 'docs' );
 		$l = soko_t( 'lines' );
 		$p = soko_t( 'products' );
-		return $wpdb->get_results( $wpdb->prepare( "SELECT l.*, d.number, d.date, d.customer_id, p.cat, p.name AS pname FROM $l l JOIN $d d ON d.id = l.doc_id LEFT JOIN $p p ON p.id = l.product_id WHERE d.type = 'invoice' AND d.status <> 'void' AND d.date BETWEEN %s AND %s", $from, $to ), ARRAY_A ); // phpcs:ignore
+		return $wpdb->get_results( $wpdb->prepare( "SELECT l.*, d.number, d.date, d.customer_id, p.cat, p.name AS pname FROM $l l JOIN $d d ON d.id = l.doc_id LEFT JOIN $p p ON p.id = l.product_id WHERE d.type = 'invoice' AND d.status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ) . " AND d.date BETWEEN %s AND %s", $from, $to ), ARRAY_A ); // phpcs:ignore
 	}
 
 	/** Profit and loss figures, read from the ledger so every report agrees. */
@@ -111,35 +111,60 @@ final class Soko_Reports {
 				break;
 
 			case 'cashflow':
-				$in  = $wpdb->get_results( $wpdb->prepare( "SELECT DATE(received) d, SUM(amount) a FROM $P WHERE status = 'matched' AND received BETWEEN %s AND %s GROUP BY DATE(received)", $from . ' 00:00:00', $to . ' 23:59:59' ), ARRAY_A ); // phpcs:ignore
-				$un  = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(amount) FROM $P WHERE status <> 'matched' AND received BETWEEN %s AND %s", $from . ' 00:00:00', $to . ' 23:59:59' ) ); // phpcs:ignore
-				$out_e = $wpdb->get_results( $wpdb->prepare( "SELECT date d, SUM(amount) a FROM $E WHERE date BETWEEN %s AND %s GROUP BY date", $from, $to ), ARRAY_A ); // phpcs:ignore
-				$PU  = soko_t( 'purchases' );
-				$out_p = $wpdb->get_results( $wpdb->prepare( "SELECT DATE(received) d, SUM(paid) a FROM $PU WHERE paid > 0 AND received BETWEEN %s AND %s GROUP BY DATE(received)", $from . ' 00:00:00', $to . ' 23:59:59' ), ARRAY_A ); // phpcs:ignore
-				$weeks = array();
-				$add = function ( $rows, $k ) use ( &$weeks ) {
-					foreach ( $rows as $r ) {
-						$w = gmdate( 'Y-m-d', strtotime( 'monday this week', strtotime( $r['d'] ) ) );
-						if ( ! isset( $weeks[ $w ] ) ) {
-							$weeks[ $w ] = array( 'in' => 0, 'out' => 0 );
-						}
-						$weeks[ $w ][ $k ] += (float) $r['a'];
+				// Built from every posting to Cash, M-Pesa and Bank, so it reconciles to the books.
+				$money = array( '1000', '1010', '1020' );
+				$label = array(
+					'payment'       => 'Received from customers',
+					'expense'       => 'Paid for expenses',
+					'supplier_pay'  => 'Paid to suppliers',
+					'supplier_paid' => 'Paid to suppliers',
+					'manual'        => 'Owner, loans and other entries',
+					'opening'       => 'Opening balances',
+				);
+				$open_bal = 0;
+				$weeks    = array();
+				$cats     = array();
+				foreach ( Soko_Accounts::postings( $to ) as $pp ) {
+					if ( ! in_array( (string) $pp[1], $money, true ) ) {
+						continue;
 					}
-				};
-				$add( $in, 'in' );
-				$add( $out_e, 'out' );
-				$add( $out_p, 'out' );
+					$amt = $pp[2] - $pp[3];
+					if ( $pp[0] < $from || 'opening' === $pp[6] && $pp[0] <= $from ) {
+						$open_bal += $amt;
+						continue;
+					}
+					$c = isset( $label[ $pp[6] ] ) ? $label[ $pp[6] ] : 'Other';
+					if ( ! isset( $cats[ $c ] ) ) {
+						$cats[ $c ] = array( 'in' => 0, 'out' => 0 );
+					}
+					$cats[ $c ][ $amt >= 0 ? 'in' : 'out' ] += abs( $amt );
+					$w = gmdate( 'Y-m-d', strtotime( 'monday this week', strtotime( $pp[0] ) ) );
+					if ( ! isset( $weeks[ $w ] ) ) {
+						$weeks[ $w ] = array( 'in' => 0, 'out' => 0 );
+					}
+					$weeks[ $w ][ $amt >= 0 ? 'in' : 'out' ] += abs( $amt );
+				}
 				ksort( $weeks );
+				$ti = array_sum( wp_list_pluck( $cats, 'in' ) );
+				$to_ = array_sum( wp_list_pluck( $cats, 'out' ) );
+				$sum = array( array( 'Cash, M-Pesa and bank at the start', self::m( $open_bal ), '_b' => 1 ) );
+				foreach ( $cats as $c => $v ) {
+					if ( $v['in'] ) {
+						$sum[] = array( $c, self::m( $v['in'] ) );
+					}
+					if ( $v['out'] ) {
+						$sum[] = array( $c, -self::m( $v['out'] ) );
+					}
+				}
+				$sum[] = array( 'Net change', self::m( $ti - $to_ ), '_b' => 1 );
+				$sum[] = array( 'Cash, M-Pesa and bank at the end', self::m( $open_bal + $ti - $to_ ), '_b' => 1 );
 				$rows = array();
-				$ti = 0;
-				$to_ = 0;
 				foreach ( $weeks as $w => $v ) {
 					$rows[] = array( 'Week of ' . date_i18n( 'j M', strtotime( $w ) ), self::m( $v['in'] ), self::m( $v['out'] ), self::m( $v['in'] - $v['out'] ) );
-					$ti += $v['in'];
-					$to_ += $v['out'];
 				}
 				$rows[] = array( 'Total', self::m( $ti ), self::m( $to_ ), self::m( $ti - $to_ ), '_b' => 1 );
-				$out['kpis'] = array( array( 'Money in', soko_money( $ti ) ), array( 'Money out', soko_money( $to_ ) ), array( 'Net cash', soko_money( $ti - $to_ ) ), array( 'Unmatched receipts', soko_money( $un ) ) );
+				$out['kpis'] = array( array( 'Money in', soko_money( $ti ) ), array( 'Money out', soko_money( $to_ ) ), array( 'Net cash', soko_money( $ti - $to_ ) ), array( 'Cash at the end', soko_money( $open_bal + $ti - $to_ ) ) );
+				$out['sections'][] = array( 'title' => 'Where cash came from and went', 'head' => array( 'Line', 'KES' ), 'rows' => $sum, 'widths' => array( 130, 50 ) );
 				$out['sections'][] = array( 'title' => 'Cash in and out by week', 'head' => array( 'Week', 'Money in', 'Money out', 'Net' ), 'rows' => $rows, 'widths' => array( 60, 40, 40, 40 ) );
 				$out['chart'] = array_map( function ( $w, $v ) { return array( 'label' => date_i18n( 'j M', strtotime( $w ) ), 'in' => $v['in'], 'out' => $v['out'] ); }, array_keys( $weeks ), $weeks );
 				break;
@@ -168,8 +193,8 @@ final class Soko_Reports {
 				break;
 
 			case 'customers':
-				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT c.name, COUNT(d.id) n, SUM(d.total) t, SUM(d.paid) p FROM $D d JOIN $C c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.status <> 'void' AND d.date BETWEEN %s AND %s GROUP BY c.id ORDER BY t DESC", $from, $to ), ARRAY_A ); // phpcs:ignore
-				$out['sections'][] = array( 'title' => 'Sales by customer', 'head' => array( 'Customer', 'Invoices', 'Invoiced', 'Paid', 'Owing' ), 'rows' => array_map( function ( $r ) { return array( $r['name'], (int) $r['n'], round( $r['t'] ), round( $r['p'] ), round( $r['t'] - $r['p'] ) ); }, $rows ), 'widths' => array( 70, 20, 30, 30, 30 ) );
+				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT c.name, COUNT(d.id) n, SUM(d.total) t, SUM(d.paid) p FROM $D d JOIN $C c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ) . " AND d.date BETWEEN %s AND %s GROUP BY c.id ORDER BY t DESC", $from, $to ), ARRAY_A ); // phpcs:ignore
+				$out['sections'][] = array( 'title' => 'Sales by customer', 'head' => array( 'Customer', 'Invoices', 'Invoiced', 'Paid or credited', 'Owing' ), 'rows' => array_map( function ( $r ) { return array( $r['name'], (int) $r['n'], round( $r['t'] ), round( $r['p'] ), round( $r['t'] - $r['p'] ) ); }, $rows ), 'widths' => array( 70, 20, 30, 30, 30 ) );
 				$out['kpis'] = array( array( 'Customers', count( $rows ) ), array( 'Invoiced', soko_money( array_sum( wp_list_pluck( $rows, 't' ) ) ) ) );
 				break;
 
@@ -187,6 +212,21 @@ final class Soko_Reports {
 				$out['kpis'] = array( array( 'Total owed', soko_money( array_sum( $b ) ) ), array( 'Overdue', soko_money( array_sum( $b ) - $b['Not yet due'] ) ), array( 'Open invoices', count( $open ) ) );
 				$out['sections'][] = array( 'title' => 'Ageing', 'head' => array( 'Bucket', 'KES' ), 'rows' => array_map( function ( $k, $v ) { return array( $k, round( $v ) ); }, array_keys( $b ), $b ), 'widths' => array( 130, 50 ) );
 				$out['sections'][] = array( 'title' => 'Open invoices', 'head' => array( 'Invoice', 'Customer', 'Phone', 'Due', 'Days late', 'Balance' ), 'rows' => $rows, 'widths' => array( 25, 55, 30, 25, 20, 25 ) );
+				$cr   = (float) $wpdb->get_var( "SELECT SUM(paid - total) FROM $D WHERE type = 'invoice' AND status <> 'void' AND paid > total" ); // phpcs:ignore
+				$book = Soko_Accounts::balances( soko_today() );
+				$book = isset( $book['1100'] ) ? round( $book['1100'], 2 ) : 0;
+				$owed = round( array_sum( $b ), 2 );
+				$pend = (float) $wpdb->get_var( "SELECT SUM(d.total - d.paid) FROM $D d WHERE d.type = 'invoice' AND d.status <> 'void' AND d.paid < d.total AND NOT " . Soko_Accounts::confirmed_sql( 'd' ) ); // phpcs:ignore
+				$rec  = array( array( 'Owed on open invoices', $owed ), array( 'Less customer credit balances (overpayments)', -round( $cr, 2 ) ) );
+				if ( $pend > 0.005 ) {
+					$rec[] = array( 'Less website orders not yet confirmed (not yet sales)', -round( $pend, 2 ) );
+				}
+				$diff = round( $book - ( $owed - $cr - $pend ), 2 );
+				if ( abs( $diff ) > 0.5 ) {
+					$rec[] = array( 'Opening balances and other entries', $diff );
+				}
+				$rec[] = array( 'Accounts receivable in the books', $book, '_b' => 1 );
+				$out['sections'][] = array( 'title' => 'Agrees with the books', 'head' => array( 'Line', 'KES' ), 'rows' => $rec, 'widths' => array( 130, 50 ) );
 				break;
 
 			case 'vat':
@@ -196,8 +236,21 @@ final class Soko_Reports {
 				$net = $n['vat'] - $ein - $pin;
 				$out['kpis'] = array( array( 'Output VAT', soko_money( $n['vat'] ) ), array( 'Input VAT', soko_money( $ein + $pin ) ), array( $net >= 0 ? 'VAT payable' : 'VAT credit', soko_money( abs( $net ) ) ) );
 				$out['sections'][] = array( 'title' => 'VAT position', 'head' => array( 'Line', 'KES' ), 'rows' => array( array( 'Output VAT on sales', $n['vat'] ), array( 'Input VAT on purchases', -round( $pin, 2 ) ), array( 'Input VAT on expenses', -round( $ein, 2 ) ), array( $net >= 0 ? 'Payable to KRA' : 'Credit carried forward', round( $net, 2 ), '_b' => 1 ) ), 'widths' => array( 130, 50 ) );
-				$inv = $wpdb->get_results( $wpdb->prepare( "SELECT d.number, d.date, c.name, c.kra, d.subtotal, d.vat, d.total, d.etims_ref FROM $D d LEFT JOIN $C c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.status <> 'void' AND d.date BETWEEN %s AND %s ORDER BY d.date", $from, $to ), ARRAY_A ); // phpcs:ignore
+				$inv = $wpdb->get_results( $wpdb->prepare( "SELECT d.number, d.date, c.name, c.kra, d.subtotal, d.vat, d.total, d.etims_ref FROM $D d LEFT JOIN $C c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ) . " AND d.date BETWEEN %s AND %s ORDER BY d.date", $from, $to ), ARRAY_A ); // phpcs:ignore
 				$out['sections'][] = array( 'title' => 'Sales invoices', 'head' => array( 'Invoice', 'Date', 'Customer', 'KRA PIN', 'Net', 'VAT', 'eTIMS' ), 'rows' => array_map( function ( $r ) { return array( $r['number'], $r['date'], $r['name'], $r['kra'], round( $r['subtotal'] ), round( $r['vat'] ), $r['etims_ref'] ); }, $inv ), 'widths' => array( 22, 22, 45, 26, 22, 18, 25 ) );
+				$cn = $wpdb->get_results( $wpdb->prepare( "SELECT d.number, d.date, c.name, d.subtotal, d.vat FROM $D d LEFT JOIN $C c ON c.id = d.customer_id WHERE d.type = 'credit' AND d.status <> 'void' AND d.date BETWEEN %s AND %s ORDER BY d.date", $from, $to ), ARRAY_A ); // phpcs:ignore
+				if ( $cn ) {
+					$out['sections'][] = array( 'title' => 'Credit notes (reduce output VAT)', 'head' => array( 'Credit note', 'Date', 'Customer', 'Net', 'VAT' ), 'rows' => array_map( function ( $r ) { return array( $r['number'], $r['date'], $r['name'], -round( $r['subtotal'], 2 ), -round( $r['vat'], 2 ) ); }, $cn ) );
+				}
+				$iv = array();
+				foreach ( Soko_Accounts::postings( $to ) as $pp ) {
+					if ( '1300' === (string) $pp[1] && $pp[0] >= $from && in_array( $pp[6], array( 'expense', 'bill' ), true ) && $pp[2] > 0 ) {
+						$iv[] = array( $pp[0], 'bill' === $pp[6] ? 'Supplier bill' : 'Expense', $pp[4], $pp[5], round( $pp[2], 2 ) );
+					}
+				}
+				if ( $iv ) {
+					$out['sections'][] = array( 'title' => 'Input VAT claimed', 'head' => array( 'Date', 'Type', 'Details', 'Reference', 'VAT' ), 'rows' => $iv );
+				}
 				break;
 
 			case 'stock':
@@ -267,6 +320,19 @@ final class Soko_Reports {
 						$equity[] = array( $code . '  ' . $a['name'], -$v );
 						$te      -= $v;
 					}
+				}
+				// Customers who overpaid: shown as money owed back, not netted inside receivables.
+				$cr = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(paid - total) FROM $D WHERE type = 'invoice' AND status <> 'void' AND paid > total AND date <= %s", $to ) ); // phpcs:ignore
+				if ( $cr > 0.005 ) {
+					foreach ( $assets as &$ar ) {
+						if ( 0 === strpos( $ar[0], '1100' ) ) {
+							$ar[1] = round( $ar[1] + $cr, 2 );
+						}
+					}
+					unset( $ar );
+					$ta     += $cr;
+					$liabs[] = array( 'Customer credit balances (overpayments)', round( $cr, 2 ) );
+					$tl     += $cr;
 				}
 				$fy    = substr( $to, 0, 4 ) . '-01-01';
 				$ret   = Soko_Accounts::profit( null, gmdate( 'Y-m-d', strtotime( $fy . ' -1 day' ) ) );
@@ -350,8 +416,22 @@ final class Soko_Reports {
 					$rows[] = array_merge( array( $r['name'] ? $r['name'] : '—', $r['number'], $d ), $cells );
 				}
 				$rows[] = array_merge( array( 'Total', '', '' ), array_map( function ( $x ) { return round( $x, 2 ); }, $tot ), array( '_b' => 1 ) );
+				$pre  = (float) $wpdb->get_var( 'SELECT SUM(paid) FROM ' . $PU . " WHERE status <> 'received' AND paid > 0" ); // phpcs:ignore
+				$bk   = Soko_Accounts::balances( $to );
+				$bk   = isset( $bk['2000'] ) ? -round( $bk['2000'], 2 ) : 0;
+				$bills = round( array_sum( $tot ), 2 );
+				$prec = array( array( 'Unpaid supplier bills', $bills ) );
+				if ( $pre > 0.005 ) {
+					$prec[] = array( 'Less paid in advance on orders not yet received', -round( $pre, 2 ) );
+				}
+				$pd = round( $bk - ( $bills - $pre ), 2 );
+				if ( abs( $pd ) > 0.5 ) {
+					$prec[] = array( 'Opening balances and other entries', $pd );
+				}
+				$prec[] = array( 'Accounts payable in the books', $bk, '_b' => 1 );
 				$out['kpis'] = array( array( 'Owed to suppliers', soko_money( array_sum( $tot ) ) ), array( 'Over 60 days', soko_money( $tot[2] + $tot[3] ) ) );
 				$out['sections'][] = array( 'title' => 'Unpaid supplier bills', 'head' => array( 'Supplier', 'Order', 'Received', '0–30 days', '31–60', '61–90', 'Over 90' ), 'rows' => $rows );
+				$out['sections'][] = array( 'title' => 'Agrees with the books', 'head' => array( 'Line', 'KES' ), 'rows' => $prec, 'widths' => array( 130, 50 ) );
 				break;
 		}
 		return $out;
@@ -403,8 +483,8 @@ final class Soko_Reports {
 		$pm1 = gmdate( 'Y-m-t', strtotime( $pm0 ) );
 		$this_m = self::pl_numbers( $m0, $m1 );
 		$last_m = self::pl_numbers( $pm0, $pm1 );
-		$sales  = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(total) FROM $D WHERE type='invoice' AND status <> 'void' AND date BETWEEN %s AND %s", $m0, $m1 ) ); // phpcs:ignore
-		$psales = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(total) FROM $D WHERE type='invoice' AND status <> 'void' AND date BETWEEN %s AND %s", $pm0, $pm1 ) ); // phpcs:ignore
+		$sales  = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(total) FROM $D d WHERE type='invoice' AND status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ) . " AND date BETWEEN %s AND %s", $m0, $m1 ) ); // phpcs:ignore
+		$psales = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(total) FROM $D d WHERE type='invoice' AND status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ) . " AND date BETWEEN %s AND %s", $pm0, $pm1 ) ); // phpcs:ignore
 		$coll   = $wpdb->get_row( $wpdb->prepare( "SELECT SUM(amount) a, COUNT(*) n FROM $P WHERE status = 'matched' AND received BETWEEN %s AND %s", $m0 . ' 00:00:00', $m1 . ' 23:59:59' ), ARRAY_A ); // phpcs:ignore
 		$owed   = (float) $wpdb->get_var( "SELECT SUM(total - paid) FROM $D WHERE type='invoice' AND status <> 'void' AND paid < total" ); // phpcs:ignore
 		$over   = $wpdb->get_results( $wpdb->prepare( "SELECT d.id, d.number, d.total - d.paid bal, d.due, c.name FROM $D d LEFT JOIN " . soko_t( 'customers' ) . " c ON c.id = d.customer_id WHERE d.type='invoice' AND d.status <> 'void' AND d.paid < d.total - 0.5 AND d.due < %s ORDER BY d.due LIMIT 8", soko_today() ), ARRAY_A ); // phpcs:ignore

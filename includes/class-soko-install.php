@@ -102,7 +102,19 @@ final class Soko_Install {
 				$wpdb->query( "UPDATE $lt SET source = 'Website quote form' WHERE source IN ('Quote form', 'Website', 'Quote')" ); // phpcs:ignore
 				$wpdb->query( "UPDATE $lt SET source = 'Solar calculator' WHERE source IN ('Power Planner', 'Power planner', 'Planner')" ); // phpcs:ignore
 			}
-			if ( version_compare( (string) get_option( 'soko_db_version' ), '13', '<' ) ) {
+			if ( version_compare( (string) get_option( 'soko_db_version' ), '14', '<' ) ) {
+				// Stock movements keep the cost they had, so later price edits never rewrite past accounts.
+				self::activate();
+				global $wpdb;
+				$mt = soko_t( 'moves' );
+				$pt = soko_t( 'products' );
+				$wpdb->query( "UPDATE $mt SET cost = (SELECT $pt.cost FROM $pt WHERE $pt.id = $mt.product_id) WHERE cost = 0" ); // phpcs:ignore
+				// Business times in Nairobi time unless the site already has a time zone.
+				if ( ! get_option( 'timezone_string' ) && ! (float) get_option( 'gmt_offset' ) ) {
+					update_option( 'timezone_string', 'Africa/Nairobi' );
+				}
+			}
+			if ( version_compare( (string) get_option( 'soko_db_version' ), '15', '<' ) ) {
 				global $wpdb;
 				$wpdb->query( $wpdb->prepare( 'UPDATE ' . soko_t( 'products' ) . ' SET runs = %s WHERE runs = %s', 'About 18 hours of lights, TV, fridge and Wi-Fi', 'About 8 hours of lights, TV, fridge and Wi-Fi' ) ); // phpcs:ignore
 				// One consistent payment and survey story across the site.
@@ -113,6 +125,8 @@ final class Soko_Install {
 						'receipt sent instantly' => 'official receipt for every payment',
 						'Book a free consultation. An engineer visits, assesses your site and gives you a fixed quote with installation.' => 'Talk to an engineer at no cost. If a site visit is needed, the survey fee is deducted from your system when you go ahead, and you get a fixed quote with installation.',
 						'150 to 350 litres' => '150 to 300 litres',
+						'Tell us what you want to power. We advise for free, by phone or on site.' => 'Tell us what you want to power. We advise for free by phone or WhatsApp, and book a site survey when a visit is needed.',
+						'see the system you need, what it costs and how soon it pays for itself.' => 'see the system you need and how soon it pays for itself.',
 					);
 					$json = wp_json_encode( $site, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
 					$new  = str_replace( array_keys( $map ), array_values( $map ), $json );
@@ -267,6 +281,7 @@ final class Soko_Install {
 			qty decimal(12,2) NOT NULL DEFAULT 0,
 			reason varchar(40) NOT NULL DEFAULT '',
 			ref varchar(60) NOT NULL DEFAULT '',
+			cost decimal(14,2) NOT NULL DEFAULT 0,
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created datetime NULL,
 			PRIMARY KEY  (id),

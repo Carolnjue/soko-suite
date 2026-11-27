@@ -42,15 +42,21 @@ class Soko_Accounts {
 	/** All accounts, keyed by code: [code, name, type, key]. */
 	public static function chart() {
 		static $chart = null;
-		if ( null !== $chart ) {
+		if ( null !== $chart && ! self::$chart_reset ) {
 			return $chart;
 		}
+		self::$chart_reset = false;
 		$chart = array();
 		foreach ( self::base() as $a ) {
 			$chart[ $a[0] ] = array( 'code' => $a[0], 'name' => $a[1], 'type' => $a[2], 'key' => $a[3] );
 		}
 		foreach ( self::expense_accounts() as $cat => $code ) {
 			$chart[ $code ] = array( 'code' => $code, 'name' => $cat, 'type' => 'expense', 'key' => 'exp' );
+		}
+		foreach ( (array) get_option( 'soko_custom_accounts', array() ) as $code => $a ) {
+			if ( ! isset( $chart[ $code ] ) ) {
+				$chart[ (string) $code ] = array( 'code' => (string) $code, 'name' => $a['name'], 'type' => $a['type'], 'key' => 'custom' );
+			}
 		}
 		ksort( $chart, SORT_STRING );
 		return $chart;
@@ -78,6 +84,52 @@ class Soko_Accounts {
 		}
 		return $map;
 	}
+
+	public static function add_account( $code, $name, $type ) {
+		$code = preg_replace( '/\D/', '', (string) $code );
+		$name = sanitize_text_field( $name );
+		$ranges = array( 'asset' => '1', 'liability' => '2', 'equity' => '3', 'income' => '4', 'expense' => '5' );
+		if ( ! isset( $ranges[ $type ] ) ) {
+			return new WP_Error( 'soko', 'Choose the account type.', array( 'status' => 400 ) );
+		}
+		if ( 4 !== strlen( $code ) ) {
+			return new WP_Error( 'soko', 'Account codes have four digits.', array( 'status' => 400 ) );
+		}
+		$first = $code[0];
+		if ( 'expense' === $type ? ! in_array( $first, array( '5', '6', '7' ), true ) : $first !== $ranges[ $type ] ) {
+			return new WP_Error( 'soko', 'expense' === $type ? 'Expense codes start with 5, 6 or 7.' : sprintf( '%s codes start with %s.', ucfirst( $type ), $ranges[ $type ] ), array( 'status' => 400 ) );
+		}
+		if ( ! $name ) {
+			return new WP_Error( 'soko', 'Give the account a name.', array( 'status' => 400 ) );
+		}
+		self::$chart_reset = true;
+		if ( isset( self::chart()[ $code ] ) ) {
+			return new WP_Error( 'soko', 'Code ' . $code . ' is already used by ' . self::chart()[ $code ]['name'] . '.', array( 'status' => 400 ) );
+		}
+		$c = (array) get_option( 'soko_custom_accounts', array() );
+		$c[ $code ] = array( 'name' => $name, 'type' => $type );
+		update_option( 'soko_custom_accounts', $c, false );
+		self::$chart_reset = true;
+		return $code;
+	}
+
+	public static function remove_account( $code ) {
+		$c = (array) get_option( 'soko_custom_accounts', array() );
+		if ( ! isset( $c[ $code ] ) ) {
+			return new WP_Error( 'soko', 'Only accounts you added can be removed.', array( 'status' => 400 ) );
+		}
+		foreach ( self::postings() as $p ) {
+			if ( (string) $p[1] === (string) $code ) {
+				return new WP_Error( 'soko', 'This account has entries, so it cannot be removed.', array( 'status' => 400 ) );
+			}
+		}
+		unset( $c[ $code ] );
+		update_option( 'soko_custom_accounts', $c, false );
+		self::$chart_reset = true;
+		return true;
+	}
+
+	public static $chart_reset = false;
 
 	public static function code( $key ) {
 		foreach ( self::base() as $a ) {
@@ -140,6 +192,14 @@ class Soko_Accounts {
 		}
 	}
 
+	/**
+	 * Website orders are booked in the accounts once confirmed: any payment received,
+	 * or staff have started processing them. Unconfirmed orders are not yet sales.
+	 */
+	public static function confirmed_sql( $a = 'd' ) {
+		return "( $a.source <> 'web' OR $a.paid > 0 OR $a.fulfil IN ('to_pack','packed','dispatched','delivered') )";
+	}
+
 	private static function build() {
 		global $wpdb;
 		$out  = array();
@@ -149,25 +209,22 @@ class Soko_Accounts {
 		$L    = soko_t( 'lines' );
 
 		// 1. Invoices: customer owes us; sales and VAT on sales; cost of goods sold.
-		$lines = $wpdb->get_results( "SELECT l.doc_id, l.qty, l.price, l.cost, l.vatable, l.product_id, d.number, d.date FROM $L l JOIN $D d ON d.id = l.doc_id WHERE d.type = 'invoice' AND d.status <> 'void'", ARRAY_A ); // phpcs:ignore
+		$C     = soko_t( 'customers' );
+		$lines = $wpdb->get_results( "SELECT l.doc_id, l.qty, l.price, l.vatable, d.number, d.date, c.name AS cname FROM $L l JOIN $D d ON d.id = l.doc_id LEFT JOIN $C c ON c.id = d.customer_id WHERE d.type = 'invoice' AND d.status <> 'void' AND " . self::confirmed_sql( 'd' ), ARRAY_A ); // phpcs:ignore
 		$inv   = array();
 		foreach ( $lines as $l ) {
 			$k = $l['doc_id'];
 			if ( ! isset( $inv[ $k ] ) ) {
-				$inv[ $k ] = array( 'n' => $l['number'], 'd' => $l['date'], 'net' => 0, 'vat' => 0, 'cogs' => 0 );
+				$inv[ $k ] = array( 'n' => $l['number'], 'd' => $l['date'], 'c' => $l['cname'], 'net' => 0, 'vat' => 0 );
 			}
 			$amt = $l['qty'] * $l['price'];
 			$v   = $l['vatable'] ? ( $incl ? $amt * $rate / ( 100 + $rate ) : $amt * $rate / 100 ) : 0;
 			$inv[ $k ]['net']  += $incl ? $amt - $v : $amt;
 			$inv[ $k ]['vat']  += $v;
-			$inv[ $k ]['cogs'] += $l['qty'] * (float) $l['cost'];
 		}
 		foreach ( $inv as $id => $x ) {
 			$tot = $x['net'] + $x['vat'];
-			self::add( $out, $x['d'], 'Invoice ' . $x['n'], $x['n'], 'invoice', $id, array( array( '1100', $tot ), array( '4000', -$x['net'] ), array( '2100', -$x['vat'] ) ) );
-			if ( $x['cogs'] > 0 ) {
-				self::add( $out, $x['d'], 'Cost of goods sold, ' . $x['n'], $x['n'], 'cogs', $id, array( array( '5000', $x['cogs'] ), array( '1200', -$x['cogs'] ) ) );
-			}
+			self::add( $out, $x['d'], 'Invoice ' . $x['n'] . ( $x['c'] ? ', ' . $x['c'] : '' ), $x['n'], 'invoice', $id, array( array( '1100', $tot ), array( '4000', -$x['net'] ), array( '2100', -$x['vat'] ) ) );
 		}
 
 		// 2. Credit notes: reduce sales and VAT, and what the customer owes.
@@ -176,9 +233,10 @@ class Soko_Accounts {
 		}
 
 		// 3. Customer payments.
-		foreach ( $wpdb->get_results( 'SELECT id, method, code, amount, status, received, doc_id FROM ' . soko_t( 'payments' ) . " WHERE method <> 'credit'", ARRAY_A ) as $p ) { // phpcs:ignore
+		foreach ( $wpdb->get_results( 'SELECT p.id, p.method, p.code, p.amount, p.status, p.received, p.payer, d.number FROM ' . soko_t( 'payments' ) . " p LEFT JOIN $D d ON d.id = p.doc_id WHERE p.method <> 'credit'", ARRAY_A ) as $p ) { // phpcs:ignore
 			$against = 'matched' === $p['status'] ? '1100' : '2200';
-			self::add( $out, $p['received'], ( 'matched' === $p['status'] ? 'Payment received ' : 'Payment not yet matched ' ) . $p['code'], $p['code'], 'payment', $p['id'], array( array( self::money_account( $p['method'] ), $p['amount'] ), array( $against, -$p['amount'] ) ) );
+			$memo    = ( 'matched' === $p['status'] ? 'Payment from ' : 'Payment not yet matched, from ' ) . ( $p['payer'] ? $p['payer'] : 'customer' ) . ( 'matched' === $p['status'] && $p['number'] ? ' for ' . $p['number'] : '' );
+			self::add( $out, $p['received'], $memo, $p['code'], 'payment', $p['id'], array( array( self::money_account( $p['method'] ), $p['amount'] ), array( $against, -$p['amount'] ) ) );
 		}
 
 		// 4. Expenses.
@@ -210,15 +268,32 @@ class Soko_Accounts {
 			}
 		}
 
-		// 6. Stock: opening stock and adjustments, valued at cost.
+		// 6. Stock, valued at the cost recorded when each movement happened.
+		//    Goods received on supplier bills are posted with the bill (section 5).
+		//    Cost of goods sold is posted when stock leaves for a sale.
 		$P = soko_t( 'products' );
-		foreach ( $wpdb->get_results( 'SELECT m.id, m.qty, m.reason, m.ref, m.created, p.cost, p.name FROM ' . soko_t( 'moves' ) . " m JOIN $P p ON p.id = m.product_id WHERE m.reason NOT IN ('Sold', 'Received')", ARRAY_A ) as $m ) { // phpcs:ignore
-			$val = round( $m['qty'] * (float) $m['cost'], 2 );
+		foreach ( $wpdb->get_results( 'SELECT m.id, m.qty, m.reason, m.ref, m.created, m.cost AS mcost, p.cost, p.name FROM ' . soko_t( 'moves' ) . " m JOIN $P p ON p.id = m.product_id WHERE m.reason <> 'Received'", ARRAY_A ) as $m ) { // phpcs:ignore
+			$unit = (float) $m['mcost'] > 0 ? (float) $m['mcost'] : (float) $m['cost'];
+			$val  = round( $m['qty'] * $unit, 2 );
 			if ( 'Opening stock' === $m['reason'] ) {
 				self::add( $out, $m['created'], 'Opening stock, ' . $m['name'], '', 'stock', $m['id'], array( array( '1200', $val ), array( '3050', -$val ) ) );
+			} elseif ( 'Sold' === $m['reason'] ) {
+				self::add( $out, $m['created'], 'Cost of goods sold, ' . $m['name'] . ( $m['ref'] ? ' (' . $m['ref'] . ')' : '' ), $m['ref'], 'cogs', $m['id'], array( array( '5000', -$val ), array( '1200', $val ) ) );
 			} else {
 				self::add( $out, $m['created'], $m['reason'] . ', ' . $m['name'], $m['ref'], 'stock', $m['id'], array( array( '1200', $val ), array( '5100', -$val ) ) );
 			}
+		}
+
+		// Stock on hand that has no movement history (loaded before movements were recorded) is opening stock.
+		$MV = soko_t( 'moves' );
+		foreach ( $wpdb->get_results( "SELECT p.id, p.name, p.stock, p.cost, p.created, (SELECT COALESCE(SUM(m.qty), 0) FROM $MV m WHERE m.product_id = p.id) AS moved, (SELECT MIN(m2.created) FROM $MV m2 WHERE m2.product_id = p.id) AS first FROM $P p WHERE p.kind = 'product'", ARRAY_A ) as $u ) { // phpcs:ignore
+			$gap = round( (float) $u['stock'] - (float) $u['moved'], 2 );
+			if ( abs( $gap ) < 0.005 || (float) $u['cost'] <= 0 ) {
+				continue;
+			}
+			$when = $u['first'] ? $u['first'] : ( $u['created'] ? $u['created'] : soko_now() );
+			$val  = round( $gap * (float) $u['cost'], 2 );
+			self::add( $out, substr( $when, 0, 10 ) < '2000-01-01' ? soko_today() : $when, 'Opening stock (no earlier record), ' . $u['name'], '', 'stock_open', $u['id'], array( array( '1200', $val ), array( '3050', -$val ) ) );
 		}
 
 		// 7. Journals: opening balances, manual entries, supplier payments.
@@ -308,6 +383,13 @@ class Soko_Accounts {
 		if ( count( $clean ) < 2 ) {
 			return new WP_Error( 'soko', 'A journal needs at least two lines.', array( 'status' => 400 ) );
 		}
+		$net = array();
+		foreach ( $clean as $l ) {
+			$net[ $l['code'] ] = ( isset( $net[ $l['code'] ] ) ? $net[ $l['code'] ] : 0 ) + $l['debit'] - $l['credit'];
+		}
+		if ( count( array_filter( $net, function ( $v ) { return abs( $v ) > 0.005; } ) ) < 2 ) {
+			return new WP_Error( 'soko', 'This entry moves money from an account back into the same account, so it changes nothing. Use two different accounts.', array( 'status' => 400 ) );
+		}
 		if ( abs( $dr - $cr ) > 0.01 ) {
 			return new WP_Error( 'soko', sprintf( 'Debits (%s) and credits (%s) must be equal.', soko_money_exact( $dr ), soko_money_exact( $cr ) ), array( 'status' => 400 ) );
 		}
@@ -340,7 +422,7 @@ class Soko_Accounts {
 				continue;
 			}
 			// Assets carry debit balances; liabilities and equity carry credit balances.
-			$debit_side = 'asset' === $chart[ $code ]['type'] || 'expense' === $chart[ $code ]['type'];
+			$debit_side = 'asset' === $chart[ $code ]['type'] || 'expense' === $chart[ $code ]['type'] || 'drawings' === $chart[ $code ]['key'];
 			$dr         = $debit_side ? $amt : -$amt;
 			$lines[]    = array( 'code' => (string) $code, 'debit' => max( 0, $dr ), 'credit' => max( 0, -$dr ) );
 			$net       += $dr;
@@ -368,7 +450,7 @@ class Soko_Accounts {
 			if ( '3050' === (string) $l['code'] ) {
 				continue;
 			}
-			$debit_side       = isset( $chart[ $l['code'] ] ) && in_array( $chart[ $l['code'] ]['type'], array( 'asset', 'expense' ), true );
+			$debit_side       = isset( $chart[ $l['code'] ] ) && ( in_array( $chart[ $l['code'] ]['type'], array( 'asset', 'expense' ), true ) || 'drawings' === $chart[ $l['code'] ]['key'] );
 			$a[ $l['code'] ] = $debit_side ? $l['debit'] - $l['credit'] : $l['credit'] - $l['debit'];
 		}
 		return array( 'date' => $j['date'], 'amounts' => $a );

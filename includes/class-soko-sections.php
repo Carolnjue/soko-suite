@@ -213,7 +213,7 @@ final class Soko_Sections {
 			array( 'icon' => 'cctv', 'image' => 'soko:stock/smart-panel.jpg', 'title' => 'IT and security', 'text' => 'Solar CCTV, networking and IT consultancy for offices and remote sites.', 'link' => '/shop/cctv/' ),
 		);
 		$steps = array(
-			array( 'icon' => 'bulb', 'title' => 'Consultation', 'text' => 'Tell us what you want to power. We advise for free, by phone or on site.' ),
+			array( 'icon' => 'bulb', 'title' => 'Consultation', 'text' => 'Tell us what you want to power. We advise for free by phone or WhatsApp, and book a site survey when a visit is needed.' ),
 			array( 'icon' => 'tools', 'title' => 'Survey and design', 'text' => 'Our engineers check your roof, wiring and usage, then size the system.' ),
 			array( 'icon' => 'panel', 'title' => 'Installation', 'text' => 'EPRA-licensed technicians install, test and hand over, usually in one to two days.' ),
 			array( 'icon' => 'shield', 'title' => 'Aftercare', 'text' => 'Monitoring, cleaning and maintenance keep your system at full output.' ),
@@ -277,7 +277,7 @@ final class Soko_Sections {
 						) ) ),
 						$sec( 'categories', array( 'title' => 'Shop by category', 'text' => 'Panels, inverters, batteries, water heating, lighting and more, with prices shown.' ) ),
 						$sec( 'products', array( 'title' => 'Popular products', 'text' => 'Every product shows its specifications, what it can power, warranty and installation cost.', 'source' => 'featured', 'limit' => 8, 'tabs' => 1 ) ),
-						$sec( 'savings', array( 'title' => 'What could solar save you?', 'text' => 'Slide to your monthly electricity bill and see the system you need, what it costs and how soon it pays for itself.', 'image' => $img . 'proj-lukundo.jpg' ) ),
+						$sec( 'savings', array( 'title' => 'What could solar save you?', 'text' => 'Slide to your monthly electricity bill and see the system you need and how soon it pays for itself.', 'image' => $img . 'proj-lukundo.jpg' ) ),
 						$sec( 'services', array( 'title' => 'Solar solutions and IT consultancy', 'text' => 'Designed, supplied, installed and maintained by one team of EPRA-licensed technicians and engineers.', 'items' => $services ) ),
 						$sec( 'projects', array( 'title' => 'Recent projects', 'text' => 'From a 10 kW bakery in Voi to a 70 kW hotel in Kisumu.', 'limit' => 4 ) ),
 						$sec( 'steps', array( 'title' => 'How we work', 'text' => 'Clear steps, one point of contact, no surprises on price.', 'items' => $steps ) ),
@@ -415,8 +415,9 @@ final class Soko_Sections {
 		if ( empty( $h[ $i ]['site'] ) ) {
 			return new WP_Error( 'soko', 'That version is no longer available.', array( 'status' => 404 ) );
 		}
-		$ver = $h[ $i ]['site'];
-		self::remember( self::site(), 'restore of an earlier version' );
+		$ver = soko_rel( $h[ $i ]['site'] );
+		$cur = get_option( 'soko_site' );
+		self::remember( is_array( $cur ) ? $cur : soko_rel( self::site() ), 'restore of an earlier version' );
 		update_option( 'soko_site', $ver, false );
 		update_option( 'soko_flush', 1, false );
 		return $ver;
@@ -433,7 +434,8 @@ final class Soko_Sections {
 			set_transient( 'soko_site_draft_' . get_current_user_id(), $site, DAY_IN_SECONDS );
 			return array( 'draft' => true );
 		}
-		$old = self::site();
+		$old = get_option( 'soko_site' );
+		$old = is_array( $old ) ? $old : soko_rel( self::site() );
 		$what = array();
 		foreach ( (array) ( isset( $site['pages'] ) ? $site['pages'] : array() ) as $k => $pg ) {
 			if ( ! isset( $old['pages'][ $k ] ) ) {

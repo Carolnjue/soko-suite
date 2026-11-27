@@ -965,3 +965,14 @@ html[data-theme=dark] .htabs button span{color:#a9b4c6}html[data-theme=dark] .ht
 .w>span{transition:transform .28s cubic-bezier(.2,.75,.15,1);transition-delay:calc(var(--i)*15ms)}
 .ri{transition:opacity .25s ease-out,transform .3s cubic-bezier(.2,.7,.2,1),border-color .2s,box-shadow .25s;transition-delay:var(--d,0ms)}
 .hd p{transition:opacity .25s .05s,transform .25s .05s}
+.bo-note,.inst-note{background:var(--warm,#fff6ea);border:1px solid #f3c98b;color:var(--ink);border-radius:12px;padding:10px 14px;font-size:14px;margin:10px 0}
+html[data-theme=dark] .bo-note,html[data-theme=dark] .inst-note{background:#2a2114;border-color:#5a4220}
+/* home hero copy: quick */
+.hslide.on .hcopy>*{animation-duration:.35s}.hslide.on .hcopy>*:nth-child(2){animation-delay:.03s}.hslide.on .hcopy>*:nth-child(3){animation-delay:.06s}.hslide.on .hcopy>*:nth-child(4){animation-delay:.09s}
+/* timelines: quick */
+.tl-line i{transition-duration:.6s}.tl.in li .dot{animation-duration:.3s;animation-delay:calc(var(--i) * .08s)}
+
+/* run 5: alignment and tap targets */
+.crumbs{align-items:center}.crumbs a{min-width:0;justify-content:flex-start}
+.pickup svg{flex:none;width:18px;height:18px;margin-top:2px}
+@media (pointer:coarse){.card h3 a{display:flex;align-items:center;min-height:44px}}

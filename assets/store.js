@@ -256,7 +256,15 @@
   function formData(f) { var o = {}; new FormData(f).forEach(function (v, k) { o[k] = v; }); return o; }
   function validPhone(p) { var d = String(p).replace(/\D/g, ''); return /^(0[17]\d{8}|254[17]\d{8}|[17]\d{8})$/.test(d); }
   function msg(f, text, ok) { var m = $('.formmsg', f); if (m) { m.textContent = text; m.className = 'formmsg ' + (ok ? 'ok' : 'err'); } }
-  var FMSG = { name: 'Please enter your full name.', phone: 'Enter a valid phone number, for example 0712 345 678.', email: 'Enter a valid email address, for example name@gmail.com.', county: 'Please enter your county or town.', address: 'Please enter where we should deliver or install.', message: 'Tell us briefly what you need.', number: 'Enter your order or invoice number.' };
+  var FMSG = { name: 'Please enter your full name.', phone: 'Enter a valid phone number, for example 0712 345 678.', email: 'Enter a valid email address, for example name@gmail.com.', county: 'Please enter your county or town.', address: 'Please enter the address for delivery, installation or the visit.', message: 'Tell us briefly what you need.', number: 'Enter your order or invoice number.' };
+  /* clear a field's error, and the form message, as soon as the visitor fixes it */
+  document.addEventListener('input', function (ev) {
+    var i = ev.target; if (!i.classList || !i.classList.contains('input-err')) return;
+    if (i.checkValidity && i.checkValidity() && String(i.value).trim()) {
+      fieldErr(i, ''); var f = i.form;
+      if (f && !f.querySelector('.input-err')) { var m = f.querySelector('.formmsg.err'); if (m) { m.textContent = ''; m.className = 'formmsg'; } }
+    }
+  });
   function fieldErr(i, text) {
     var box = i.closest('.f'), e = box ? box.querySelector('.ferr') : (i.nextElementSibling && i.nextElementSibling.classList.contains('ferr') ? i.nextElementSibling : null);
     i.classList.toggle('input-err', !!text); i.setAttribute('aria-invalid', text ? 'true' : 'false');
@@ -296,7 +304,8 @@
 
   /* ---------------- checkout ---------------- */
   function hasGoods() { return cart.some(function (c) { var p = byId[c.id]; return !p || p.kind === 'product'; }); }
-  function deliveryFee() { if (!hasGoods()) return 0; var r = $('[name=delivery]:checked'); return r ? +r.dataset.fee : 0; }
+  function installing() { return cart.some(function (c) { return c.install; }); }
+  function deliveryFee() { if (!hasGoods() || installing()) return 0; var r = $('[name=delivery]:checked'); return r ? +r.dataset.fee : 0; }
   function renderCheckout() {
     var co = $('[data-checkout]');
     if (!co || co.dataset.done) return;
@@ -308,7 +317,13 @@
     payBtn.textContent = S.stk ? 'Pay ' + money(subtotal() + deliveryFee()) + '' : 'Place order · ' + money(subtotal() + deliveryFee());
     var svc = cart.some(function (c) { var p = byId[c.id]; return p && p.kind !== 'product'; });
     var inst = $('.inst-date', co); if (inst) { inst.hidden = !(svc || cart.some(function (c) { return c.install; })); var dl = $('[data-datelab]', co); if (dl) dl.textContent = cart.some(function (c) { return c.install; }) ? 'Preferred installation date' : 'Preferred visit date'; }
-    var db = $('.delblock', co); if (db) db.hidden = !hasGoods();
+    var db = $('.delblock', co); if (db) {
+      db.hidden = !hasGoods() || installing();
+      var bo = $('.bo-note', db), any = cart.some(function (c) { return backorder(c.id); });
+      if (any && !bo) { db.insertAdjacentHTML('beforeend', '<p class="bo-note">Some items are ordered in for you and arrive in about a week. We deliver them, or have them ready to collect, once they arrive.</p>'); }
+      if (!any && bo) bo.remove();
+    }
+    var ins = $('.inst-note', co); if (installing() && !ins) { var anchor = $('.inst-date', co); if (anchor) anchor.insertAdjacentHTML('beforebegin', '<p class="inst-note">Our team delivers and installs everything on this order, so there is no separate delivery choice.</p>'); } else if (!installing() && ins) ins.remove();
   }
   var coForm = $('[data-co-form]');
   if (coForm) {
@@ -386,7 +401,7 @@
         if (s.void) { pp.innerHTML = '<div class="payflow"><h3>Order cancelled</h3><p class="muted">This order was cancelled and nothing is due. Call us if you would like to order again.</p><a class="btn b-sun wide" href="tel:+' + esc(String(S.phone || '').replace(/^\+/, '')) + '">Call us</a></div>'; return; }
         if (s.balance <= 0) { pp.innerHTML = '<div class="payflow"><div class="okc"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></div><h3>Fully paid</h3><p class="muted">Thank you. We will be in touch to arrange delivery' + (s.fulfil === 'dispatched' || s.fulfil === 'delivered' ? '' : ' and installation where you chose it') + '.</p></div>'; return; }
         if (!S.stk) {
-          pp.innerHTML = '<h3>Balance ' + money(s.balance) + '</h3>' + (S.pay && S.pay.number ? '<p class="muted">Pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div><p class="muted" style="margin-top:12px">Your receipt appears here once the payment is confirmed.</p>' : '<p class="muted">Our team will call you to confirm your order and how you would like to pay.</p>') + '<a class="btn b-sun wide" href="tel:+' + esc(String(S.phone || '').replace(/^\+/, '')) + '">Call us</a>';
+          pp.innerHTML = '<h3>How to pay</h3>' + (S.pay && S.pay.number ? '<p class="muted">Pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div><p class="muted" style="margin-top:12px">Your receipt appears here once the payment is confirmed.</p>' : '<p class="muted">Our team will call you to confirm your order and how you would like to pay.</p>') + '<a class="btn b-sun wide" href="tel:+' + esc(String(S.phone || '').replace(/^\+/, '')) + '">Call us</a>';
           return;
         }
         pp.innerHTML = '<h3>Pay ' + money(s.balance) + '</h3><form data-paybal novalidate><div class="f"><label for="pPhone">Phone number to pay from</label><input id="pPhone" name="phone" inputmode="tel" value="' + esc(td.phone) + '" required></div><div class="f"><label for="pAmt">Amount</label><input id="pAmt" name="amount" type="number" min="1" max="' + s.balance + '" value="' + Math.ceil(s.balance) + '"></div><button class="btn b-sun wide">Send payment request</button><p class="formmsg"></p></form>' + (S.pay && S.pay.number ? '<p class="muted" style="margin-top:14px">Or pay from your M-Pesa menu:</p><div class="paybill"><div><span>' + esc(S.pay.kind) + '</span><b>' + esc(S.pay.number) + '</b></div>' + (S.pay.kind === 'Paybill' ? '<div><span>Account</span><b>' + esc(td.doc) + '</b></div>' : '') + '</div>' : '');
@@ -605,6 +620,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   if (location.hash.length > 1) revealAt(location.hash.slice(1));
   /* numbers count up when they come into view */
   function countUp(el) {
+    if (/\d\s*[–-]\s*\d/.test(el.textContent)) return; // a range such as "3–10 kW" is shown as it is
     var m = el.textContent.match(/^([^0-9]*)([0-9][0-9,]*\.?[0-9]*)(.*)$/); if (!m) return;
     var end = parseFloat(m[2].replace(/,/g, '')), dec = (m[2].split('.')[1] || '').length, t0 = null, comma = m[2].indexOf(',') > -1;
     function f(n) { var s = n.toFixed(dec); return comma ? Number(s).toLocaleString('en-GB', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : s; }
@@ -626,9 +642,11 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   bar.querySelector('button').addEventListener('click', function () { var b = document.querySelector('[data-add-pdp]'); if (b) b.click(); });
   new IntersectionObserver(function (es) { var on = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; bar.classList.toggle('on', on); var t = document.querySelector('.toast'); if (t) t.classList.toggle('up', on); }).observe(row);
 })();
-/* phones: keep the WhatsApp button off the home banner buttons while the banner is on screen */
+/* phones: keep the WhatsApp button off banners and titles until the visitor scrolls */
 (function () {
-  var hero = document.querySelector('.hero'), wa = document.querySelector('.wa');
-  if (!hero || !wa || !('IntersectionObserver' in window)) return;
-  new IntersectionObserver(function (es) { wa.classList.toggle('wa-hide', es[0].isIntersecting && innerWidth < 1100); }, { threshold: 0.35 }).observe(hero);
+  var wa = document.querySelector('.wa'); if (!wa) return;
+  var hero = document.querySelector('.hero'), inHero = false;
+  function upd() { var ph = innerWidth < 1100; wa.classList.toggle('wa-hide', ph && (inHero || scrollY < 300)); }
+  if (hero && 'IntersectionObserver' in window) new IntersectionObserver(function (es) { inHero = es[0].intersectionRatio >= 0.35; upd(); }, { threshold: [0, 0.35] }).observe(hero);
+  addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd); upd();
 })();

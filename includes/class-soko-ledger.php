@@ -195,6 +195,7 @@ final class Soko_Ledger {
 				'qty'        => $qty,
 				'reason'     => $reason,
 				'ref'        => $ref,
+				'cost'       => (float) $wpdb->get_var( $wpdb->prepare( 'SELECT cost FROM ' . soko_t( 'products' ) . ' WHERE id = %d', $product_id ) ), // phpcs:ignore
 				'user_id'    => get_current_user_id(),
 				'created'    => soko_now(),
 			)

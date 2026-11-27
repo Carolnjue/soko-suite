@@ -21,6 +21,7 @@
   K.icon = function (k, s) { return (D.icons[k] || D.icons.panel).replace(/width="24" height="24"/, 'width="' + (s || 24) + '" height="' + (s || 24) + '"'); };
   K.ic = function (path) { return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + path + '"/></svg>'; };
   K.ICONS = {
+    accounts: 'M4 4h12a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3zM4 17a3 3 0 0 1 3-3h12M8 8h7M8 11h5',
     home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z', sales: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7', payments: 'M3 6h18v12H3zM3 10h18M7 15h3',
     crm: 'M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-2a4 4 0 0 0-3-3.9M16 2.1a4 4 0 0 1 0 7.8', jobs: 'M14 6l4 4-9 9H5v-4zM12 8l4 4',
     schedule: 'M4 5h16v16H4zM4 10h16M9 3v4M15 3v4', stock: 'M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10', purchases: 'M3 3h2l3 12h11l2-8H7M10 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',

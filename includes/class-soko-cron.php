@@ -114,7 +114,7 @@ final class Soko_Cron {
 			foreach ( $ids as $id ) {
 				$d = Soko_Ledger::doc( $id );
 				if ( $d['customer'] && $d['customer']['email'] ) {
-					Soko_Ledger::email_doc( $d, $d['customer']['email'], sprintf( "Hello %s,\n\nThis is a friendly reminder that invoice %s has a balance of %s, which was due on %s.\n\nPay by M-Pesa using account number %s, or online: %s\n\nThank you,\n%s", $d['customer']['name'], $d['number'], soko_money( $d['balance'] ), date_i18n( 'j M Y', strtotime( $d['due'] ) ), $d['number'], $d['pay_url'], $biz ) );
+					Soko_Ledger::email_doc( $d, $d['customer']['email'], sprintf( "Hello %s,\n\nThis is a friendly reminder that invoice %s has a balance of %s, which was due on %s.\n\nYou can pay using %s as the reference, or online: %s\n\nThank you,\n%s", $d['customer']['name'], $d['number'], soko_money( $d['balance'] ), date_i18n( 'j M Y', strtotime( $d['due'] ) ), $d['number'], $d['pay_url'], $biz ) );
 				}
 			}
 		}

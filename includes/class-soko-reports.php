@@ -22,6 +22,10 @@ final class Soko_Reports {
 			'payments'    => 'Payments received',
 			'expenses'    => 'Expenses',
 			'jobs'        => 'Installations',
+			'bs'          => 'Balance sheet',
+			'tb'          => 'Trial balance',
+			'gl'          => 'General ledger',
+			'payables'    => 'Bills owed to suppliers (aged payables)',
 		);
 	}
 
@@ -38,32 +42,37 @@ final class Soko_Reports {
 		return $wpdb->get_results( $wpdb->prepare( "SELECT l.*, d.number, d.date, d.customer_id, p.cat, p.name AS pname FROM $l l JOIN $d d ON d.id = l.doc_id LEFT JOIN $p p ON p.id = l.product_id WHERE d.type = 'invoice' AND d.status <> 'void' AND d.date BETWEEN %s AND %s", $from, $to ), ARRAY_A ); // phpcs:ignore
 	}
 
+	/** Profit and loss figures, read from the ledger so every report agrees. */
 	public static function pl_numbers( $from, $to ) {
-		global $wpdb;
-		$rate  = soko_setting( 'vat_registered' ) ? (float) soko_setting( 'vat_rate', 16 ) : 0;
-		$incl  = (int) soko_setting( 'prices_incl_vat', 1 );
-		$sales = 0;
-		$cogs  = 0;
-		$vat   = 0;
-		foreach ( self::lines( $from, $to ) as $l ) {
-			$amt = $l['qty'] * $l['price'];
-			$v   = $l['vatable'] ? ( $incl ? $amt * $rate / ( 100 + $rate ) : $amt * $rate / 100 ) : 0;
-			$sales += $incl ? $amt - $v : $amt;
-			$vat   += $v;
-			$cogs  += $l['qty'] * $l['cost'];
+		$m     = Soko_Accounts::movements( $from, $to );
+		$chart = Soko_Accounts::chart();
+		$g     = function ( $c ) use ( $m ) { return isset( $m[ $c ] ) ? (float) $m[ $c ] : 0; };
+		$sales   = -$g( '4000' );
+		$returns = $g( '4900' );
+		$other   = -$g( '4950' );
+		$cogs    = $g( '5000' );
+		$exps    = array();
+		foreach ( $m as $code => $v ) {
+			if ( isset( $chart[ $code ] ) && 'expense' === $chart[ $code ]['type'] && '5000' !== (string) $code && abs( $v ) > 0.005 ) {
+				$exps[] = array( 'category' => $chart[ $code ]['name'], 'net' => round( $v, 2 ), 'code' => (string) $code );
+			}
 		}
-		$e    = soko_t( 'expenses' );
-		$exps = $wpdb->get_results( $wpdb->prepare( "SELECT category, SUM(amount - vat) AS net, SUM(vat) AS vat FROM $e WHERE date BETWEEN %s AND %s GROUP BY category ORDER BY net DESC", $from, $to ), ARRAY_A ); // phpcs:ignore
-		$ex   = array_sum( wp_list_pluck( $exps, 'net' ) );
+		usort( $exps, function ( $a, $b ) { return $b['net'] <=> $a['net']; } );
+		$ex  = array_sum( wp_list_pluck( $exps, 'net' ) );
+		$net_sales = $sales - $returns;
+		$vat = -Soko_Accounts::sum( '2100', $from, $to, array( 'invoice', 'credit' ) );
 		return array(
-			'sales'    => self::m( $sales ),
+			'sales'    => self::m( $net_sales ),
+			'gross_sales' => self::m( $sales ),
+			'returns'  => self::m( $returns ),
+			'other'    => self::m( $other ),
 			'cogs'     => self::m( $cogs ),
-			'gross'    => self::m( $sales - $cogs ),
+			'gross'    => self::m( $net_sales - $cogs ),
 			'expenses' => $exps,
 			'opex'     => self::m( $ex ),
-			'net'      => self::m( $sales - $cogs - $ex ),
+			'net'      => self::m( $net_sales + $other - $cogs - $ex ),
 			'vat'      => self::m( $vat ),
-			'margin'   => $sales ? round( ( $sales - $cogs ) / $sales * 100 ) : 0,
+			'margin'   => $net_sales ? round( ( $net_sales - $cogs ) / $net_sales * 100 ) : 0,
 		);
 	}
 
@@ -82,11 +91,16 @@ final class Soko_Reports {
 		switch ( $type ) {
 			case 'pl':
 				$n = self::pl_numbers( $from, $to );
-				$rows = array(
-					array( 'Sales (excluding VAT)', $n['sales'] ),
-					array( 'Cost of goods sold', -$n['cogs'] ),
-					array( 'Gross profit', $n['gross'], '_b' => 1 ),
-				);
+				$rows = array( array( 'Sales (excluding VAT)', $n['gross_sales'] ) );
+				if ( $n['returns'] ) {
+					$rows[] = array( 'Less credit notes and returns', -$n['returns'] );
+					$rows[] = array( 'Net sales', $n['sales'], '_b' => 1 );
+				}
+				$rows[] = array( 'Cost of goods sold', -$n['cogs'] );
+				$rows[] = array( 'Gross profit', $n['gross'], '_b' => 1 );
+				if ( $n['other'] ) {
+					$rows[] = array( 'Other income', $n['other'] );
+				}
 				foreach ( $n['expenses'] as $x ) {
 					$rows[] = array( $x['category'], -1 * self::m( $x['net'] ) );
 				}
@@ -177,9 +191,8 @@ final class Soko_Reports {
 
 			case 'vat':
 				$n   = self::pl_numbers( $from, $to );
-				$ein = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(vat) FROM $E WHERE date BETWEEN %s AND %s", $from, $to ) ); // phpcs:ignore
-				$PU  = soko_t( 'purchases' );
-				$pin = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(vat) FROM $PU WHERE status = 'received' AND date BETWEEN %s AND %s", $from, $to ) ); // phpcs:ignore
+				$ein = Soko_Accounts::sum( '1300', $from, $to, array( 'expense' ) );
+				$pin = Soko_Accounts::sum( '1300', $from, $to, array( 'bill' ) );
 				$net = $n['vat'] - $ein - $pin;
 				$out['kpis'] = array( array( 'Output VAT', soko_money( $n['vat'] ) ), array( 'Input VAT', soko_money( $ein + $pin ) ), array( $net >= 0 ? 'VAT payable' : 'VAT credit', soko_money( abs( $net ) ) ) );
 				$out['sections'][] = array( 'title' => 'VAT position', 'head' => array( 'Line', 'KES' ), 'rows' => array( array( 'Output VAT on sales', $n['vat'] ), array( 'Input VAT on purchases', -round( $pin, 2 ) ), array( 'Input VAT on expenses', -round( $ein, 2 ) ), array( $net >= 0 ? 'Payable to KRA' : 'Credit carried forward', round( $net, 2 ), '_b' => 1 ) ), 'widths' => array( 130, 50 ) );
@@ -228,6 +241,117 @@ final class Soko_Reports {
 				$undated = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $J WHERE date IS NULL OR date = ''" ); // phpcs:ignore
 				$out['kpis'] = array( array( 'Jobs', count( $rows ) ), array( 'Commissioned', count( array_filter( $rows, function ( $r ) { return 'Commissioned' === $r['stage']; } ) ) ), array( 'Not yet dated', $undated ) );
 				$out['sections'][] = array( 'title' => 'Installations', 'head' => array( 'Date', 'Customer', 'Work', 'Stage', 'Team' ), 'rows' => array_map( function ( $r ) { return array( $r['date'], $r['name'], $r['title'], $r['stage'], $r['techs'] ); }, $rows ), 'align' => array( 'L', 'L', 'L', 'L', 'L' ), 'widths' => array( 24, 45, 55, 26, 30 ) );
+				break;
+
+			case 'bs':
+				$period = 'As at ' . date_i18n( 'j M Y', strtotime( $to ) );
+				$out['period'] = $period;
+				$b      = Soko_Accounts::balances( $to );
+				$chart  = Soko_Accounts::chart();
+				$assets = array();
+				$liabs  = array();
+				$equity = array();
+				$ta = 0; $tl = 0; $te = 0;
+				foreach ( $chart as $code => $a ) {
+					$v = isset( $b[ $code ] ) ? round( $b[ $code ], 2 ) : 0;
+					if ( abs( $v ) < 0.005 ) {
+						continue;
+					}
+					if ( 'asset' === $a['type'] ) {
+						$assets[] = array( $code . '  ' . $a['name'], $v );
+						$ta      += $v;
+					} elseif ( 'liability' === $a['type'] ) {
+						$liabs[] = array( $code . '  ' . $a['name'], -$v );
+						$tl     -= $v;
+					} elseif ( 'equity' === $a['type'] ) {
+						$equity[] = array( $code . '  ' . $a['name'], -$v );
+						$te      -= $v;
+					}
+				}
+				$fy    = substr( $to, 0, 4 ) . '-01-01';
+				$ret   = Soko_Accounts::profit( null, gmdate( 'Y-m-d', strtotime( $fy . ' -1 day' ) ) );
+				$cur   = Soko_Accounts::profit( $fy, $to );
+				if ( abs( $ret ) > 0.005 ) {
+					$equity[] = array( 'Retained profit from earlier years', $ret );
+				}
+				$equity[] = array( 'Profit this year (since 1 Jan)', $cur );
+				$te      += $ret + $cur;
+				$assets[]  = array( 'Total assets', round( $ta, 2 ), '_b' => 1 );
+				$liabs[]   = array( 'Total liabilities', round( $tl, 2 ), '_b' => 1 );
+				$equity[]  = array( 'Total equity', round( $te, 2 ), '_b' => 1 );
+				$diff      = round( $ta - $tl - $te, 2 );
+				$out['kpis'] = array( array( 'Total assets', soko_money( $ta ) ), array( 'Total liabilities', soko_money( $tl ) ), array( 'Net worth (equity)', soko_money( $te ) ) );
+				$out['sections'][] = array( 'title' => 'What the business owns (assets)', 'head' => array( 'Account', 'KES' ), 'rows' => $assets, 'widths' => array( 130, 50 ) );
+				$out['sections'][] = array( 'title' => 'What the business owes (liabilities)', 'head' => array( 'Account', 'KES' ), 'rows' => $liabs, 'widths' => array( 130, 50 ) );
+				$out['sections'][] = array( 'title' => "Owner's equity", 'head' => array( 'Account', 'KES' ), 'rows' => $equity, 'widths' => array( 130, 50 ) );
+				$out['check'] = abs( $diff ) < 0.01 ? 'balanced' : 'out by ' . $diff;
+				if ( isset( $b['1200'] ) && $b['1200'] < -0.5 ) {
+					$out['note'] = 'Stock shows below zero because stock was sold that was never entered at cost. Add your stock in Accounts → Opening balances.';
+				}
+				break;
+
+			case 'tb':
+				$out['period'] = 'As at ' . date_i18n( 'j M Y', strtotime( $to ) );
+				$b    = Soko_Accounts::balances( $to );
+				$rows = array();
+				$td = 0; $tc = 0;
+				foreach ( Soko_Accounts::chart() as $code => $a ) {
+					$v = isset( $b[ $code ] ) ? round( $b[ $code ], 2 ) : 0;
+					if ( abs( $v ) < 0.005 ) {
+						continue;
+					}
+					$rows[] = array( $code, $a['name'], $v > 0 ? $v : '', $v < 0 ? -$v : '' );
+					$td    += max( 0, $v );
+					$tc    += max( 0, -$v );
+				}
+				$rows[] = array( '', 'Totals', round( $td, 2 ), round( $tc, 2 ), '_b' => 1 );
+				$out['kpis'] = array( array( 'Total debits', soko_money( $td ) ), array( 'Total credits', soko_money( $tc ) ), array( 'Difference', soko_money( abs( $td - $tc ) ) ) );
+				$out['sections'][] = array( 'title' => 'Trial balance', 'head' => array( 'Code', 'Account', 'Debit', 'Credit' ), 'rows' => $rows, 'widths' => array( 20, 90, 35, 35 ), 'align' => array( 'L', 'L', 'R', 'R' ) );
+				break;
+
+			case 'gl':
+				$chart = Soko_Accounts::chart();
+				$open  = Soko_Accounts::balances( gmdate( 'Y-m-d', strtotime( $from . ' -1 day' ) ) );
+				$by    = array();
+				foreach ( Soko_Accounts::postings( $to ) as $pp ) {
+					if ( $pp[0] >= $from ) {
+						$by[ $pp[1] ][] = $pp;
+					}
+				}
+				ksort( $by, SORT_STRING );
+				$n = 0;
+				foreach ( $by as $code => $ps ) {
+					$bal  = isset( $open[ $code ] ) ? round( $open[ $code ], 2 ) : 0;
+					$rows = array( array( '', 'Opening balance', '', '', $bal, '_b' => 1 ) );
+					foreach ( $ps as $pp ) {
+						$bal   += $pp[2] - $pp[3];
+						$rows[] = array( $pp[0], $pp[4], $pp[2] ? $pp[2] : '', $pp[3] ? $pp[3] : '', round( $bal, 2 ) );
+						++$n;
+					}
+					$rows[] = array( '', 'Closing balance', '', '', round( $bal, 2 ), '_b' => 1 );
+					$out['sections'][] = array( 'title' => $code . '  ' . ( isset( $chart[ $code ] ) ? $chart[ $code ]['name'] : '' ), 'head' => array( 'Date', 'Details', 'Debit', 'Credit', 'Balance' ), 'rows' => $rows, 'widths' => array( 24, 86, 23, 23, 24 ), 'align' => array( 'L', 'L', 'R', 'R', 'R' ), 'code' => (string) $code );
+				}
+				$out['kpis'] = array( array( 'Accounts', count( $by ) ), array( 'Entries', $n ) );
+				break;
+
+			case 'payables':
+				$out['period'] = 'As at ' . date_i18n( 'j M Y', strtotime( $to ) );
+				$PU   = soko_t( 'purchases' );
+				$rows = array();
+				$tot  = array( 0, 0, 0, 0 );
+				foreach ( $wpdb->get_results( 'SELECT p.number, p.date, p.received, p.total, p.paid, s.name FROM ' . $PU . ' p LEFT JOIN ' . soko_t( 'suppliers' ) . " s ON s.id = p.supplier_id WHERE p.status = 'received' AND p.total - p.paid > 0.5 ORDER BY p.received", ARRAY_A ) as $r ) { // phpcs:ignore
+					$d    = substr( $r['received'] ? $r['received'] : $r['date'], 0, 10 );
+					$days = max( 0, (int) floor( ( strtotime( $to ) - strtotime( $d ) ) / DAY_IN_SECONDS ) );
+					$owe  = round( $r['total'] - $r['paid'], 2 );
+					$bk   = $days <= 30 ? 0 : ( $days <= 60 ? 1 : ( $days <= 90 ? 2 : 3 ) );
+					$tot[ $bk ] += $owe;
+					$cells = array( '', '', '', '' );
+					$cells[ $bk ] = $owe;
+					$rows[] = array_merge( array( $r['name'] ? $r['name'] : '—', $r['number'], $d ), $cells );
+				}
+				$rows[] = array_merge( array( 'Total', '', '' ), array_map( function ( $x ) { return round( $x, 2 ); }, $tot ), array( '_b' => 1 ) );
+				$out['kpis'] = array( array( 'Owed to suppliers', soko_money( array_sum( $tot ) ) ), array( 'Over 60 days', soko_money( $tot[2] + $tot[3] ) ) );
+				$out['sections'][] = array( 'title' => 'Unpaid supplier bills', 'head' => array( 'Supplier', 'Order', 'Received', '0–30 days', '31–60', '61–90', 'Over 90' ), 'rows' => $rows );
 				break;
 		}
 		return $out;

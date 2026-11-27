@@ -29,10 +29,12 @@ final class Soko_Settings {
 			'prefix_invoice'  => 'INV-',
 			'prefix_receipt'  => 'RCT-',
 			'prefix_po'       => 'PO-',
+			'prefix_credit'   => 'CN-',
 			'next_quote'      => 1001,
 			'next_invoice'    => 1001,
 			'next_receipt'    => 1001,
 			'next_po'         => 101,
+			'next_credit'     => 1001,
 			'quote_valid'     => 14,
 			'invoice_due'     => 14,
 			'deposit_percent' => 60,
@@ -148,7 +150,7 @@ final class Soko_Settings {
 
 	/** Next document number, incremented atomically enough for a small team. */
 	public static function next_number( $type ) {
-		$map = array( 'quote' => 'quote', 'invoice' => 'invoice', 'receipt' => 'receipt', 'po' => 'po' );
+		$map = array( 'quote' => 'quote', 'invoice' => 'invoice', 'receipt' => 'receipt', 'po' => 'po', 'credit' => 'credit' );
 		$k   = $map[ $type ];
 		$s   = self::all();
 		$n   = (int) $s[ 'next_' . $k ];

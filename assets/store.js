@@ -51,25 +51,27 @@
     var l = cart.filter(function (c) { return c.id === id && !!c.install === !!install; })[0];
     var cap = maxQty(id), have = cart.filter(function (c) { return c.id === id; }).reduce(function (a, c) { return a + c.qty; }, 0);
     qty = Math.max(1, qty || 1);
-    if (have + qty > cap) { qty = cap - have; if (qty <= 0) { toast('Only ' + cap + ' of ' + byId[id].name + ' available. Call us for larger orders.'); return; } toast('Only ' + cap + ' available, so ' + qty + ' added.'); silent = true; }
+    if (have + qty > cap) { qty = cap - have; if (qty <= 0) { toast(capMsg(id, cap)); return; } toast((backorder(id) ? 'Up to ' + cap + ' can be ordered in online, so ' : 'Only ' + cap + ' available, so ') + qty + ' added.'); silent = true; }
     if (l) l.qty += qty; else cart.push({ id: id, qty: qty, install: install ? 1 : 0 });
     saveCart(true);
     if (!silent) toast('Added to cart: ' + byId[id].name, ['View cart', S.home + 'cart/']);
   }
-  function maxQty(id) { var p = byId[id]; return p && p.kind === 'product' && p.stock > 0 ? Math.min(500, Math.floor(p.stock)) : 500; }
+  function backorder(id) { var p = byId[id]; return !!(p && p.kind === 'product' && p.stock <= 0); }
+  function maxQty(id) { var p = byId[id]; if (!p || p.kind !== 'product') return 50; return p.stock > 0 ? Math.min(500, Math.floor(p.stock)) : 20; }
+  function capMsg(id, cap) { return backorder(id) ? 'We order this in for you (about a week). For more than ' + cap + ', please call us.' : 'Only ' + cap + ' available. Call us for larger orders.'; }
   function lineTotal(c) { var p = byId[c.id]; return (p.price + (c.install ? p.install : 0)) * c.qty; }
   function subtotal() { return cart.reduce(function (a, c) { return a + lineTotal(c); }, 0); }
   function thumb(p) { return '<div class="thumb">' + (p.img ? '<img src="' + esc(p.img) + '" alt="">' : (S.icons[p.icon] || '').replace(/width="100" height="100"/, 'width="38" height="38"')) + '</div>'; }
   function linesHTML(edit) {
     return cart.map(function (c, i) {
       var p = byId[c.id];
-      return '<div class="line">' + thumb(p) + '<div><h4>' + esc(p.name) + '</h4><small>' + money(p.price) + (c.install ? ' + installation ' + money(p.install) : '') + '</small>' + (edit ? '<button class="rm" data-rm="' + i + '">Remove</button>' : '') + '</div>' +
+      return '<div class="line">' + thumb(p) + '<div><h4>' + esc(p.name) + '</h4><small>' + money(p.price) + (c.install ? ' + installation ' + money(p.install) : '') + '</small>' + (backorder(c.id) ? '<small class="bo">Ordered in for you: about a week</small>' : '') + (edit ? '<button class="rm" data-rm="' + i + '">Remove</button>' : '') + '</div>' +
         (edit ? '<span class="qty"><button data-cq="' + i + '" data-d="-1" aria-label="One less">−</button><b>' + c.qty + '</b><button data-cq="' + i + '" data-d="1" aria-label="One more">+</button></span>' : '<b>× ' + c.qty + '</b>') + '</div>';
     }).join('');
   }
   function sumHTML(fee) {
     var s = subtotal(), vat = S.vat ? Math.round((s + (fee || 0)) * S.vat / (100 + S.vat)) : 0;
-    return '<div><span>Items</span><span>' + money(s) + '</span></div><div><span>Delivery</span><span>' + (fee === null ? 'Chosen at checkout' : fee ? money(fee) : 'Free') + '</span></div>' + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + (fee || 0)) + '</span></div>';
+    return '<div><span>Items</span><span>' + money(s) + '</span></div>' + (hasGoods() ? '<div><span>Delivery</span><span>' + (fee === null ? 'Chosen at checkout' : fee ? money(fee) : 'Free') + '</span></div>' : '') + (vat ? '<div class="muted"><span>Includes VAT</span><span>' + money(vat) + '</span></div>' : '') + '<div class="grand"><span>Total</span><span>' + money(s + (fee || 0)) + '</span></div>';
   }
   function emptyCart() { return '<h3>Your cart is empty</h3><p class="muted" style="margin:8px 0 18px">Start with the solar calculator or browse the shop.</p><div class="row"><a class="btn b-sun" href="' + S.home + 'planner/">Calculate my system</a><a class="btn b-line" href="' + S.home + 'shop/">Go to the shop</a></div>'; }
   function upsell() {
@@ -314,7 +316,7 @@
     coForm.addEventListener('change', function (e) { if (e.target.name === 'delivery') renderCheckout(); });
     coForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      var dsel = coForm.querySelector('[name=delivery]:checked'), needAddr = (hasGoods() && dsel && +dsel.value > 0) || cart.some(function (c) { return c.install; });
+      var dsel = coForm.querySelector('[name=delivery]:checked'), needAddr = (hasGoods() && dsel && +dsel.value > 0) || cart.some(function (c) { return c.install || (byId[c.id] && byId[c.id].kind !== 'product'); });
       ['address', 'county'].forEach(function (n) { if (coForm[n]) coForm[n].required = !!needAddr; });
       if (!cart.length || !check(coForm)) return;
       var b = formData(coForm), btn = $('[data-pay]', coForm);
@@ -426,7 +428,7 @@
     };
     $$('[name=inst]', pdp).forEach(function (r) { r.addEventListener('change', syncPrice); });
     if (q) q.addEventListener('input', syncPrice);
-    var capQ = function () { var mx = maxQty(pd.id), v = Math.round(+q.value || 1); if (v > mx) { v = mx; toast('Only ' + mx + ' available. Call us for larger orders.'); } q.value = Math.max(1, v); };
+    var capQ = function () { var mx = maxQty(pd.id), v = Math.round(+q.value || 1); if (v > mx) { v = mx; toast(capMsg(pd.id, mx)); } q.value = Math.max(1, v); };
     if (q) { q.max = maxQty(pd.id); q.min = 1; q.addEventListener('change', function () { capQ(); syncPrice(); }); }
     $$('[data-qty] button', pdp).forEach(function (b) { b.onclick = function () { q.value = Math.max(1, (+q.value || 1) + +b.dataset.d); capQ(); syncPrice(); }; });
     $('[data-add-pdp]', pdp).onclick = function () { add(pd.id, Math.max(1, +q.value || 1), inst()); };

@@ -220,7 +220,7 @@ button{width:100%;height:50px;border:0;border-radius:12px;background:<?php echo 
 </head><body>
 <div id="app" class="app"><div class="boot"><div class="spin"></div>Opening Dynamic Desk…</div></div>
 <script>window.DESK=<?php echo wp_json_encode( array( 'api' => esc_url_raw( rest_url( 'soko/v1/' ) ), 'wpapi' => esc_url_raw( rest_url( 'wp/v2/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'site' => home_url( '/' ), 'logout' => home_url( '/desk/logout/' ), 'logo' => $b['logo'], 'plugin' => SOKO_URL, 'icons' => array_combine( soko_icon_names(), array_map( function ( $k ) { return soko_icon( $k, 24 ); }, soko_icon_names() ) ), 'schema' => Soko_Sections::schema() ) ); ?>;</script>
-<?php foreach ( array( 'desk-core', 'desk-modules', 'desk-studio' ) as $f ) : ?><script src="<?php echo esc_url( SOKO_URL . 'assets/' . $f . '.js?v=' . SOKO_VERSION ); ?>"></script><?php endforeach; ?>
+<?php foreach ( array( 'desk-core', 'desk-modules', 'desk-studio', 'desk-accounts' ) as $f ) : ?><script src="<?php echo esc_url( SOKO_URL . 'assets/' . $f . '.js?v=' . SOKO_VERSION ); ?>"></script><?php endforeach; ?>
 </body></html>
 		<?php
 	}

@@ -916,3 +916,19 @@ html[data-theme=dark] .soko .hrs input{color:#fff;background:#23272d}
 @media(max-width:600px){.costeps li i{position:relative;z-index:2}.costeps li+li::before{right:calc(50% + 17px);width:calc(100% - 30px)}}
 @media(max-width:1024px){.ann-r{display:none}.ann-l{flex-wrap:nowrap;overflow:hidden}}
 .pickup{display:flex;gap:10px;align-items:flex-start;background:var(--alt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:4px 0 16px;color:var(--ink)}
+.line small.bo{display:block;color:#b45309;font-weight:600;margin-top:2px}html[data-theme=dark] .line small.bo{color:#f7a440}
+/* run 4: touch targets and contrast */
+@media(hover:none){
+.htabs button{min-height:48px;padding-top:12px}
+.ptabs button,.sv-mode button,.subchips a,.chip{min-height:44px;height:auto}
+.soko .hrs input{height:44px}
+.theme,.ico{min-width:44px;min-height:44px}
+.ann-l a,.ann-r a,.ann-m a{min-height:44px}
+.crumbs a{min-width:44px;justify-content:center}
+.soko input[type=range]{height:12px;margin:16px 0}
+.soko input[type=range]::-webkit-slider-thumb{width:34px;height:34px}
+}
+.htabs button span{color:#5b6b85}.htabs button.on span{color:#b45309}
+html[data-theme=dark] .htabs button span{color:#a9b4c6}html[data-theme=dark] .htabs button.on span{color:#f7a440}
+.tnum{color:#b45309}html[data-theme=dark] .tnum{color:#f7a440}
+.ann-m a.am-wa{background:#0b7a3e;border-color:#0b7a3e}

@@ -66,7 +66,7 @@
     var t = salesState.tab;
     var q = t === 'web' ? 'docs?type=invoice&source=web' : 'docs?type=' + t;
     v.innerHTML = K.head('Sales and invoices', 'Quotations become invoices in one click. Every invoice number doubles as the payment reference, so payments match themselves.', '<button class="btn" data-nq>' + ic(I.plus) + 'New quotation</button><button class="btn sun" data-ni>' + ic(I.plus) + 'New invoice</button>') +
-      K.tabs('sales', [['invoice', 'Invoices'], ['quote', 'Quotations'], ['receipt', 'Receipts'], ['web', 'Website orders']], t) + '<div data-list><div class="boot" style="height:30vh"><div class="spin"></div></div></div>';
+      K.tabs('sales', [['invoice', 'Invoices'], ['quote', 'Quotations'], ['receipt', 'Receipts'], ['credit', 'Credit notes'], ['web', 'Website orders']], t) + '<div data-list><div class="boot" style="height:30vh"><div class="spin"></div></div></div>';
     $('[data-nq]', v).onclick = function () { K.editDoc('quote'); };
     $('[data-ni]', v).onclick = function () { K.editDoc('invoice'); };
     $$('[data-tabs] button', v).forEach(function (b) { b.onclick = function () { salesState.tab = b.dataset.t; salesState.state = ''; if (location.hash === '#sales') K.V.sales(v); else location.hash = 'sales'; }; });
@@ -79,11 +79,12 @@
           return (!salesState.state || st === salesState.state || (salesState.state === 'owed' && ['unpaid', 'partial', 'overdue'].indexOf(st) > -1)) && K.qmatch(salesState.q, r.number + ' ' + (r.customer_name || '') + ' ' + (r.customer_phone || ''), r.customer_phone);
         });
         var live = list.filter(function (r) { return r.state !== 'void' && r.status !== 'void'; }), total = live.reduce(function (a, r) { return a + r.total; }, 0), bal = live.reduce(function (a, r) { return a + (r.type === 'invoice' ? r.balance : 0); }, 0);
-        var cols = [{ k: 'number', label: t === 'receipt' ? 'Receipt' : t === 'quote' ? 'Quotation' : 'Invoice', f: function (r) { return '<b class="mono">' + esc(r.number) + '</b>'; } }, { k: 'customer_name', label: 'Customer', f: function (r) { return esc(r.customer_name || '—') + '<div class="tiny">' + esc(K.phone(r.customer_phone)) + '</div>'; } }, { k: 'date', label: 'Date', f: function (r) { return K.ds(r.date); } }];
+        var cols = [{ k: 'number', label: t === 'receipt' ? 'Receipt' : t === 'quote' ? 'Quotation' : t === 'credit' ? 'Credit note' : 'Invoice', f: function (r) { return '<b class="mono">' + esc(r.number) + '</b>'; } }, { k: 'customer_name', label: 'Customer', f: function (r) { return esc(r.customer_name || '—') + '<div class="tiny">' + esc(K.phone(r.customer_phone)) + '</div>'; } }, { k: 'date', label: 'Date', f: function (r) { return K.ds(r.date); } }];
         if (t === 'invoice' || t === 'web') cols.push({ k: 'due', label: 'Due', f: function (r) { return K.ds(r.due); } });
         if (t === 'quote') cols.push({ k: 'due', label: 'Valid to', f: function (r) { return K.ds(r.due); } });
         cols.push({ k: 'total', label: 'Total', n: 1, f: function (r) { return money(r.total); } });
         if (t === 'invoice' || t === 'web') cols.push({ k: 'balance', label: 'Balance', n: 1, f: function (r) { return r.balance > 0 ? money(r.balance) : '<span class="mut">—</span>'; } });
+        if (t === 'credit') cols.push({ k: 'x', label: 'Against invoice', f: function (r) { return esc((r.meta && r.meta.invoice) || ''); } }, { k: 'y', label: 'Reason', f: function (r) { return esc((r.meta && r.meta.reason) || ''); } });
         if (t === 'receipt') cols.push({ k: 'x', label: 'For invoice', f: function (r) { return esc(r.meta.invoice || ''); } }, { k: 'y', label: 'Paid by', f: function (r) { return esc((K.method(r.meta.method) + ' ') + (r.meta.code || '')); } });
         else cols.push({ k: 'state', label: 'Status', f: function (r) { return t === 'web' ? K.badge(r.fulfil || 'awaiting_payment') + ' ' + K.badge(r.state) : K.badge(r.state); } });
         if (t === 'invoice') cols.push({ k: 'etims_status', label: 'eTIMS', f: function (r) { return r.etims_status ? K.badge(r.etims_status) : ''; } });
@@ -116,8 +117,10 @@
       acts.push('<a class="btn" target="_blank" rel="noopener" href="' + wa + '">' + ic(I.wa) + 'WhatsApp</a>');
       if (isInv && d.balance > 0 && d.state !== 'void') { if (K.me.mpesa_ready) acts.push('<button class="btn sun" data-a="stk">' + ic(I.phone) + 'Request M-Pesa</button>'); acts.push('<button class="btn" data-a="pay">' + ic(I.cash) + 'Record payment</button>'); }
       if (isQ && d.status !== 'accepted') { acts.push('<button class="btn sun" data-a="convert">' + ic(I.check) + 'Convert to invoice</button>'); }
-      if (!isR && !isVoid && !(isInv && d.paid > 0)) acts.push('<button class="btn" data-a="edit">' + ic(I.edit) + 'Edit</button>');
-      if (!isR) acts.push('<button class="btn" data-a="dup">' + ic(I.copy) + 'Duplicate</button>');
+      var isC = d.type === 'credit';
+      if (!isR && !isC && !isVoid && !(isInv && d.paid > 0)) acts.push('<button class="btn" data-a="edit">' + ic(I.edit) + 'Edit</button>');
+      if (!isR && !isC) acts.push('<button class="btn" data-a="dup">' + ic(I.copy) + 'Duplicate</button>');
+      if (isInv && !isVoid && K.can('sales')) acts.push('<button class="btn" data-a="credit">' + ic(I.x) + 'Credit note</button>');
       if (isInv && !isVoid && K.can('jobs')) acts.push('<button class="btn" data-a="job">' + ic(I.truck) + 'Book installation</button>');
       if (isQ && d.status !== 'accepted' && d.status !== 'declined') acts.push('<button class="btn" data-a="decline">Mark declined</button>');
       if (isInv && !d.paid && d.state !== 'void') acts.push('<button class="btn danger" data-a="void">' + ic(I.trash) + 'Cancel invoice</button>');
@@ -179,6 +182,11 @@
           if (a === 'decline') return act('status', { status: 'declined' }).then(function () { K.openDoc(d.id); }).catch(K.fail);
           if (a === 'deliver') return act('deliver').then(function () { K.openDoc(d.id); }).catch(K.fail);
           if (a === 'job') return act('job').catch(K.fail);
+          if (a === 'credit') {
+            var mc = K.modal('Credit note against ' + esc(d.number), '<p class="sub">Use a credit note to reduce what the customer owes, for example for returned goods or a discount agreed after invoicing. It lowers sales and VAT in your accounts.</p><div class="grid2">' + K.field('Amount (including VAT)', 'amount', '', 'number') + K.field('Reason', 'reason', '', 'text', { ph: 'e.g. One panel returned' }) + '</div>', '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-cn>Issue credit note</button>');
+            $('[data-cn]', mc).onclick = function () { var f = K.read(mc); K.closeModal(); act('credit', f).then(function () { K.openDoc(d.id); K.refreshBadges(); }).catch(K.fail); };
+            return;
+          }
           if (a === 'etims') return act('etims', { ref: $('[data-et]', dr).value }).then(function () { K.openDoc(d.id); K.refreshBadges(); }).catch(K.fail);
         };
       });
@@ -698,7 +706,7 @@
 
   /* ================================================================ REPORTS */
   var repState = { type: 'pl', p: 'month', from: '', to: '' };
-  var CAT = { pl: 'Profit and loss', cashflow: 'Cash flow', sales: 'Sales by product and category', customers: 'Sales by customer', receivables: 'Money owed', vat: 'VAT summary', stock: 'Stock valuation', payments: 'Payments received', expenses: 'Expenses', jobs: 'Installations' };
+  var CAT = { pl: 'Profit and loss', cashflow: 'Cash flow', sales: 'Sales by product and category', customers: 'Sales by customer', receivables: 'Money owed', vat: 'VAT summary', stock: 'Stock valuation', payments: 'Payments received', expenses: 'Expenses', jobs: 'Installations', bs: 'Balance sheet', tb: 'Trial balance', gl: 'General ledger', payables: 'Bills owed to suppliers' };
   K.V.reports = function (v) {
     var pr = repState.p === 'custom' ? [repState.from || K.today(), repState.to || K.today()] : period(repState.p);
     v.innerHTML = K.head('Reports', 'Every report downloads as Excel or PDF, ready for your accountant or KRA.', '') +

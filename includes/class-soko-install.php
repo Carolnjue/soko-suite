@@ -102,6 +102,28 @@ final class Soko_Install {
 				$wpdb->query( "UPDATE $lt SET source = 'Website quote form' WHERE source IN ('Quote form', 'Website', 'Quote')" ); // phpcs:ignore
 				$wpdb->query( "UPDATE $lt SET source = 'Solar calculator' WHERE source IN ('Power Planner', 'Power planner', 'Planner')" ); // phpcs:ignore
 			}
+			if ( version_compare( (string) get_option( 'soko_db_version' ), '13', '<' ) ) {
+				global $wpdb;
+				$wpdb->query( $wpdb->prepare( 'UPDATE ' . soko_t( 'products' ) . ' SET runs = %s WHERE runs = %s', 'About 18 hours of lights, TV, fridge and Wi-Fi', 'About 8 hours of lights, TV, fridge and Wi-Fi' ) ); // phpcs:ignore
+				// One consistent payment and survey story across the site.
+				$site = get_option( 'soko_site' );
+				if ( is_array( $site ) ) {
+					$map  = array(
+						'By mobile money, bank transfer, card or cash, at checkout or against your invoice number. You get a receipt immediately. For larger projects we take a deposit to start and the balance on handover.' => 'Once we confirm your order, pay by mobile money, bank transfer, card or cash, using your order or invoice number as the reference. You get an official receipt as soon as the payment is confirmed. For larger projects we take a deposit to start and the balance on handover.',
+						'receipt sent instantly' => 'official receipt for every payment',
+						'Book a free consultation. An engineer visits, assesses your site and gives you a fixed quote with installation.' => 'Talk to an engineer at no cost. If a site visit is needed, the survey fee is deducted from your system when you go ahead, and you get a fixed quote with installation.',
+						'150 to 350 litres' => '150 to 300 litres',
+					);
+					$json = wp_json_encode( $site, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+					$new  = str_replace( array_keys( $map ), array_values( $map ), $json );
+					if ( $new !== $json ) {
+						$dec = json_decode( $new, true );
+						if ( is_array( $dec ) ) {
+							update_option( 'soko_site', $dec, false );
+						}
+					}
+				}
+			}
 			self::activate();
 		}
 		if ( get_option( 'soko_flush' ) ) {
@@ -359,6 +381,19 @@ final class Soko_Install {
 			created datetime NULL,
 			PRIMARY KEY  (id)
 		) $c;";
+		$sql[] = 'CREATE TABLE ' . $t( 'journal' ) . " (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			date date NULL,
+			memo varchar(255) NOT NULL DEFAULT '',
+			ref varchar(60) NOT NULL DEFAULT '',
+			source varchar(20) NOT NULL DEFAULT 'manual',
+			entries longtext NULL,
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			demo tinyint(1) NOT NULL DEFAULT 0,
+			created datetime NULL,
+			PRIMARY KEY  (id),
+			KEY source (source)
+		) $c;";
 		$sql[] = 'CREATE TABLE ' . $t( 'activity' ) . " (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -453,7 +488,7 @@ final class Soko_Install {
 			$p( 'INV-H5', 'Hybrid inverter 5 kW, 48 V', 'hybrid', 78000, 18, array( 'Output' => '5 kW pure sine', 'Solar input' => '6.5 kW, 2 MPPT', 'Battery' => '48 V lithium or lead-acid', 'Monitoring' => 'Wi-Fi app' ), 'Runs a home on solar, battery and KPLC together', array( 'img' => 'prod-inverters.jpg', 'watts' => 5000, 'featured' => 1, 'install_fee' => 9000, 'warranty' => '3 years' ) ),
 			$p( 'INV-V5', 'Victron MultiPlus-II 5 kVA', 'hybrid', 265000, 4, array( 'Output' => '4 kW continuous', 'Charger' => '70 A', 'Transfer' => 'Under 20 ms', 'Monitoring' => 'VRM portal' ), 'Premium backup for offices, clinics and data rooms', array( 'brand' => 'Victron Energy', 'watts' => 4000, 'install_fee' => 15000, 'warranty' => '5 years' ) ),
 			$p( 'GTI-10', 'Grid-tie inverter 10 kW', 'gridtie', 145000, 7, array( 'Output' => '10 kW three-phase', 'MPPT' => '2 trackers', 'Efficiency' => '98.3%', 'Monitoring' => 'Wi-Fi app' ), 'Cuts daytime KPLC bills for businesses', array( 'watts' => 10000, 'install_fee' => 20000, 'warranty' => '5 years' ) ),
-			$p( 'LI-5', 'Lithium battery 5 kWh', 'lithium', 135000, 26, array( 'Capacity' => '5.12 kWh', 'Voltage' => '51.2 V', 'Cycles' => '6,000 at 80% depth', 'Mount' => 'Wall or rack' ), 'About 8 hours of lights, TV, fridge and Wi-Fi', array( 'img' => 'prod-lithium.jpg', 'brand' => 'Lithium Valley', 'kwh' => 5.12, 'tag' => 'In demand', 'featured' => 1, 'install_fee' => 5000, 'warranty' => '6 years' ) ),
+			$p( 'LI-5', 'Lithium battery 5 kWh', 'lithium', 135000, 26, array( 'Capacity' => '5.12 kWh', 'Voltage' => '51.2 V', 'Cycles' => '6,000 at 80% depth', 'Mount' => 'Wall or rack' ), 'About 18 hours of lights, TV, fridge and Wi-Fi', array( 'img' => 'prod-lithium.jpg', 'brand' => 'Lithium Valley', 'kwh' => 5.12, 'tag' => 'In demand', 'featured' => 1, 'install_fee' => 5000, 'warranty' => '6 years' ) ),
 			$p( 'LI-10', 'Lithium battery 10 kWh', 'lithium', 245000, 11, array( 'Capacity' => '10.24 kWh', 'Voltage' => '51.2 V', 'Cycles' => '6,000 at 80% depth', 'Mount' => 'Floor stand' ), 'A full night for a family home', array( 'img' => 'prod-lithium.jpg', 'brand' => 'Lithium Valley', 'kwh' => 10.24, 'install_fee' => 7000, 'warranty' => '6 years' ) ),
 			$p( 'GEL-200', 'Gel battery 200 Ah, 12 V', 'gel', 32000, 40, array( 'Capacity' => '200 Ah', 'Voltage' => '12 V', 'Cycles' => '1,200 at 50% depth', 'Type' => 'Deep-cycle gel' ), 'Budget backup for small systems', array( 'kwh' => 2.4 ) ),
 			$p( 'PS-1', 'Portable power station 1 kWh', 'stations', 89000, 15, array( 'Battery' => '1 kWh built in', 'Inverter' => '200 W AC', 'Charging' => 'Solar, AC or car', 'Uses' => 'Home backup, outdoor work, events' ), 'Router, lights, laptop and POS through a blackout', array( 'img' => 'prod-station.jpg', 'kwh' => 1, 'watts' => 200, 'tag' => 'Entry level', 'featured' => 1, 'warranty' => '2 years' ) ),

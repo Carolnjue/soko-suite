@@ -84,7 +84,7 @@ final class Soko_PDF {
 		$pdf->SetMargins( 15, 12, 15 );
 		$pdf->SetAutoPageBreak( true, 20 );
 		$pdf->AddPage();
-		$titles = array( 'quote' => 'Quotation', 'invoice' => $s['vat_registered'] ? 'Tax invoice' : 'Invoice', 'receipt' => 'Receipt' );
+		$titles = array( 'quote' => 'Quotation', 'invoice' => $s['vat_registered'] ? 'Tax invoice' : 'Invoice', 'receipt' => 'Receipt', 'credit' => 'Credit note' );
 		$right  = array( $d['number'], 'Date: ' . date_i18n( 'j M Y', strtotime( $d['date'] ) ) );
 		if ( 'quote' === $d['type'] && $d['due'] ) {
 			$right[] = 'Valid until: ' . date_i18n( 'j M Y', strtotime( $d['due'] ) );
@@ -92,7 +92,7 @@ final class Soko_PDF {
 		if ( 'invoice' === $d['type'] && $d['due'] ) {
 			$right[] = 'Due: ' . date_i18n( 'j M Y', strtotime( $d['due'] ) );
 		}
-		if ( 'receipt' === $d['type'] && ! empty( $d['meta']['invoice'] ) ) {
+		if ( in_array( $d['type'], array( 'receipt', 'credit' ), true ) && ! empty( $d['meta']['invoice'] ) ) {
 			$right[] = 'For invoice: ' . $d['meta']['invoice'];
 		}
 		self::head( $pdf, ( 'void' === ( isset( $d['state'] ) ? $d['state'] : '' ) ? 'CANCELLED · ' : '' ) . $titles[ $d['type'] ], $right );
@@ -264,12 +264,33 @@ final class Soko_PDF {
 	 * Report PDF. $sections: array of array( 'title' => '', 'head' => array(), 'rows' => array(), 'align' => array() ).
 	 */
 	public static function report( $title, $period, $sections, $kpis = array() ) {
+		return self::pack( array( array( 'title' => $title, 'period' => $period, 'sections' => $sections, 'kpis' => $kpis ) ) );
+	}
+
+	/** Several reports in one PDF, each starting on a new page. */
+	public static function pack( $reports, $cover = null ) {
 		$s   = Soko_Settings::all();
 		$pdf = new Soko_PDF_Doc( 'P', 'mm', 'A4' );
 		$pdf->foot = $s['business'] . ' · Generated ' . date_i18n( 'j M Y H:i' );
 		$pdf->AliasNbPages();
 		$pdf->SetMargins( 15, 12, 15 );
 		$pdf->SetAutoPageBreak( true, 20 );
+		if ( $cover ) {
+			$pdf->AddPage();
+			self::head( $pdf, $cover['title'], array( $cover['period'] ) );
+			$pdf->SetFont( 'Helvetica', '', 10.5 );
+			self::color( $pdf, self::INK );
+			foreach ( $cover['lines'] as $ln ) {
+				$pdf->Cell( 0, 8, self::t( $ln ), 0, 1 );
+			}
+		}
+		foreach ( $reports as $r ) {
+			self::draw( $pdf, $r['title'], $r['period'], $r['sections'], isset( $r['kpis'] ) ? $r['kpis'] : array() );
+		}
+		return $pdf->Output( 'S' );
+	}
+
+	private static function draw( $pdf, $title, $period, $sections, $kpis ) {
 		$pdf->AddPage();
 		self::head( $pdf, $title, array( $period ) );
 		if ( $kpis ) {
@@ -360,6 +381,6 @@ final class Soko_PDF {
 			}
 			$pdf->Ln( 4 );
 		}
-		return $pdf->Output( 'S' );
 	}
+
 }

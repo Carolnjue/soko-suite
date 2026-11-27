@@ -91,6 +91,7 @@ function soko_modules() {
 		'stock'      => array( 'Products and stock', 'soko_stock', 'Operate' ),
 		'purchases'  => array( 'Purchases', 'soko_purchases', 'Operate' ),
 		'expenses'   => array( 'Expenses', 'soko_expenses', 'Money' ),
+		'accounts'   => array( 'Accounts', 'soko_reports', 'Money' ),
 		'reports'    => array( 'Reports', 'soko_reports', 'Money' ),
 		'compliance' => array( 'Tax and compliance', 'soko_compliance', 'Money' ),
 		'studio'     => array( 'Site Studio', 'soko_site', 'Website' ),

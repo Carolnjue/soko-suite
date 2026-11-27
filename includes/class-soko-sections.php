@@ -206,7 +206,7 @@ final class Soko_Sections {
 		};
 		$services = array(
 			array( 'icon' => 'panel', 'image' => 'soko:seed/team-roof.jpg', 'title' => 'Solar PV systems', 'text' => 'On-grid, off-grid and hybrid systems for homes, businesses and institutions, sized to how you use power.', 'link' => '/shop/kits/' ),
-			array( 'icon' => 'heater', 'image' => 'soko:seed/team-heater.jpg', 'title' => 'Solar water heating', 'text' => 'Pressurised heaters from 150 to 350 litres, supplied, installed and tested.', 'link' => '/shop/heaters/' ),
+			array( 'icon' => 'heater', 'image' => 'soko:seed/team-heater.jpg', 'title' => 'Solar water heating', 'text' => 'Pressurised heaters from 150 to 300 litres, supplied, installed and tested.', 'link' => '/shop/heaters/' ),
 			array( 'icon' => 'pump', 'image' => 'soko:seed/proj-baraka.jpg', 'title' => 'Borehole solarisation', 'text' => 'Pumps and pumping inverters that run boreholes and farm machinery on sunshine.', 'link' => '/shop/pumps/' ),
 			array( 'icon' => 'street', 'image' => 'soko:seed/team-street.jpg', 'title' => 'Solar lighting', 'text' => 'Floodlights and street lights for compounds, estates, schools and farms.', 'link' => '/shop/street/' ),
 			array( 'icon' => 'battery', 'image' => 'soko:seed/proj-bunyore.jpg', 'title' => 'Power backup', 'text' => 'Lithium storage and inverters that keep you running through blackouts.', 'link' => '/shop/lithium/' ),
@@ -271,7 +271,7 @@ final class Soko_Sections {
 						) ) ),
 						$sec( 'trust_strip', array( 'items' => array(
 							array( 'icon' => 'shield', 'title' => 'EPRA-licensed', 'text' => 'technicians and engineers' ),
-							array( 'icon' => 'battery', 'title' => 'Easy payment', 'text' => 'receipt sent instantly' ),
+							array( 'icon' => 'battery', 'title' => 'Easy payment', 'text' => 'official receipt for every payment' ),
 							array( 'icon' => 'kit', 'title' => 'Countrywide delivery', 'text' => 'and installation' ),
 							array( 'icon' => 'tools', 'title' => 'Aftercare', 'text' => 'maintenance visits' ),
 						) ) ),
@@ -293,7 +293,7 @@ final class Soko_Sections {
 						$sec( 'page_hero', array( 'title' => 'Everything solar, from one team', 'text' => 'We design, supply, install and maintain. One point of contact from the first survey to the final switch-on.', 'style' => 'photo', 'image' => $img . 'team-roof.jpg', 'cta_label' => 'Book a site survey', 'cta_link' => '/contact/' ) ),
 						$sec( 'services', array( 'title' => 'Our services', 'text' => '', 'items' => $services ) ),
 						$sec( 'text_image', array( 'kicker' => 'Water for farms and homes', 'title' => 'Borehole and farm solarisation', 'text' => '<p>Diesel pumps are expensive to run and break down when you need water most. We size a solar pump or a pumping inverter for your borehole depth and daily water need, so your tank fills every sunny day.</p><p>We also solarise farm machinery and cold rooms.</p>', 'image' => $img . 'proj-baraka.jpg', 'side' => 'right', 'cta_label' => 'See pumps', 'cta_link' => '/shop/pumps/' ) ),
-						$sec( 'text_image', array( 'kicker' => 'Hot water', 'title' => 'Solar water heating', 'text' => '<p>Pressurised flat-plate heaters with stainless steel tanks, from 150 to 350 litres. We install, pressure-test and hand over, with an electric backup for cloudy days.</p>', 'image' => $img . 'team-heater.jpg', 'side' => 'left', 'cta_label' => 'See water heaters', 'cta_link' => '/shop/heaters/' ) ),
+						$sec( 'text_image', array( 'kicker' => 'Hot water', 'title' => 'Solar water heating', 'text' => '<p>Pressurised flat-plate heaters with stainless steel tanks, from 150 to 300 litres. We install, pressure-test and hand over, with an electric backup for cloudy days.</p>', 'image' => $img . 'team-heater.jpg', 'side' => 'left', 'cta_label' => 'See water heaters', 'cta_link' => '/shop/heaters/' ) ),
 						$sec( 'steps', array( 'title' => 'How we work', 'text' => '', 'items' => $steps ) ),
 						$sec( 'cta_band', $cta ),
 					),
@@ -338,7 +338,7 @@ final class Soko_Sections {
 						$sec( 'contact', array( 'title' => '', 'text' => '' ) ),
 						$sec( 'faq', array( 'title' => 'Common questions', 'text' => '', 'items' => array(
 							array( 'q' => 'Do you install outside Nairobi?', 'a' => 'Yes. We have installed in Kisumu, Vihiga, Voi, Machakos and beyond. Delivery and installation costs depend on distance.' ),
-							array( 'q' => 'How do I pay?', 'a' => 'By mobile money, bank transfer, card or cash, at checkout or against your invoice number. You get a receipt immediately. For larger projects we take a deposit to start and the balance on handover.' ),
+							array( 'q' => 'How do I pay?', 'a' => 'Once we confirm your order, pay by mobile money, bank transfer, card or cash, using your order or invoice number as the reference. You get an official receipt as soon as the payment is confirmed. For larger projects we take a deposit to start and the balance on handover.' ),
 							array( 'q' => 'Are your technicians licensed?', 'a' => 'Yes. Our technicians and engineers are licensed by EPRA.' ),
 						) ) ),
 					),

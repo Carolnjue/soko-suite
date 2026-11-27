@@ -281,7 +281,7 @@ final class Soko_Ledger {
 		$d['customer_id'] = (int) $d['customer_id'];
 		$d['parent_id']   = (int) $d['parent_id'];
 		$d['meta']        = soko_json( $d['meta'] );
-		$d['balance']     = 'void' === $d['status'] ? 0 : max( 0, round( $d['total'] - $d['paid'], 2 ) );
+		$d['balance']     = 'void' === $d['status'] || 'invoice' !== $d['type'] ? 0 : max( 0, round( $d['total'] - $d['paid'], 2 ) );
 		$d['state']       = self::state( $d );
 		if ( $with_lines ) {
 			$d['lines'] = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'lines' ) . ' WHERE doc_id = %d ORDER BY sort, id', $d['id'] ), ARRAY_A ); // phpcs:ignore
@@ -630,7 +630,7 @@ final class Soko_Ledger {
 			$doc['customer'] ? $doc['customer']['name'] : '',
 			strtolower( $kind[ $doc['type'] ] ),
 			$doc['number'],
-			'invoice' === $doc['type'] && $doc['balance'] > 0 ? 'Amount due: ' . soko_money( $doc['balance'] ) . '. Pay by M-Pesa using account number ' . $doc['number'] . '.' : '',
+			'invoice' === $doc['type'] && $doc['balance'] > 0 ? 'Amount due: ' . soko_money( $doc['balance'] ) . '. Please use ' . $doc['number'] . ' as the payment reference.' : '',
 			$doc['pay_url'],
 			$name,
 			soko_setting( 'phone' )

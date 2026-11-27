@@ -16,7 +16,7 @@
 defined( 'ABSPATH' ) || exit;
 
 define( 'SOKO_VERSION', '1.3.1' );
-define( 'SOKO_DB_VERSION', '4' );
+define( 'SOKO_DB_VERSION', '5' );
 define( 'SOKO_FILE', __FILE__ );
 define( 'SOKO_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SOKO_URL', plugin_dir_url( __FILE__ ) );

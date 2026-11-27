@@ -35,7 +35,7 @@ final class Soko_Install {
 
 	public static function maybe_upgrade() {
 		if ( get_option( 'soko_db_version' ) !== SOKO_DB_VERSION ) {
-			if ( in_array( get_option( 'soko_db_version' ), array( '1', '2', '3' ), true ) ) {
+			if ( in_array( get_option( 'soko_db_version' ), array( '1', '2', '3', '4' ), true ) ) {
 				// 1.x staging sites: take the redesigned header, pages and category photos.
 				update_option( 'soko_site', Soko_Sections::default_site(), false );
 				delete_option( 'soko_categories' );

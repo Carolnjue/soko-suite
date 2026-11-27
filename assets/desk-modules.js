@@ -436,7 +436,7 @@
     Promise.all([K.api('events?from=' + from + '&to=' + to), K.can('jobs') ? K.api('jobs').catch(function () { return []; }) : Promise.resolve([])]).then(function (res) {
       var evs = res[0], jobs = res[1] || [];
       var linked = {}; evs.forEach(function (e) { if (+e.job_id) linked[e.job_id] = 1; });
-      jobs.forEach(function (j) { if (j.date && j.date >= from && j.date <= to && !linked[j.id]) evs.push({ id: 'j' + j.id, job: j.id, title: j.title + (j.customer ? ' · ' + j.customer : ''), kind: 'Install', start: j.date + ' 08:00:00', who: j.techs || '', location: j.location || '', done: j.stage === 'Commissioned' ? 1 : 0 }); });
+      jobs.forEach(function (j) { if (j.date && j.date >= from && j.date <= to && !linked[j.id] && !evs.some(function (e) { return String(e.start).slice(0, 10) === j.date && (String(e.title).toLowerCase().indexOf(String(j.title).toLowerCase()) > -1 || (j.location && e.location === j.location)); })) evs.push({ id: 'j' + j.id, job: j.id, title: j.title + (j.customer ? ' · ' + j.customer : ''), kind: 'Install', start: j.date + ' 08:00:00', who: j.techs || '', location: j.location || '', done: j.stage === 'Commissioned' ? 1 : 0 }); });
       var people = Array.from(new Set(evs.map(function (e) { return e.who; }).filter(Boolean)));
       var list = evs.filter(function (e) { return !schedState.who || e.who === schedState.who; });
       var days = [];

@@ -726,14 +726,14 @@ final class Soko_API {
 						'title'       => sanitize_text_field( ! empty( $b['title'] ) ? $b['title'] : 'Installation for ' . $d['number'] ),
 						'customer_id' => $d['customer_id'],
 						'doc_id'      => $d['id'],
-						'stage'       => 'Scheduled',
+						'stage'       => 'Survey',
 						'location'    => $d['customer'] ? trim( $d['customer']['address'] . ' ' . $d['customer']['county'] ) : '',
 						'checklist'   => '[]',
 						'created'     => soko_now(),
 						'updated'     => soko_now(),
 					)
 				);
-				return array( 'message' => 'Installation job created.' );
+				return array( 'message' => 'Installation booked. Set the date and team.', 'job_id' => (int) $wpdb->insert_id );
 		}
 		return new WP_Error( 'soko', 'Unknown action.', array( 'status' => 400 ) );
 	}

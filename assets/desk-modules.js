@@ -100,7 +100,7 @@
       if (isQ && d.status !== 'accepted') { acts.push('<button class="btn sun" data-a="convert">' + ic(I.check) + 'Convert to invoice</button>'); }
       if (!isR && !(isInv && d.paid > 0)) acts.push('<button class="btn" data-a="edit">' + ic(I.edit) + 'Edit</button>');
       if (!isR) acts.push('<button class="btn" data-a="dup">' + ic(I.copy) + 'Duplicate</button>');
-      if (isInv && K.can('jobs')) acts.push('<button class="btn" data-a="job">' + ic(I.truck) + 'Create installation job</button>');
+      if (isInv && K.can('jobs')) acts.push('<button class="btn" data-a="job">' + ic(I.truck) + 'Book installation</button>');
       if (isQ && d.status !== 'accepted' && d.status !== 'declined') acts.push('<button class="btn" data-a="decline">Mark declined</button>');
       if (isInv && !d.paid && d.state !== 'void') acts.push('<button class="btn danger" data-a="void">' + ic(I.trash) + 'Cancel invoice</button>');
       var fulfil = '';
@@ -116,14 +116,14 @@
       if (d.parent) links.push('From <a href="#" data-open="' + d.parent.id + '">' + esc(d.parent.number) + '</a>');
       (d.children || []).forEach(function (ch) { links.push((ch.type === 'receipt' ? 'Receipt ' : ch.type === 'invoice' ? 'Invoice ' : '') + '<a href="#" data-open="' + ch.id + '">' + esc(ch.number) + '</a>'); });
       var stks = (d.stk || []).length ? '<p class="tiny">Last M-Pesa prompt: ' + esc(d.stk[0].status) + ' · ' + esc(d.stk[0].message) + '</p>' : '';
-      var body = '<div class="docv"><div class="dvh"><div><b>' + esc(d.number) + '</b><div>' + K.badge(d.state) + (d.source === 'web' ? ' <span class="st">Website</span>' : '') + '</div></div><div style="text-align:right"><div class="tiny">' + (isQ ? 'Valid to ' + K.d(d.due) : isInv ? 'Due ' + K.d(d.due) : K.d(d.date)) + '</div><b>' + money(isInv ? d.balance : d.total) + '</b><div class="tiny">' + (isInv ? 'balance of ' + money(d.total) : 'total') + '</div></div></div>' +
+      var body = '<div class="docv"><div class="dvh"><div><b>' + esc(d.number) + '</b><div>' + K.badge(d.state) + (d.source === 'web' ? ' <span class="st">Website</span>' : '') + '</div></div><div style="text-align:right"><div class="tiny">' + (isQ ? 'Valid to ' + K.d(d.due) : isInv ? 'Due ' + K.d(d.due) : K.d(d.date)) + '</div><b>' + money(isInv ? d.balance : d.total) + '</b><div class="tiny">' + (isInv ? (d.balance < d.total ? 'still to pay · ' + money(d.total - d.balance) + ' paid of ' + money(d.total) : 'to pay') : 'total') + '</div></div></div>' +
         '<div style="padding:14px 16px"><dl class="kv"><dt>Customer</dt><dd><b>' + esc(c.name || '—') + '</b></dd><dt>Phone</dt><dd>' + esc(K.phone(c.phone)) + '</dd>' + (c.email ? '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' : '') + (c.kra ? '<dt>KRA PIN</dt><dd>' + esc(c.kra) + '</dd>' : '') + '<dt>Date</dt><dd>' + K.d(d.date) + '</dd>' + (links.length ? '<dt>Linked</dt><dd>' + links.join(' · ') + '</dd>' : '') + '</dl></div>' +
         '<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Price</th><th class="n">Amount</th></tr></thead><tbody>' + d.lines.map(function (l) { return '<tr><td>' + esc(l.description) + '</td><td class="n">' + K.num(l.qty) + '</td><td class="n">' + money(l.price, 1) + '</td><td class="n">' + money(l.qty * l.price, 1) + '</td></tr>'; }).join('') + '</tbody></table>' +
         '<div class="tot">' + (d.vat ? '<div><span>Excl. VAT</span><span>' + money(d.subtotal) + '</span></div><div><span>VAT</span><span>' + money(d.vat) + '</span></div>' : '') + '<div class="g"><span>Total</span><span>' + money(d.total) + '</span></div>' + (isInv && d.paid ? '<div><span>Paid</span><span>' + money(d.paid) + '</span></div><div><b>Balance</b><b>' + money(d.balance) + '</b></div>' : '') + '</div>' + (d.notes ? '<p style="padding:0 16px 14px;white-space:pre-line" class="tiny">' + esc(d.notes) + '</p>' : '') + '</div>' +
         '<div class="actgrid">' + acts.join('') + '</div>' + stks + fulfil + pays + etims;
       var dr = K.drawer(esc(isQ ? 'Quotation' : isInv ? 'Invoice' : 'Receipt') + ' ' + esc(d.number), body, '', true);
       var act = function (a, extra) {
-        return K.api('docs/' + d.id + '/action', { body: Object.assign({ action: a }, extra || {}) }).then(function (r) { if (r.message) K.toast(r.message); return r; });
+        return K.api('docs/' + d.id + '/action', { body: Object.assign({ action: a }, extra || {}) }).then(function (r) { if (r.message) K.toast(r.message); if (r.job_id) { K.openJob = r.job_id; if (K.closeDrawer) K.closeDrawer(); document.querySelectorAll('.drawer,.overlay,.scrim').forEach(function (x) { x.remove(); }); location.hash = '#jobs'; } return r; });
       };
       $$('[data-open]', dr).forEach(function (a) { a.onclick = function (e) { e.preventDefault(); K.openDoc(+a.dataset.open); }; });
       $$('[data-ff]', dr).forEach(function (b) { b.onclick = function () { (b.dataset.ff === 'delivered' ? act('deliver') : act('fulfil', { fulfil: b.dataset.ff })).then(function () { K.openDoc(d.id); K.refreshBadges(); }); }; });
@@ -387,6 +387,7 @@
           return '<div class="lane" data-lane="' + esc(s) + '"><h4>' + esc(s) + '<span>' + js.length + '</span></h4>' + js.map(function (j) { var done = (j.checklist || []).length, pct = checklist.length ? Math.round(done / checklist.length * 100) : 0; return '<div class="ticket" draggable="true" data-job="' + j.id + '"><b>' + esc(j.customer || j.title) + '</b><small>' + esc(j.title) + (j.size ? ' · ' + esc(j.size) : '') + '</small><small>' + esc(j.location) + '</small><div class="row"><small>' + esc(j.techs || 'Unassigned') + '</small><span class="st">' + (j.date ? K.ds(j.date) : 'No date') + '</span></div><div class="prog"><i style="width:' + pct + '%"></i></div></div>'; }).join('') + '</div>';
         }).join('') + '</div>';
       $('[data-nj]', v).onclick = function () { K.editJob(null, stages, checklist); };
+      if (K.openJob) { var oj = jobs.filter(function (j) { return j.id == K.openJob; })[0]; K.openJob = 0; if (oj) K.editJob(oj, stages, checklist); }
       $$('[data-job]', v).forEach(function (t) {
         t.onclick = function () { K.editJob(jobs.filter(function (j) { return j.id == t.dataset.job; })[0], stages, checklist); };
         t.ondragstart = function (e) { e.dataTransfer.setData('text', t.dataset.job); t.classList.add('drag'); };
@@ -432,19 +433,26 @@
     var monday = function (iso) { var d = new Date(iso + 'T12:00:00'), w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return K.iso(d); };
     if (!schedState.start) schedState.start = monday(K.today());
     var from = schedState.start, to = K.add(from, 13);
-    K.api('events?from=' + from + '&to=' + to).then(function (evs) {
+    Promise.all([K.api('events?from=' + from + '&to=' + to), K.can('jobs') ? K.api('jobs').catch(function () { return []; }) : Promise.resolve([])]).then(function (res) {
+      var evs = res[0], jobs = res[1] || [];
+      var linked = {}; evs.forEach(function (e) { if (+e.job_id) linked[e.job_id] = 1; });
+      jobs.forEach(function (j) { if (j.date && j.date >= from && j.date <= to && !linked[j.id]) evs.push({ id: 'j' + j.id, job: j.id, title: j.title + (j.customer ? ' · ' + j.customer : ''), kind: 'Install', start: j.date + ' 08:00:00', who: j.techs || '', location: j.location || '', done: j.stage === 'Commissioned' ? 1 : 0 }); });
       var people = Array.from(new Set(evs.map(function (e) { return e.who; }).filter(Boolean)));
       var list = evs.filter(function (e) { return !schedState.who || e.who === schedState.who; });
       var days = [];
       for (var i = 0; i < 14; i++) days.push(K.add(from, i));
-      var wd = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      var wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      var kc = function (k) { k = String(k || '').toLowerCase(); return k.indexOf('install') > -1 ? 'k-ins' : k.indexOf('survey') > -1 ? 'k-sur' : k.indexOf('maint') > -1 ? 'k-mnt' : k.indexOf('call') > -1 ? 'k-call' : 'k-oth'; };
       v.innerHTML = K.head('Schedule', 'Installs, surveys, calls and maintenance for the next two weeks. The team gets an email reminder the evening before.', '<button class="btn" data-prev>← Earlier</button><button class="btn" data-now>This week</button><button class="btn" data-next>Later →</button><button class="btn sun" data-ne>' + ic(I.plus) + 'Add</button>') +
-        '<div class="box"><div class="toolbar"><select data-who><option value="">Everyone</option>' + people.map(function (p) { return '<option' + (p === schedState.who ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select><span class="tiny">' + K.d(from) + ' to ' + K.d(to) + '</span></div>' +
-        days.map(function (d, i) {
+        '<div class="box"><div class="toolbar"><select data-who><option value="">Everyone</option>' + people.map(function (p) { return '<option' + (p === schedState.who ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select><span class="tiny">' + K.d(from) + ' to ' + K.d(to) + '</span><span class="legend"><i class="k-ins"></i>Install<i class="k-sur"></i>Survey<i class="k-mnt"></i>Maintenance<i class="k-call"></i>Call</span></div>' +
+        '<div class="cal">' + wd.map(function (w) { return '<div class="cal-h">' + w + '</div>'; }).join('') +
+        days.map(function (d) {
           var es = list.filter(function (e) { return String(e.start).slice(0, 10) === d; });
-          if (!es.length && i % 7 > 4) return '';
-          return '<div class="day' + (d === K.today() ? ' today' : '') + '"><span>' + wd[i % 7] + ' ' + K.ds(d) + (d === K.today() ? ' · Today' : '') + '</span></div><ul class="sched">' + (es.length ? es.map(function (e) { return '<li class="' + (+e.done ? 'done' : '') + '"><time>' + K.t(e.start) + '<small>' + esc(e.kind) + '</small></time><span><b>' + esc(e.title) + '</b><br><small class="tiny">' + esc([e.who, e.location].filter(Boolean).join(' · ')) + '</small></span><span class="acts"><button class="btn sm" data-done="' + e.id + '" data-v="' + (+e.done ? 0 : 1) + '">' + (+e.done ? 'Undo' : 'Done') + '</button><button class="btn sm ghost" data-ee="' + e.id + '">' + ic(I.edit) + '</button></span></li>'; }).join('') : '<li><time></time><span class="tiny">Nothing booked</span><span></span></li>') + '</ul>';
-        }).join('') + '</div>';
+          var past = d < K.today();
+          return '<div class="cal-d' + (d === K.today() ? ' today' : '') + (past ? ' past' : '') + '" data-day="' + d + '"><span class="cal-n">' + K.ds(d) + '</span>' + es.map(function (e) { return '<button class="chip-ev ' + kc(e.kind) + (+e.done ? ' done' : '') + '" ' + (e.job ? 'data-oj="' + e.job + '"' : 'data-ee="' + e.id + '"') + ' title="' + esc(e.title) + '"><time>' + K.t(e.start) + '</time><b>' + esc(e.title) + '</b>' + (e.who ? '<small>' + esc(e.who) + '</small>' : '') + '</button>'; }).join('') + '<button class="cal-add" data-addday="' + d + '" aria-label="Add on ' + K.ds(d) + '">+</button></div>';
+        }).join('') + '</div></div>';
+      $$('[data-addday]', v).forEach(function (b) { b.onclick = function () { K.editEvent({ kind: 'Install', start: b.dataset.addday + ' 09:00:00', remind: 1 }); }; });
+      $$('[data-oj]', v).forEach(function (b) { b.onclick = function () { K.openJob = +b.dataset.oj; location.hash = '#jobs'; }; });
       $('[data-prev]', v).onclick = function () { schedState.start = K.add(from, -7); K.V.schedule(v); };
       $('[data-next]', v).onclick = function () { schedState.start = K.add(from, 7); K.V.schedule(v); };
       $('[data-now]', v).onclick = function () { schedState.start = monday(K.today()); K.V.schedule(v); };

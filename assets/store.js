@@ -527,10 +527,10 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   var targets = $$('main .band .wrap > *, main .strip .wrap > div, .tl');
   if (!('IntersectionObserver' in window) || reduce) { $$('.tl').forEach(function (t) { t.classList.add('in'); }); return; }
-  var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -40px 0px', threshold: 0 });
   targets.forEach(function (el, i) {
     if (el.getBoundingClientRect().top < innerHeight * 0.92) { el.classList.add('in'); if (el.classList.contains('tl')) return; return; }
-    if (!el.classList.contains('tl')) { el.classList.add('rv'); el.style.transitionDelay = (i % 4) * 0.05 + 's'; }
+    if (!el.classList.contains('tl') && el.offsetHeight < innerHeight * 1.5) { el.classList.add('rv'); el.style.transitionDelay = (i % 4) * 0.05 + 's'; }
     io.observe(el);
   });
 })();

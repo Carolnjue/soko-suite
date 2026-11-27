@@ -271,3 +271,26 @@
   });
   window.addEventListener('appinstalled', function () { var b = document.querySelector('[data-install]'); if (b) b.hidden = true; if (window.K && K.toast) K.toast('Dynamic Desk is installed. Open it from your apps or home screen.'); });
 })();
+
+/* Every card that summarises something opens the screen behind it */
+(function () {
+  function follow(el) {
+    var set = el.getAttribute('data-set');
+    if (set && window.K && K.S) { try { var o = JSON.parse(set); Object.keys(o).forEach(function (k) { if (K.S[k]) Object.assign(K.S[k], o[k]); }); } catch (e) {} }
+    if (el.dataset.scroll) {
+      var hs = [].slice.call(document.querySelectorAll('#view h3')).filter(function (h) { return h.textContent.trim() === el.dataset.scroll; })[0];
+      if (hs) hs.closest('.box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    var h = (el.dataset.go || '').replace(/^#/, '');
+    if (h && window.K && K.go) K.go(h);
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-go],[data-scroll]');
+    if (!el || e.target.closest('a[href],button,input,select,textarea,label') && !e.target.closest('a[href],button,input,select,textarea,label').matches('[data-go],[data-scroll]')) return;
+    if (el.closest('.drawer,.modal')) return;
+    e.preventDefault(); e.stopPropagation(); follow(el);
+  }, true);
+  document.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.kpi.link,.box.link')) { e.preventDefault(); follow(e.target); } });
+  new MutationObserver(function () { document.querySelectorAll('.kpi.link:not([tabindex]),.box.link:not([tabindex])').forEach(function (x) { x.tabIndex = 0; x.setAttribute('role', 'link'); }); }).observe(document.documentElement, { childList: true, subtree: true });
+})();

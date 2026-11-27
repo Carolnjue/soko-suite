@@ -314,3 +314,11 @@ details.tech[open] summary{margin-bottom:10px;color:var(--ink)}
 @media(max-width:760px){.appways{grid-template-columns:minmax(0,1fr)}}
 [data-install][hidden]{display:none!important}
 td.nw{white-space:nowrap}@media(max-width:640px){.stack td.nw{white-space:normal}}
+/* clickable summary cards */
+.kpi.link,.box.link{cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s}
+.kpi.link{position:relative}
+.kpi.link::after{content:"→";position:absolute;right:14px;top:12px;color:var(--soft);opacity:0;transform:translateX(-4px);transition:.2s}
+.kpi.link:hover,.box.link:hover,.kpi.link:focus-visible,.box.link:focus-visible{border-color:var(--brand);box-shadow:0 14px 30px -22px rgba(29,33,86,.5);outline:none}
+.kpi.link:hover{transform:translateY(-2px)}
+.kpi.link:hover::after{opacity:1;transform:none;color:var(--brand)}
+.box.link h3::after{content:" →";color:var(--soft);font-weight:500;opacity:0;transition:.2s}.box.link:hover h3::after{opacity:1}

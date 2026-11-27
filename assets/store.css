@@ -767,3 +767,8 @@ html[data-theme=dark] .band:has(.svc){background:radial-gradient(900px 420px at 
 html[data-theme=dark] .band:has(.ptabs) .addbtn{box-shadow:0 10px 22px -10px rgba(247,148,29,.8)}
 html[data-theme=dark] .shopband .side a{color:#1d2156}html[data-theme=dark] .shopband .side a.on,html[data-theme=dark] .shopband .side a:hover{background:#fff3e2;color:#b35d00}html[data-theme=dark] .shopband .side a svg{color:#4d63c9}
 html[data-theme=dark] .shopband select,html[data-theme=dark] .shopband input{background:#fff;color:#1a2240;border-color:#dfe3f4}
+@media(max-width:600px){.art .off{top:auto;bottom:10px;right:10px}.art .tag{font-size:11.5px;padding:3px 9px;max-width:calc(100% - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+html[data-theme=dark] .shopband,html[data-theme=dark] .band:has(.ptabs){color-scheme:light}
+@media(max-width:920px){.hero-in{height:calc(100svh - var(--hdr,66px));min-height:480px;max-height:820px}.hstage{flex:1;min-height:0;grid-template-rows:minmax(0,1fr)}.hslide{grid-template-rows:minmax(0,1fr) auto;height:100%}.hpic{height:auto;min-height:0}.hpic img{height:100%;width:100%;object-fit:cover}.hcopy p{-webkit-line-clamp:3;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;margin:8px 0 14px}.hcopy .kick{margin-bottom:4px}}
+@media(max-width:600px){.hcopy h1,.hcopy .h1{font-size:clamp(24px,7.2vw,30px)}.hcopy .btn{min-height:44px;padding-inline:16px;font-size:14.5px}.htabs{padding-block:8px 10px}}
+@media(max-width:920px){.hpic{overflow:hidden;border-radius:22px 22px 22px 70px}.hcopy .row{flex-wrap:nowrap;gap:8px}.hcopy .row .btn{flex:1 1 0;white-space:nowrap;padding-inline:12px;font-size:14px}}

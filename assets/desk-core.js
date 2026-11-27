@@ -66,6 +66,7 @@
   K.method = function (m) { var map = { mpesa: 'M-Pesa', bank: 'Bank transfer', cash: 'Cash', card: 'Card', cheque: 'Cheque' }; m = String(m || ''); return map[m.toLowerCase()] || (m.charAt(0).toUpperCase() + m.slice(1)); };
   K.waNum = function (p) { var d = String(p || '').replace(/\D/g, ''); if (/^0\d{9}$/.test(d)) d = '254' + d.slice(1); else if (/^[17]\d{8}$/.test(d)) d = '254' + d; return d; };
   K.url = function (path) { return D.api + path + (path.indexOf('?') > -1 ? '&' : '?') + '_wpnonce=' + D.nonce; };
+  K.withBanks = function (o) { return o.concat(((window.DESK && DESK.banks) || []).map(function (b) { return [b[0], b[1]]; })); };
   K.open = function (path) { window.open(K.url(path), '_blank', 'noopener'); };
 
   /* ---------------- toast ---------------- */

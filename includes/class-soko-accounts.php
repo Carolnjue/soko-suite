@@ -161,7 +161,21 @@ class Soko_Accounts {
 		return (bool) preg_match( '/^(not paid|unpaid|pay later)/i', trim( (string) $method ) );
 	}
 
+	/** Cash, M-Pesa, the main bank, and any extra bank or till accounts added with codes 1021 to 1099. */
+	public static function money_codes() {
+		$out = array( '1000', '1010', '1020' );
+		foreach ( self::chart() as $c => $a ) {
+			if ( 'asset' === $a['type'] && (int) $c > 1020 && (int) $c < 1100 ) {
+				$out[] = (string) $c;
+			}
+		}
+		return $out;
+	}
+
 	public static function money_account( $method ) {
+		if ( preg_match( '/^\d{4}$/', trim( (string) $method ) ) && in_array( trim( (string) $method ), self::money_codes(), true ) ) {
+			return trim( (string) $method );
+		}
 		$m = strtolower( str_replace( array( '-', ' ' ), '', (string) $method ) );
 		if ( 'mpesa' === $m ) {
 			return '1010';
@@ -280,7 +294,7 @@ class Soko_Accounts {
 		// 5. Supplier purchases: a received order is a bill we owe.
 		$J      = soko_t( 'journal' );
 		$paidby = array();
-		foreach ( $wpdb->get_results( "SELECT ref, entries FROM $J WHERE source = 'supplier_pay'", ARRAY_A ) as $j ) { // phpcs:ignore
+		foreach ( $wpdb->get_results( "SELECT ref, entries FROM $J WHERE source IN ('supplier_pay','supplier_return')", ARRAY_A ) as $j ) { // phpcs:ignore
 			foreach ( (array) json_decode( $j['entries'], true ) as $jl ) {
 				if ( '2000' === (string) $jl['code'] ) {
 					$paidby[ $j['ref'] ] = ( isset( $paidby[ $j['ref'] ] ) ? $paidby[ $j['ref'] ] : 0 ) + (float) $jl['debit'];
@@ -305,6 +319,9 @@ class Soko_Accounts {
 		foreach ( $wpdb->get_results( 'SELECT m.id, m.qty, m.reason, m.ref, m.created, m.cost AS mcost, p.cost, p.name FROM ' . soko_t( 'moves' ) . " m JOIN $P p ON p.id = m.product_id WHERE m.reason <> 'Received'", ARRAY_A ) as $m ) { // phpcs:ignore
 			$unit = (float) $m['mcost'] > 0 ? (float) $m['mcost'] : (float) $m['cost'];
 			$val  = round( $m['qty'] * $unit, 2 );
+			if ( 'Returned to supplier' === $m['reason'] ) {
+				continue; // posted with its supplier credit journal
+			}
 			if ( 'Opening stock' === $m['reason'] ) {
 				self::add( $out, $m['created'], 'Opening stock, ' . $m['name'], '', 'stock', $m['id'], array( array( '1200', $val ), array( '3050', -$val ) ) );
 			} elseif ( 'Sold' === $m['reason'] ) {
@@ -385,7 +402,7 @@ class Soko_Accounts {
 		global $wpdb;
 		$out = array();
 		$jt  = array();
-		foreach ( $wpdb->get_results( "SELECT ref, date, entries FROM " . soko_t( 'journal' ) . " WHERE source = 'supplier_pay'", ARRAY_A ) as $j ) { // phpcs:ignore
+		foreach ( $wpdb->get_results( "SELECT ref, date, entries FROM " . soko_t( 'journal' ) . " WHERE source IN ('supplier_pay','supplier_return')", ARRAY_A ) as $j ) { // phpcs:ignore
 			foreach ( (array) json_decode( $j['entries'], true ) as $jl ) {
 				if ( '2000' === (string) $jl['code'] ) {
 					$jt[ $j['ref'] ] = ( isset( $jt[ $j['ref'] ] ) ? $jt[ $j['ref'] ] : 0 ) + (float) $jl['debit'];

@@ -1034,3 +1034,21 @@ html[data-theme=dark] .tl .dot svg{color:#f7a440;stroke:#f7a440}
 .tmini{min-width:0!important;min-height:0!important}
 @media(max-width:900px){.totop{bottom:152px}}
 .mtools .theme{min-width:0!important;min-height:0!important}
+/* compare */
+.media{position:relative}
+.cmpbtn{position:absolute;left:10px;bottom:10px;z-index:2;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border-radius:99px;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 92%,transparent);color:var(--head);font:600 12.5px Inter,sans-serif;cursor:pointer;opacity:.95}
+.cmpbtn.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.cmpbtn::after{content:"";position:absolute;inset:-7px -4px}
+@media(hover:hover){.card .cmpbtn:not(.on){opacity:0;transition:opacity .15s}.card:hover .cmpbtn,.card:focus-within .cmpbtn{opacity:.95}}
+.cmptray{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:56;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 110px);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 8px 8px 14px;box-shadow:0 20px 40px -18px rgba(15,29,54,.5)}
+.cmptray>span{display:flex;gap:8px;overflow:hidden;min-width:0}.cmptray>span b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.cmptray .btn{height:40px;padding:0 16px;white-space:nowrap}.cmptray .btn[disabled]{opacity:.6}
+.cmpx{border:0;background:none;color:var(--soft);font-size:13px;text-decoration:underline;min-height:40px;cursor:pointer}
+@media(max-width:600px){.cmptray{left:10px;right:76px;transform:none;max-width:none;bottom:18px}.cmptray>span{display:none}}
+.cmpbox{max-width:980px}.cmpscroll{overflow-x:auto}
+.cmptable{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+.cmptable th,.cmptable td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.cmptable thead th{font-weight:700}.cmptable thead img{display:block;width:100%;max-width:160px;aspect-ratio:4/3;object-fit:cover;border-radius:10px;margin-bottom:8px}
+.cmptable tbody th{color:var(--soft);font-weight:500;white-space:nowrap;position:sticky;left:0;background:var(--card)}
+.cmptable .btn{height:40px;padding:0 14px}
+.cat span{align-items:flex-start}.cat span>em,.cat span>small,.cat span>i{flex:none;margin-top:2px}

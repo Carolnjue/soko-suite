@@ -104,8 +104,11 @@ final class Soko_API {
 		$r( '/purchases', 'POST', array( __CLASS__, 'save_purchase' ), self::perm( 'soko_purchases' ) );
 		$r( '/purchases/(?P<id>\d+)', 'POST', array( __CLASS__, 'save_purchase' ), self::perm( 'soko_purchases' ) );
 		$r( '/purchases/(?P<id>\d+)/pay', 'POST', array( __CLASS__, 'pay_purchase' ), self::perm( 'soko_purchases' ) );
+		$r( '/purchases/(?P<id>\d+)/return', 'POST', array( __CLASS__, 'return_purchase' ), self::perm( 'soko_purchases' ) );
 		$r( '/expenses/(?P<id>\d+)/pay', 'POST', array( __CLASS__, 'pay_expense' ), self::perm( 'soko_expenses' ) );
 		$r( '/accounts/transfer', 'POST', array( __CLASS__, 'transfer' ), self::perm( 'soko_reports' ) );
+		$r( '/accounts/depreciation', 'POST', array( __CLASS__, 'depreciation' ), self::perm( 'soko_reports' ) );
+		$r( '/customers/(?P<id>\d+)/statement', 'GET', array( __CLASS__, 'statement' ), self::perm( 'soko_sales', array( 'soko_payments', 'soko_reports' ) ) );
 		$r( '/purchases/(?P<id>\d+)/receive', 'POST', array( __CLASS__, 'receive_purchase' ), self::perm( 'soko_purchases', array( 'soko_stock' ) ) );
 
 		$r( '/reports/(?P<type>[a-z]+)', 'GET', array( __CLASS__, 'report' ), self::perm( 'soko_reports' ) );
@@ -1374,6 +1377,105 @@ final class Soko_API {
 		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'purchases' ) . ' WHERE id = %d', $id ), ARRAY_A ); // phpcs:ignore
 	}
 
+	/** Customer statement: everything charged and paid in a period, with a running balance. */
+	public static function statement( $req ) {
+		global $wpdb;
+		$c = Soko_Ledger::customer( (int) $req['id'] );
+		if ( ! $c ) {
+			return new WP_Error( 'soko', 'Customer not found.', array( 'status' => 404 ) );
+		}
+		$from = ! empty( $req['from'] ) ? sanitize_text_field( $req['from'] ) : gmdate( 'Y-m-01', strtotime( soko_today() . ' -2 months' ) );
+		$to   = ! empty( $req['to'] ) ? sanitize_text_field( $req['to'] ) : soko_today();
+		$D    = soko_t( 'docs' );
+		$ev   = array();
+		foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT d.id, d.type, d.number, d.date, d.total, d.meta, d.parent_id FROM $D d WHERE d.customer_id = %d AND d.type IN ('invoice','credit') AND d.status <> 'void' AND " . Soko_Accounts::confirmed_sql( 'd' ), $c['id'] ), ARRAY_A ) as $d ) { // phpcs:ignore
+			if ( 'invoice' === $d['type'] ) {
+				$ev[] = array( $d['date'], 'Invoice ' . $d['number'], (float) $d['total'], 0 );
+				$m = soko_json( $d['meta'] );
+				foreach ( isset( $m['refunds'] ) ? (array) $m['refunds'] : array() as $e ) {
+					$ev[] = array( $e['date'], 'Refund on ' . $d['number'] . ( $e['code'] ? ' (' . $e['code'] . ')' : '' ), (float) $e['amount'], 0 );
+				}
+			} else {
+				$ev[] = array( $d['date'], 'Credit note ' . $d['number'], 0, (float) $d['total'] );
+			}
+		}
+		foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT p.received, p.amount, p.method, p.code, d.number FROM ' . soko_t( 'payments' ) . " p JOIN $D d ON d.id = p.doc_id WHERE d.customer_id = %d AND p.status = 'matched'", $c['id'] ), ARRAY_A ) as $p ) { // phpcs:ignore
+			$ev[] = array( substr( $p['received'], 0, 10 ), 'Payment for ' . $p['number'] . ( $p['code'] ? ' (' . $p['code'] . ')' : '' ), 0, (float) $p['amount'] );
+		}
+		usort( $ev, function ( $a, $b ) { return strcmp( $a[0], $b[0] ); } );
+		$open = 0;
+		$rows = array();
+		$bal  = 0;
+		foreach ( $ev as $e ) {
+			if ( $e[0] < $from ) {
+				$open += $e[2] - $e[3];
+				continue;
+			}
+			if ( $e[0] > $to || ( 0 == $e[2] && 0 == $e[3] ) ) { // phpcs:ignore
+				continue;
+			}
+			$rows[] = $e;
+		}
+		$bal  = $open;
+		$out  = array( array( date_i18n( 'j M Y', strtotime( $from ) ), 'Balance brought forward', '', '', round( $open, 2 ), '_b' => 1 ) );
+		foreach ( $rows as $e ) {
+			$bal  += $e[2] - $e[3];
+			$out[] = array( date_i18n( 'j M Y', strtotime( $e[0] ) ), $e[1], $e[2] ? round( $e[2], 2 ) : '', $e[3] ? round( $e[3], 2 ) : '', round( $bal, 2 ) );
+		}
+		$out[] = array( '', $bal >= 0 ? 'Balance due' : 'In credit', '', '', round( $bal, 2 ), '_b' => 1 );
+		$title = 'Statement for ' . $c['name'];
+		$per   = date_i18n( 'j M Y', strtotime( $from ) ) . ' to ' . date_i18n( 'j M Y', strtotime( $to ) );
+		$secs  = array( array( 'title' => 'Account activity', 'head' => array( 'Date', 'Details', 'Charged', 'Paid or credited', 'Balance' ), 'rows' => $out, 'widths' => array( 26, 74, 26, 30, 24 ) ) );
+		$kpis  = array( array( $bal >= 0 ? 'Balance due' : 'In credit', soko_money( abs( $bal ) ) ), array( 'Phone', soko_phone_display( $c['phone'] ) ) );
+		if ( 'pdf' === $req['format'] ) {
+			soko_log( 'Statement for ' . $c['name'], 'customer', $c['id'] );
+			self::send_file( Soko_PDF::report( $title, $per, $secs, $kpis ), 'application/pdf', sanitize_file_name( 'statement-' . $c['name'] . '-' . $to ) . '.pdf', true );
+		}
+		return array( 'title' => $title, 'period' => $per, 'sections' => $secs, 'kpis' => $kpis, 'balance' => round( $bal, 2 ) );
+	}
+
+	/** Depreciation: spread the cost of equipment and vehicles over their working life (straight line, by month). */
+	public static function depreciation( $req ) {
+		$b     = $req->get_json_params();
+		$chart = Soko_Accounts::chart();
+		foreach ( array( '1590' => array( 'Accumulated depreciation', 'asset' ), '6970' => array( 'Depreciation', 'expense' ) ) as $code => $a ) {
+			if ( ! isset( $chart[ $code ] ) ) {
+				$x = Soko_Accounts::add_account( $code, $a[0], $a[1] );
+				if ( is_wp_error( $x ) ) {
+					return $x;
+				}
+			}
+		}
+		$date = self::pick_date( isset( $b['date'] ) ? $b['date'] : '' );
+		if ( is_wp_error( $date ) ) {
+			return $date;
+		}
+		$bal  = Soko_Accounts::balances( $date );
+		$cost = isset( $bal['1500'] ) ? (float) $bal['1500'] : 0;
+		$acc  = isset( $bal['1590'] ) ? -(float) $bal['1590'] : 0;
+		$rate = isset( $b['rate'] ) ? (float) $b['rate'] : 25;
+		$amt  = isset( $b['amount'] ) && '' !== $b['amount'] ? round( (float) $b['amount'], 2 ) : round( $cost * $rate / 100 / 12, 2 );
+		if ( ! empty( $b['preview'] ) ) {
+			return array( 'cost' => round( $cost, 2 ), 'depreciated' => round( $acc, 2 ), 'suggested' => round( $cost * $rate / 100 / 12, 2 ) );
+		}
+		if ( $amt <= 0 ) {
+			return new WP_Error( 'soko', 'There is no equipment value to depreciate yet.', array( 'status' => 400 ) );
+		}
+		if ( $acc + $amt > $cost + 0.01 ) {
+			return new WP_Error( 'soko', 'That would take the equipment below zero. At most ' . soko_money_exact( max( 0, $cost - $acc ) ) . ' is left to depreciate.', array( 'status' => 400 ) );
+		}
+		$ref = 'DEP-' . substr( $date, 0, 7 );
+		global $wpdb;
+		if ( $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . soko_t( 'journal' ) . " WHERE source = 'depreciation' AND ref = %s", $ref ) ) ) { // phpcs:ignore
+			return new WP_Error( 'soko', 'Depreciation for ' . date_i18n( 'F Y', strtotime( $date ) ) . ' is already recorded.', array( 'status' => 400 ) );
+		}
+		$j = Soko_Accounts::journal( $date, 'Depreciation for ' . date_i18n( 'F Y', strtotime( $date ) ) . ' (' . ( $rate + 0 ) . '% a year)', array( array( '6970', $amt, 0 ), array( '1590', 0, $amt ) ), 'depreciation', $ref );
+		if ( is_wp_error( $j ) ) {
+			return $j;
+		}
+		return array( 'message' => 'Depreciation of ' . soko_money( $amt ) . ' recorded for ' . date_i18n( 'F Y', strtotime( $date ) ) . '.' );
+	}
+
 	/** Move money between cash, M-Pesa and bank (for example banking the day's cash). */
 	public static function transfer( $req ) {
 		$b    = $req->get_json_params();
@@ -1382,7 +1484,7 @@ final class Soko_API {
 		$amt  = round( (float) ( isset( $b['amount'] ) ? $b['amount'] : 0 ), 2 );
 		$fee  = round( (float) ( isset( $b['fee'] ) ? $b['fee'] : 0 ), 2 );
 		$chart = Soko_Accounts::chart();
-		$money = array_keys( array_filter( $chart, function ( $a, $c ) { return 'asset' === $a['type'] && ( in_array( (string) $c, array( '1000', '1010', '1020' ), true ) || ( (int) $c > 1020 && (int) $c < 1100 ) ); }, ARRAY_FILTER_USE_BOTH ) );
+		$money = Soko_Accounts::money_codes();
 		if ( ! in_array( $from, array_map( 'strval', $money ), true ) || ! in_array( $to, array_map( 'strval', $money ), true ) || $from === $to ) {
 			return new WP_Error( 'soko', 'Choose two different money accounts.', array( 'status' => 400 ) );
 		}
@@ -1442,6 +1544,64 @@ final class Soko_API {
 		return array( 'message' => 'Payment saved. ' . ( $left > 0.5 ? soko_money( $left ) . ' still to pay.' : 'The bill is fully paid.' ) );
 	}
 
+	/** Send goods back to the supplier: stock out at what they cost, and the bill reduced (a supplier credit). */
+	public static function return_purchase( $req ) {
+		global $wpdb;
+		$b  = $req->get_json_params();
+		$po = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'purchases' ) . ' WHERE id = %d', $req['id'] ), ARRAY_A ); // phpcs:ignore
+		if ( ! $po || 'received' !== $po['status'] ) {
+			return new WP_Error( 'soko', 'Only goods that were received can be returned.', array( 'status' => 400 ) );
+		}
+		$date = self::pick_date( isset( $b['date'] ) ? $b['date'] : '' );
+		if ( is_wp_error( $date ) ) {
+			return $date;
+		}
+		if ( $lk = Soko_Accounts::locked( $date ) ) { // phpcs:ignore
+			return $lk;
+		}
+		$items = soko_json( $po['items'] );
+		$share = (float) $po['vat'] > 0 && (float) $po['total'] > 0 ? ( (float) $po['total'] - (float) $po['vat'] ) / (float) $po['total'] : 1;
+		$gross = 0;
+		$net   = 0;
+		$done  = array();
+		foreach ( (array) ( isset( $b['qty'] ) ? $b['qty'] : array() ) as $k => $q ) {
+			$q = (float) $q;
+			if ( $q <= 0 || ! isset( $items[ $k ] ) || ! $items[ $k ]['product_id'] ) {
+				continue;
+			}
+			$l    = $items[ $k ];
+			$back = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(-SUM(qty),0) FROM ' . soko_t( 'moves' ) . " WHERE ref = %s AND product_id = %d AND reason = 'Returned to supplier'", $po['number'], $l['product_id'] ) ); // phpcs:ignore
+			$q    = min( $q, (float) $l['qty'] - $back );
+			$prod = Soko_Ledger::product( (int) $l['product_id'] );
+			if ( $q <= 0 || ! $prod || (float) $prod['stock'] < $q ) {
+				return new WP_Error( 'soko', 'Not enough ' . $l['name'] . ' in stock to send back.', array( 'status' => 400 ) );
+			}
+			$unit = round( (float) $l['cost'] * $share, 2 );
+			Soko_Ledger::move( (int) $l['product_id'], -$q, 'Returned to supplier', $po['number'], true, $unit, $date );
+			$gross += $q * (float) $l['cost'];
+			$net   += $q * $unit;
+			$done[] = ( $q + 0 ) . ' × ' . $l['name'];
+		}
+		if ( ! $done ) {
+			return new WP_Error( 'soko', 'Enter how many of each item are going back.', array( 'status' => 400 ) );
+		}
+		$gross = round( $gross, 2 );
+		$net   = round( $net, 2 );
+		$lines = array( array( '2000', $gross, 0 ), array( '1200', 0, $net ) );
+		if ( $gross - $net > 0.005 ) {
+			$lines[] = array( '1300', 0, round( $gross - $net, 2 ) );
+		}
+		$reason = sanitize_text_field( isset( $b['reason'] ) ? $b['reason'] : '' );
+		$j = Soko_Accounts::journal( $date, 'Returned to supplier, ' . $po['number'] . ': ' . implode( ', ', $done ) . ( $reason ? ' (' . $reason . ')' : '' ), $lines, 'supplier_return', $po['number'] );
+		if ( is_wp_error( $j ) ) {
+			return $j;
+		}
+		$wpdb->update( soko_t( 'purchases' ), array( 'paid' => (float) $po['paid'] + $gross ), array( 'id' => (int) $po['id'] ) );
+		soko_log( 'Returned to supplier ' . soko_money( $gross ) . ' on ' . $po['number'], 'purchase', $po['number'] );
+		$left = (float) $po['total'] - (float) $po['paid'] - $gross;
+		return array( 'message' => 'Return recorded. The supplier owes you credit of ' . soko_money( $gross ) . ( $left < -0.5 ? ', which is more than the bill: ask them for a refund or use it on the next order' : '' ) . '.' );
+	}
+
 	public static function pay_purchase( $req ) {
 		global $wpdb;
 		$b  = $req->get_json_params();
@@ -1486,6 +1646,49 @@ final class Soko_API {
 		if ( $when < substr( $po['date'], 0, 10 ) ) {
 			return new WP_Error( 'soko', 'Goods cannot be received before the order date (' . date_i18n( 'j M Y', strtotime( $po['date'] ) ) . ').', array( 'status' => 400 ) );
 		}
+		// Part of the order arrived: this order keeps what came, the rest moves to a new order still to arrive.
+		$items = soko_json( $po['items'] );
+		$got   = isset( $b['qty'] ) && is_array( $b['qty'] ) ? $b['qty'] : null;
+		if ( $got ) {
+			$now_i  = array();
+			$rest_i = array();
+			foreach ( $items as $k => $l ) {
+				$q = isset( $got[ $k ] ) && '' !== $got[ $k ] ? max( 0, min( (float) $l['qty'], (float) $got[ $k ] ) ) : (float) $l['qty'];
+				if ( $q > 0 ) {
+					$now_i[] = array_merge( $l, array( 'qty' => $q ) );
+				}
+				if ( (float) $l['qty'] - $q > 0 ) {
+					$rest_i[] = array_merge( $l, array( 'qty' => (float) $l['qty'] - $q ) );
+				}
+			}
+			if ( ! $now_i ) {
+				return new WP_Error( 'soko', 'Enter how many of each item arrived.', array( 'status' => 400 ) );
+			}
+			if ( $rest_i ) {
+				$ratio = (float) $po['total'] > 0 ? (float) $po['vat'] / (float) $po['total'] : 0;
+				$sum   = function ( $ls ) { $t = 0; foreach ( $ls as $x ) { $t += (float) $x['qty'] * (float) $x['cost']; } return round( $t, 2 ); };
+				$t_now  = $sum( $now_i );
+				$t_rest = $sum( $rest_i );
+				$wpdb->insert(
+					soko_t( 'purchases' ),
+					array(
+						'supplier_id' => (int) $po['supplier_id'],
+						'number'      => Soko_Settings::next_number( 'po' ),
+						'date'        => $po['date'],
+						'expected'    => $po['expected'],
+						'items'       => wp_json_encode( $rest_i ),
+						'total'       => $t_rest,
+						'vat'         => round( $t_rest * $ratio, 2 ),
+						'notes'       => trim( 'Rest of ' . $po['number'] . '. ' . $po['notes'] ),
+						'status'      => 'ordered',
+						'created'     => soko_now(),
+					)
+				);
+				$rest_no = $wpdb->get_var( $wpdb->prepare( 'SELECT number FROM ' . soko_t( 'purchases' ) . ' WHERE id = %d', $wpdb->insert_id ) ); // phpcs:ignore
+				$wpdb->update( soko_t( 'purchases' ), array( 'items' => wp_json_encode( $now_i ), 'total' => $t_now, 'vat' => round( $t_now * $ratio, 2 ), 'notes' => trim( $po['notes'] . ' Rest still to come on ' . $rest_no . '.' ) ), array( 'id' => (int) $po['id'] ) );
+				$po = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . soko_t( 'purchases' ) . ' WHERE id = %d', $po['id'] ), ARRAY_A ); // phpcs:ignore
+			}
+		}
 		$share = (float) $po['vat'] > 0 && (float) $po['total'] > 0 ? ( (float) $po['total'] - (float) $po['vat'] ) / (float) $po['total'] : 1;
 		foreach ( soko_json( $po['items'] ) as $l ) {
 			if ( ! $l['product_id'] ) {
@@ -1522,7 +1725,7 @@ final class Soko_API {
 			Soko_Accounts::journal( $when, 'Paid supplier, ' . $po['number'], array( array( '2000', $now, 0 ), array( Soko_Accounts::money_account( isset( $b['method'] ) ? $b['method'] : 'bank' ), 0, $now ) ), 'supplier_pay', $po['number'] );
 		}
 		soko_log( 'Received ' . $po['number'] . ' into stock', 'purchase', $po['number'] );
-		return array( 'message' => $po['number'] . ' received. Stock updated.' );
+		return array( 'message' => $po['number'] . ' received. Stock updated.' . ( ! empty( $rest_no ) ? ' The rest is now on ' . $rest_no . '.' : '' ) );
 	}
 
 	/* ---- reports ---- */
@@ -1585,7 +1788,7 @@ final class Soko_API {
 		foreach ( Soko_Accounts::chart() as $code => $a ) {
 			$v   = isset( $b[ $code ] ) ? round( $b[ $code ], 2 ) : 0;
 			$pos = in_array( $a['type'], array( 'asset', 'expense' ), true ) ? $v : -$v;
-			$out[] = array( 'code' => (string) $code, 'name' => $a['name'], 'type' => $a['type'], 'key' => $a['key'], 'balance' => round( $pos, 2 ), 'money' => in_array( $a['key'], array( 'cash', 'mpesa', 'bank' ), true ), 'custom' => 'custom' === $a['key'] );
+			$out[] = array( 'code' => (string) $code, 'name' => $a['name'], 'type' => $a['type'], 'key' => $a['key'], 'balance' => round( $pos, 2 ), 'money' => in_array( (string) $code, Soko_Accounts::money_codes(), true ), 'custom' => 'custom' === $a['key'] );
 		}
 		global $wpdb;
 		$D     = soko_t( 'docs' );

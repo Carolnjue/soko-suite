@@ -86,7 +86,7 @@
 
   function journal(host, acc) {
     K.api('journal').then(function (rows) {
-      host.innerHTML = '<div class="box"><div class="toolbar"><span class="sub" style="margin:0">Use a journal entry for anything that is not an invoice, payment, expense or purchase: money the owner puts in or takes out, loans, equipment, VAT paid to KRA, corrections.</span><button class="btn" data-mv style="margin-left:auto">' + ic(I.cash) + 'Move money between accounts</button><button class="btn sun" data-nj>' + ic(I.plus) + 'New journal entry</button></div>' +
+      host.innerHTML = '<div class="box"><div class="toolbar"><span class="sub" style="margin:0">Use a journal entry for anything that is not an invoice, payment, expense or purchase: money the owner puts in or takes out, loans, equipment, VAT paid to KRA, corrections.</span><button class="btn" data-dep style="margin-left:auto">Record depreciation</button><button class="btn" data-mv>' + ic(I.cash) + 'Move money between accounts</button><button class="btn sun" data-nj>' + ic(I.plus) + 'New journal entry</button></div>' +
         K.table([
           { k: 'date', label: 'Date', f: function (j) { return K.ds(j.date); } },
           { k: 'memo', label: 'Details', f: function (j) { return '<b>' + esc(j.memo) + '</b><br><small class="tiny">' + (j.lines || []).map(function (l) { var a = acc.filter(function (x) { return x.code === String(l.code); })[0]; return esc((a ? a.name : l.code) + ' ' + (l.debit > 0 ? 'Dr ' + K.moneyx(l.debit, 1) : 'Cr ' + K.moneyx(l.credit, 1))); }).join(' · ') + '</small>'; } },
@@ -95,6 +95,13 @@
           { k: 'x', label: '', f: function (j) { return j.source === 'manual' ? '<button class="btn sm ghost" data-jd="' + j.id + '" aria-label="Delete entry">' + ic(I.trash) + '</button>' : ''; } }
         ], rows, { empty: 'No journal entries yet', emptySub: 'Invoices, payments, expenses and purchases are posted automatically. Manual entries appear here.' }) + '</div>';
       $('[data-nj]', host).onclick = function () { newJournal(acc); };
+      $('[data-dep]', host).onclick = function () {
+        K.api('accounts/depreciation', { body: { preview: 1, rate: 25 } }).then(function (pv) {
+          var m = K.modal('Record depreciation', '<p class="sub">Spreads the cost of equipment and vehicles over their working life, one month at a time. Equipment at cost ' + K.moneyx(pv.cost) + '; already depreciated ' + K.moneyx(pv.depreciated) + '.</p><div class="grid3">' + K.field('Rate per year %', 'rate', 25, 'number', { hint: 'Use the rate your accountant gives for these assets' }) + K.field('Amount for the month', 'amount', pv.suggested, 'number') + K.field('Month ending', 'date', K.today(), 'date') + '</div>', '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-go>Record</button>');
+          $('[name=rate]', m).oninput = function (e) { $('[name=amount]', m).value = Math.round(pv.cost * (+e.target.value || 0) / 1200 * 100) / 100; };
+          $('[data-go]', m).onclick = function () { K.api('accounts/depreciation', { body: K.read(m) }).then(function (r) { K.closeModal(); K.toast(r.message); K.route(); }).catch(K.fail); };
+        }).catch(K.fail);
+      };
       $('[data-mv]', host).onclick = function () {
         var mon = acc.filter(function (a) { return a.money; }).map(function (a) { return [a.code, a.name]; });
         var m = K.modal('Move money between accounts', '<p class="sub">For example banking the day\'s cash, or moving M-Pesa to the bank. It is not income or spending.</p><div class="grid2">' + K.field('From', 'from', mon[0] ? mon[0][0] : '', 'select', { options: mon }) + K.field('To', 'to', mon[2] ? mon[2][0] : (mon[1] ? mon[1][0] : ''), 'select', { options: mon }) + '</div><div class="grid3">' + K.field('Amount', 'amount', '', 'number') + K.field('Charges (optional)', 'fee', '', 'number') + K.field('Date', 'date', K.today(), 'date') + '</div>', '<button class="btn" data-mx>Cancel</button><button class="btn pri" data-go>Move</button>');

@@ -715,3 +715,58 @@ document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
   b.addEventListener('click', function () { var r = matchMedia('(prefers-reduced-motion: reduce)').matches; scrollTo({ top: 0, behavior: r ? 'auto' : 'smooth' }); });
   upd();
 })();
+/* compare up to 3 products side by side */
+(function () {
+  var cards = document.querySelectorAll('.card[data-p]'); if (!cards.length) return;
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var S = window.SOKO || {}, money = function (n) { return (S.currency || 'KES') + ' ' + Math.round(n || 0).toLocaleString('en-KE'); };
+  var sel = []; try { sel = JSON.parse(sessionStorage.getItem('soko_cmp') || '[]'); } catch (e) {}
+  var data = {};
+  var save = function () { try { sessionStorage.setItem('soko_cmp', JSON.stringify(sel)); } catch (e) {} };
+  var tray = document.createElement('div'); tray.className = 'cmptray'; tray.hidden = true; document.body.appendChild(tray);
+  function draw() {
+    sel = sel.filter(function (s) { return s && s.id; });
+    document.querySelectorAll('[data-cmp]').forEach(function (b) { var on = sel.some(function (s) { return String(s.id) === b.dataset.cmp; }); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.lastChild.textContent = on ? 'Comparing' : 'Compare'; });
+    tray.hidden = !sel.length;
+    tray.innerHTML = '<span>' + sel.map(function (s) { return '<b>' + esc(s.name) + '</b>'; }).join('') + '</span><button class="btn b-sun" data-cmpgo' + (sel.length < 2 ? ' disabled' : '') + '>' + (sel.length < 2 ? 'Pick one more to compare' : 'Compare ' + sel.length) + '</button><button class="cmpx" data-cmpclear aria-label="Clear comparison">Clear</button>';
+  }
+  cards.forEach(function (c) {
+    var p; try { p = JSON.parse(c.dataset.p); } catch (e) { return; }
+    if (p.kind !== 'product') return;
+    data[p.id] = p;
+    var m = c.querySelector('.media'); if (!m) return;
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'cmpbtn'; b.dataset.cmp = p.id; b.setAttribute('aria-label', 'Compare ' + p.name);
+    b.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M8 3v18M16 3v18M3 8h5M16 16h5"/></svg><span>Compare</span>';
+    m.appendChild(b);
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-cmp]');
+    if (b) {
+      e.preventDefault(); e.stopPropagation();
+      var id = b.dataset.cmp, i = sel.findIndex(function (s) { return String(s.id) === id; });
+      if (i > -1) sel.splice(i, 1); else { if (sel.length >= 3) sel.shift(); sel.push(data[id]); }
+      save(); draw(); return;
+    }
+    if (e.target.closest && e.target.closest('[data-cmpclear]')) { sel = []; save(); draw(); return; }
+    if (e.target.closest && e.target.closest('[data-cmpgo]') && sel.length > 1) open();
+  }, true);
+  function open() {
+    var keys = []; sel.forEach(function (p) { Object.keys(p.specs || {}).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); }); });
+    var row = function (label, f) { return '<tr><th scope="row">' + esc(label) + '</th>' + sel.map(function (p) { return '<td>' + f(p) + '</td>'; }).join('') + '</tr>'; };
+    var html = '<table class="cmptable"><thead><tr><th></th>' + sel.map(function (p) { return '<th scope="col">' + (p.img ? '<img src="' + esc(p.img) + '" alt="">' : '') + '<a href="' + esc(p.url) + '">' + esc(p.name) + '</a></th>'; }).join('') + '</tr></thead><tbody>' +
+      row('Price', function (p) { return '<b>' + money(p.price) + '</b>' + (p.was > p.price ? ' <s>' + money(p.was) + '</s>' : ''); }) +
+      row('Brand', function (p) { return esc(p.brand || '—'); }) + row('Category', function (p) { return esc(p.cat); }) +
+      keys.map(function (k) { return row(k, function (p) { return esc((p.specs || {})[k] || '—'); }); }).join('') +
+      row('What it powers', function (p) { return esc(p.runs || '—'); }) + row('Warranty', function (p) { return esc(p.warranty || '—'); }) +
+      row('Installation', function (p) { return p.install > 0 ? money(p.install) : '—'; }) + row('Availability', function (p) { return p.stock > 0 ? 'In stock' : 'Order in, 1 week'; }) +
+      row('', function (p) { return '<button class="btn b-sun" data-add="' + p.id + '">Add to cart</button>'; }) + '</tbody></table>';
+    var d = document.createElement('div'); d.className = 'pjmodal'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-label', 'Compare products');
+    d.innerHTML = '<div class="pjbox cmpbox"><button class="ico pjx" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="pjb"><h3>Compare products</h3><div class="cmpscroll">' + html + '</div></div></div>';
+    document.body.appendChild(d); document.body.style.overflow = 'hidden';
+    var close = function () { d.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', key); };
+    var key = function (e) { if (e.key === 'Escape') close(); };
+    d.addEventListener('click', function (e) { if (e.target === d || e.target.closest('.pjx')) close(); });
+    document.addEventListener('keydown', key); d.querySelector('.pjx').focus();
+  }
+  draw();
+})();

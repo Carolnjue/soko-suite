@@ -136,7 +136,7 @@ final class Soko_Reports {
 
 			case 'cashflow':
 				// Built from every posting to Cash, M-Pesa and Bank, so it reconciles to the books.
-				$money = array( '1000', '1010', '1020' );
+				$money = Soko_Accounts::money_codes();
 				$label = array(
 					'payment'       => 'Received from customers',
 					'expense'       => 'Paid for expenses',
@@ -156,7 +156,7 @@ final class Soko_Reports {
 				$section = function ( $pp ) use ( $grp ) {
 					$codes = isset( $grp[ $pp[6] . ':' . $pp[7] ] ) ? $grp[ $pp[6] . ':' . $pp[7] ] : array();
 					$in = $pp[2] - $pp[3] >= 0;
-					if ( ! array_diff( array_keys( $codes ), array( '1000', '1010', '1020' ) ) ) {
+					if ( ! array_diff( array_map( 'strval', array_keys( $codes ) ), Soko_Accounts::money_codes() ) ) {
 						return 'skip'; // moving money between your own accounts is not cash in or out
 					}
 					if ( isset( $codes['1500'] ) ) {
@@ -241,6 +241,7 @@ final class Soko_Reports {
 			case 'sales':
 				$bycat = array();
 				$byp   = array();
+				$pidk  = array();
 				$rate  = soko_setting( 'vat_registered' ) ? (float) soko_setting( 'vat_rate', 16 ) : 0;
 				$incl  = (int) soko_setting( 'prices_incl_vat', 1 );
 				foreach ( self::lines( $from, $to ) as $l ) {
@@ -252,9 +253,18 @@ final class Soko_Reports {
 					if ( ! isset( $byp[ $k ] ) ) {
 						$byp[ $k ] = array( 0, 0, 0 );
 					}
+					if ( $l['product_id'] ) {
+						$pidk[ (int) $l['product_id'] ] = $k;
+					}
 					$byp[ $k ][0] += $l['qty'];
 					$byp[ $k ][1] += $net;
 					$byp[ $k ][2] += $net - $l['qty'] * $l['cost'];
+				}
+				// Items that came back on a credit note are not sold.
+				foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT m.product_id, SUM(m.qty) q FROM ' . soko_t( 'moves' ) . " m JOIN $D c ON c.number = m.ref AND c.type = 'credit' AND c.status <> 'void' WHERE m.reason = 'Returned' AND c.date BETWEEN %s AND %s GROUP BY m.product_id", $from, $to ), ARRAY_A ) as $rq ) { // phpcs:ignore
+					if ( isset( $pidk[ (int) $rq['product_id'] ] ) ) {
+						$byp[ $pidk[ (int) $rq['product_id'] ] ][0] -= (float) $rq['q'];
+					}
 				}
 				arsort( $bycat );
 				uasort( $byp, function ( $a, $b ) { return $b[1] <=> $a[1]; } );
@@ -725,7 +735,7 @@ final class Soko_Reports {
 		$lic    = $wpdb->get_results( $wpdb->prepare( 'SELECT id, name, expires FROM ' . soko_t( 'licences' ) . ' WHERE expires <= %s ORDER BY expires LIMIT 4', gmdate( 'Y-m-d', strtotime( soko_today() . ' +60 days' ) ) ), ARRAY_A ); // phpcs:ignore
 		$weeks  = array();
 		// Money in and out of cash, M-Pesa and bank, from the books (so supplier payments count when paid).
-		$money = array( '1000', '1010', '1020' );
+		$money = Soko_Accounts::money_codes();
 		$start = gmdate( 'Y-m-d', strtotime( 'monday this week', strtotime( soko_today() . ' -11 weeks' ) ) );
 		$wk    = array();
 		for ( $i = 11; $i >= 0; $i-- ) {

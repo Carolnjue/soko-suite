@@ -609,12 +609,15 @@
     var cats = JSON.parse(JSON.stringify(K.cats)), names = Object.keys(D.icons);
     var draw = function () {
       host.innerHTML = '<div class="box"><p class="sub">Categories group the shop, the mega menu and the reports. Groups become the columns in the menu.</p>' + cats.map(function (c, i) { return '<div class="grid3" style="grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) auto;align-items:end;border-bottom:1px solid var(--line);padding:10px 0"><button class="thumbc" data-ico="' + i + '" title="Change icon" style="border:0">' + K.icon(c.icon, 28) + '</button>' + K.field('Name', 'n' + i, c.name, 'text') + K.field('Menu group', 'g' + i, c.group, 'text') + '<div class="acts" style="margin-bottom:12px"><button class="btn sm ghost" data-up="' + i + '" aria-label="Move up" title="Move up">' + ic(I.up) + '</button><button class="btn sm ghost" data-dn="' + i + '" aria-label="Move down" title="Move down">' + ic(I.down) + '</button><button class="btn sm ghost" data-rm="' + i + '" aria-label="Remove category" title="Remove category">' + ic(I.trash) + '</button></div></div>'; }).join('') +
-        '<div class="acts" style="margin-top:12px"><button class="btn" data-add>' + ic(I.plus) + 'Add category</button><button class="btn pri" data-save>Save categories</button></div></div>';
+        '<div class="acts" style="margin-top:12px"><button class="btn" data-add>' + ic(I.plus) + 'Add category</button><button class="btn pri" data-save>Save categories</button></div></div>' +
+        (JSON.stringify(cats) !== JSON.stringify(K.cats) ? '<div class="unsaved"><span>You have unsaved category changes.</span><button class="btn sm" data-discard>Discard</button><button class="btn pri sm" data-save>Save categories</button></div>' : '');
     };
     var pull = function () { cats.forEach(function (c, i) { var n = $('[name=n' + i + ']', host), g = $('[name=g' + i + ']', host); if (n) c.name = n.value; if (g) c.group = g.value; }); };
     draw();
+    host.oninput = function () { pull(); if (!host.querySelector('.unsaved')) host.insertAdjacentHTML('beforeend', '<div class="unsaved"><span>You have unsaved category changes.</span><button class="btn sm" data-discard>Discard</button><button class="btn pri sm" data-save>Save categories</button></div>'); };
     host.onclick = function (e) {
       var t = e.target.closest('button'); if (!t) return; pull();
+      if (t.dataset.discard != null) { cats = JSON.parse(JSON.stringify(K.cats)); draw(); return; }
       if (t.dataset.add != null) { cats.push({ id: '', name: 'New category', icon: 'panel', group: 'More' }); draw(); }
       if (t.dataset.up) { var i = +t.dataset.up; if (i) { cats.splice(i - 1, 0, cats.splice(i, 1)[0]); draw(); } }
       if (t.dataset.dn) { var j = +t.dataset.dn; if (j < cats.length - 1) { cats.splice(j + 1, 0, cats.splice(j, 1)[0]); draw(); } }

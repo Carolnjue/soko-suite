@@ -949,3 +949,19 @@ html[data-theme=dark] .htabs button span{color:#a9b4c6}html[data-theme=dark] .ht
 [data-shop-grid] .ri .media,[data-shop-grid] .ri .cimg{clip-path:none!important}
 .phero .pimg img,.phero .shimg img{animation-duration:.8s}
 .rv{transform:translateY(16px);transition:opacity .45s ease,transform .5s cubic-bezier(.2,.7,.2,1)}
+/* Faster still: reveal starts before items reach the screen; ~0.3 s per item */
+.ri{transform:translateY(10px);transition:opacity .3s ease-out,transform .35s cubic-bezier(.2,.7,.2,1),border-color .2s,box-shadow .25s;transition-delay:var(--d,0ms)}
+.ri-b{transform:translateY(10px)}
+.ri .media,.ri .cimg,.ri .simg,.pj.ri img,.bgrid>.ri .bimg{transition:clip-path .45s cubic-bezier(.65,0,.25,1);transition-delay:var(--d,0ms)}
+.ri .media img,.ri .cimg img,.ri .simg img{transform:scale(1.04);transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.strip .ri svg,.steps .ri svg,.cats .ri .cimg svg{transition-delay:calc(var(--d,0ms) + 80ms)}
+.w>span{transition:transform .4s cubic-bezier(.2,.75,.15,1);transition-delay:calc(var(--i)*20ms)}
+.hd .kick{transition:opacity .25s,transform .25s}
+.hd p{transition:opacity .3s .1s,transform .3s .1s}
+.sec-head>.btn,.sec-head>a{transition:opacity .3s .15s,transform .3s .15s,background .2s,color .2s,border-color .2s}
+.ti .timg img{transition:clip-path .5s cubic-bezier(.65,0,.25,1),transform .6s}
+.phero .pimg img,.phero .shimg img{animation-duration:.55s}
+.rv{transition:opacity .3s ease,transform .35s cubic-bezier(.2,.7,.2,1)}
+.w>span{transition:transform .28s cubic-bezier(.2,.75,.15,1);transition-delay:calc(var(--i)*15ms)}
+.ri{transition:opacity .25s ease-out,transform .3s cubic-bezier(.2,.7,.2,1),border-color .2s,box-shadow .25s;transition-delay:var(--d,0ms)}
+.hd p{transition:opacity .25s .05s,transform .25s .05s}

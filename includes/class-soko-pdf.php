@@ -213,7 +213,8 @@ final class Soko_PDF {
 			$ins = Soko_Mpesa::instructions( $d['number'] );
 			self::color( $pdf, array( 238, 245, 255 ), 'fill' );
 			$y = $pdf->GetY();
-			$pdf->Rect( 15, $y, 180, 24, 'F' );
+			$bk = array_filter( (array) ( isset( $s['bank'] ) ? $s['bank'] : array() ) );
+			$pdf->Rect( 15, $y, 180, ! empty( $bk['account'] ) ? 34 : 24, 'F' );
 			$pdf->SetXY( 20, $y + 3 );
 			$pdf->SetFont( 'Helvetica', 'B', 10 );
 			self::color( $pdf, array( 10, 143, 60 ) );
@@ -225,8 +226,13 @@ final class Soko_PDF {
 				if ( $ins['account'] ) {
 					$pdf->Cell( 80, 5, self::t( 'Account number: ' . $ins['account'] ), 0, 2 );
 				}
-			} else {
+			} elseif ( empty( $bk['account'] ) ) {
 				$pdf->Cell( 80, 5, self::t( 'We confirm your order by phone, then share how to pay. Questions: ' . $s['phone'] ), 0, 2 );
+			}
+			if ( ! empty( $bk['account'] ) ) {
+				$pdf->Cell( 80, 5, self::t( 'Bank: ' . ( isset( $bk['name'] ) ? $bk['name'] : '' ) . ( ! empty( $bk['branch'] ) ? ', ' . $bk['branch'] : '' ) ), 0, 2 );
+				$pdf->Cell( 80, 5, self::t( 'Account: ' . $bk['account'] . ( ! empty( $bk['account_name'] ) ? ' (' . $bk['account_name'] . ')' : '' ) ), 0, 2 );
+				$pdf->Cell( 80, 5, self::t( 'Reference: ' . $d['number'] ), 0, 2 );
 			}
 			$pdf->SetXY( 105, $y + 3 );
 			$pdf->SetFont( 'Helvetica', 'B', 9.5 );

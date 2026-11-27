@@ -439,7 +439,7 @@ final class Soko_Store {
 			<div class="f inst-date" hidden><label for="cDate"><span data-datelab>Preferred installation date</span> <span class="opt">(optional)</span></label><input id="cDate" name="install_date" type="date" min="' . esc_attr( gmdate( 'Y-m-d', strtotime( soko_today() . ' +2 days' ) ) ) . '"></div>
 			<div class="f"><label for="cNotes">Notes (optional)</label><textarea id="cNotes" name="notes" placeholder="Anything we should know"></textarea></div>
 			<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-			<h3>Payment</h3><div class="paybox"><p>' . ( Soko_Mpesa::ready() ? 'When you tap pay, a payment request appears on your phone. Enter your PIN to complete.' : 'Place your order and we will call to confirm it. You can then pay by mobile money, bank transfer, card or cash, using your order number as the reference.' ) . '</p></div>
+			<h3>Payment</h3><div class="paybox"><p>' . ( Soko_Mpesa::ready() ? 'When you tap pay, a payment request appears on your phone. Enter your PIN to complete.' : 'Place your order and we will call to confirm it. You can then pay by mobile money, bank transfer, card or cash, using your order number as the reference.' ) . '</p>' . ( ( $bk = array_filter( (array) soko_setting( 'bank', array() ) ) ) && ! empty( $bk['account'] ) ? '<p class="muted" style="margin-top:8px">Bank transfer: ' . esc_html( ( isset( $bk['name'] ) ? $bk['name'] : '' ) . ', account ' . $bk['account'] . ( ! empty( $bk['account_name'] ) ? ' (' . $bk['account_name'] . ')' : '' ) ) . '. Use your order number as the reference.</p>' : '' ) . '</div>
 			<button class="btn b-sun wide" type="submit" data-pay>' . ( Soko_Mpesa::ready() ? 'Pay with M-Pesa' : 'Place order' ) . '</button><p class="formmsg" role="status"></p></form>
 			<aside class="panel summary"><h3>Order summary</h3><div data-co-lines></div><div class="sum" data-co-sum></div><ul class="cotrust"><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>' . ( Soko_Mpesa::ready() ? 'You only pay when the M-Pesa prompt arrives on your own phone.' : 'Nothing is charged until we confirm your order with you.' ) . '</span></li><li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Your order number is your payment reference. Your receipt is issued as soon as payment is confirmed.</span></li><li class="inst-only" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg><span>Installed by EPRA-licensed technicians, with warranty and aftercare.</span></li></ul></aside></div></section>'; // phpcs:ignore
 	}
@@ -666,6 +666,7 @@ $chev = '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none
 				'whatsapp' => preg_replace( '/\D/', '', $s['whatsapp'] ),
 				'mpesa'    => Soko_Mpesa::ready(),
 				'pay'      => Soko_Mpesa::instructions( '' ),
+				'bank'     => array_filter( (array) soko_setting( 'bank', array() ) ),
 				'stk'      => Soko_Mpesa::ready(),
 				'phone'    => soko_phone( $s['phone'] ),
 				'route'    => self::$route,

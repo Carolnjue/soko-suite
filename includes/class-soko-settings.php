@@ -52,6 +52,7 @@ final class Soko_Settings {
 			'lead_stages'     => array( 'New', 'Contacted', 'Survey booked', 'Quoted', 'Won', 'Lost' ),
 			'job_stages'      => array( 'Survey', 'Scheduled', 'Installing', 'Commissioned', 'Maintenance' ),
 			'checklist'       => array( 'Site survey done', 'Materials picked from store', 'Panels mounted', 'Wiring and protection', 'Inverter and battery set up', 'System tested', 'Customer trained', 'Handover signed' ),
+			'bank'            => array( 'name' => '', 'account_name' => '', 'account' => '', 'branch' => '' ),
 			'mpesa'           => array(
 				'env'       => 'sandbox',
 				'type'      => 'paybill',
@@ -125,7 +126,8 @@ final class Soko_Settings {
 		if ( is_array( $v ) ) {
 			return array_map( array( __CLASS__, 'clean' ), $v );
 		}
-		if ( is_numeric( $v ) ) {
+		// Keep account, till and phone numbers exactly as typed (a leading 0 matters); only real amounts become numbers.
+		if ( is_numeric( $v ) && ! ( is_string( $v ) && preg_match( '/^0\d|^\d{8,}$/', trim( $v ) ) ) ) {
 			return $v + 0;
 		}
 		return sanitize_textarea_field( (string) $v );

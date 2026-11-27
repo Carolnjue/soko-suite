@@ -374,3 +374,5 @@ input:focus,select:focus,textarea:focus{border-color:#1b4f9e;box-shadow:0 0 0 3p
 html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#14171b;border-color:var(--line2)}
 .modal .mbox,.drawer{border:1px solid var(--line)}
 @media(max-width:640px){.stack tr{border-bottom:1px solid var(--line2);padding:10px 0}.stack tbody tr:hover td{background:none}}
+[data-pcd][hidden]{display:none!important}
+@media(max-width:640px){th{white-space:normal}}

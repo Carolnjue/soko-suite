@@ -131,7 +131,7 @@ final class Soko_Reports {
 				$rows[] = array( 'Total operating expenses', -$n['opex'], -$q['opex'], '_b' => 1 );
 				$rows[] = array( 'Net profit before tax', $n['net'], $q['net'], '_b' => 1 );
 				$out['kpis'] = array( array( 'Sales excl. VAT', soko_money( $n['sales'] ) ), array( 'Gross profit', soko_money( $n['gross'] ) ), array( 'Gross margin', $n['margin'] . '%' ), array( 'Net profit', soko_money( $n['net'] ) ) );
-				$out['sections'][] = array( 'title' => 'Profit and loss', 'head' => array( 'Line', 'This period', 'Previous (' . date_i18n( 'j M', strtotime( $pf ) ) . '–' . date_i18n( 'j M Y', strtotime( $pt ) ) . ')' ), 'rows' => $rows, 'widths' => array( 100, 40, 40 ) );
+				$out['sections'][] = array( 'title' => 'Profit and loss, compared with ' . date_i18n( 'j M', strtotime( $pf ) ) . ' to ' . date_i18n( 'j M Y', strtotime( $pt ) ), 'head' => array( 'Line', 'This period', 'Compared' ), 'rows' => $rows, 'widths' => array( 100, 40, 40 ) );
 				break;
 
 			case 'cashflow':

@@ -291,3 +291,16 @@ html[data-theme=dark] .k-ins{background:#33240f;color:#ffd29a}html[data-theme=da
 .stpanel .sttabs button.on{background:var(--card);color:var(--brand);box-shadow:0 2px 8px -4px rgba(29,33,86,.35)}
 tr.loading{opacity:.6;cursor:progress;background:linear-gradient(90deg,transparent,var(--sky),transparent) 0 0/200% 100%;animation:rowload 1s linear infinite}@keyframes rowload{to{background-position:-200% 0}}
 .blrow{display:flex;gap:12px;align-items:center}.blrow img,.blph{width:72px;height:50px;border-radius:8px;object-fit:cover;flex:none;background:var(--alt)}
+/* phones: compact record cards instead of tall label lists */
+@media(max-width:640px){
+.stack tr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2px 14px;padding:12px 4px;border-radius:12px}
+.stack tr.click:active{background:var(--alt)}
+.stack td{flex-direction:column;align-items:flex-start;justify-content:flex-start;text-align:left;gap:0;font-size:14px;padding:3px 0}
+.stack td::before{font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.stack td:first-child{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;font-size:16px}
+.stack td:first-child::before{display:none}
+.stack td:empty{display:none}
+.top .mbrand{display:flex}
+}
+.top .mbrand{display:none;align-items:center;gap:8px;font:700 15px Poppins;color:var(--ink);text-decoration:none}.top .mbrand img{height:28px}
+.tabs,.subtabs,[data-tabs]{scrollbar-width:none}.tabs::-webkit-scrollbar,.subtabs::-webkit-scrollbar,[data-tabs]::-webkit-scrollbar{display:none}
